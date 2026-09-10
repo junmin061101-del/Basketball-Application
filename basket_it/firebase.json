@@ -61,7 +61,7 @@
         ]
       },
       {
-        "source": "/{index.html,flutter_bootstrap.js,flutter_service_worker.js,version.json,main.dart.js}",
+        "source": "/{index.html,phone.html,flutter_bootstrap.js,flutter_service_worker.js,version.json,main.dart.js}",
         "headers": [
           {
             "key": "Cache-Control",
