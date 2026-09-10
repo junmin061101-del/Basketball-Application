@@ -123,6 +123,57 @@ const KBL_TEAMS = [
   { id: 'samsung', label: '서울 삼성', keywords: ['서울 삼성', '삼성 썬더스', '삼성썬더스'] },
 ];
 
+
+/**
+ * NBA 30개 구단. 한국 기사에 쓰이는 표기로 검색·매칭한다.
+ * id는 ESPN 팀 id라 NBA 팀·순위·일정 데이터와 그대로 이어진다.
+ */
+const NBA_TEAMS = [
+  { id: '1', label: '애틀랜타 호크스', keywords: ['호크스', '애틀랜타'] },
+  { id: '2', label: '보스턴 셀틱스', keywords: ['셀틱스', '보스턴'] },
+  { id: '17', label: '브루클린 네츠', keywords: ['네츠', '브루클린'] },
+  { id: '30', label: '샬럿 호네츠', keywords: ['호네츠', '샬럿'] },
+  { id: '4', label: '시카고 불스', keywords: ['불스', '시카고'] },
+  { id: '5', label: '클리블랜드 캐벌리어스', keywords: ['캐벌리어스', '클리블랜드', '캐브스'] },
+  { id: '6', label: '댈러스 매버릭스', keywords: ['매버릭스', '댈러스', '매브스'] },
+  { id: '7', label: '덴버 너기츠', keywords: ['너기츠', '너겟츠', '덴버'] },
+  { id: '8', label: '디트로이트 피스톤스', keywords: ['피스톤스', '디트로이트'] },
+  { id: '9', label: '골든스테이트 워리어스', keywords: ['워리어스', '골든스테이트'] },
+  { id: '10', label: '휴스턴 로키츠', keywords: ['로키츠', '휴스턴'] },
+  { id: '11', label: '인디애나 페이서스', keywords: ['페이서스', '인디애나'] },
+  { id: '12', label: 'LA 클리퍼스', keywords: ['클리퍼스'] },
+  { id: '13', label: 'LA 레이커스', keywords: ['레이커스'] },
+  { id: '29', label: '멤피스 그리즐리스', keywords: ['그리즐리스', '멤피스'] },
+  { id: '14', label: '마이애미 히트', keywords: ['마이애미 히트', '마이애미'] },
+  { id: '15', label: '밀워키 벅스', keywords: ['벅스', '밀워키'] },
+  { id: '16', label: '미네소타 팀버울브스', keywords: ['팀버울브스', '미네소타'] },
+  { id: '3', label: '뉴올리언스 펠리컨스', keywords: ['펠리컨스', '뉴올리언스'] },
+  { id: '18', label: '뉴욕 닉스', keywords: ['닉스', '뉴욕 닉스'] },
+  { id: '25', label: '오클라호마시티 썬더', keywords: ['썬더', '오클라호마'] },
+  { id: '19', label: '올랜도 매직', keywords: ['올랜도 매직', '올랜도'] },
+  { id: '20', label: '필라델피아 세븐티식서스', keywords: ['세븐티식서스', '식서스', '필라델피아'] },
+  { id: '21', label: '피닉스 선즈', keywords: ['선즈', '피닉스'] },
+  { id: '22', label: '포틀랜드 트레일블레이저스', keywords: ['트레일블레이저스', '블레이저스', '포틀랜드'] },
+  { id: '23', label: '새크라멘토 킹스', keywords: ['새크라멘토'] },
+  { id: '24', label: '샌안토니오 스퍼스', keywords: ['스퍼스', '샌안토니오'] },
+  { id: '28', label: '토론토 랩터스', keywords: ['랩터스', '토론토'] },
+  { id: '26', label: '유타 재즈', keywords: ['유타 재즈', '유타'] },
+  { id: '27', label: '워싱턴 위저즈', keywords: ['위저즈', '워싱턴'] },
+];
+
+/** NBA 카테고리 검색어. 리그 일반 + 화제의 선수 + 구단별. */
+const NBA_QUERIES = [
+  'NBA',
+  'NBA 농구',
+  '르브론 제임스',
+  '스테판 커리',
+  '니콜라 요키치',
+  '루카 돈치치',
+  '야니스 아데토쿤보',
+  '빅터 웸반야마',
+  ...NBA_TEAMS.map((t) => `${t.label} NBA`),
+];
+
 /** KBL 카테고리 검색어. 리그 일반 + 구단별. */
 const KBL_QUERIES = ['KBL', '프로농구', ...KBL_TEAMS.map((t) => `${t.label} 농구`)];
 
@@ -204,9 +255,9 @@ function sourceNameFor(url) {
 }
 
 /** 제목/본문에서 구단 키워드를 찾아 팀을 붙인다. 없으면 null. */
-function matchTeam(text) {
+function matchTeam(text, teams = KBL_TEAMS) {
   if (!text) return null;
-  for (const team of KBL_TEAMS) {
+  for (const team of teams) {
     if (team.keywords.some((k) => text.includes(k))) {
       return { id: team.id, label: team.label };
     }
@@ -226,8 +277,27 @@ function looksLikeBasketball(title, source) {
   if (BASKETBALL_OUTLETS.has(source)) return true;
   if (!title) return false;
   if (TITLE_SIGNALS.some((signal) => title.includes(signal))) return true;
-  // 구단 이름이 제목에 있으면 농구 기사다.
-  return KBL_TEAMS.some((team) => team.keywords.some((k) => title.includes(k)));
+  // 구단 이름이 제목에 있으면 농구 기사다(KBL·NBA 양쪽).
+  return [...KBL_TEAMS, ...NBA_TEAMS].some((team) =>
+    team.keywords.some((k) => title.includes(k)),
+  );
+}
+
+/**
+ * 카테고리에 맞는 구단 목록에서 팀을 찾는다.
+ *
+ * 제목을 먼저 본다. 본문까지 한꺼번에 훑으면 "미네소타의 에드워즈" 기사가
+ * 본문에 스친 덴버로 붙는 식으로 엉뚱한 팀이 달린다. 제목에 구단이 없을
+ * 때만 본문을 본다.
+ */
+function matchTeamFor(category, title, description) {
+  const teams = category === 'kbl'
+      ? KBL_TEAMS
+      : category === 'nba'
+        ? NBA_TEAMS
+        : null;
+  if (!teams) return null;
+  return matchTeam(title, teams) ?? matchTeam(description, teams);
 }
 
 /**
@@ -249,7 +319,7 @@ function normalizeItem(item, category) {
   const pubDate = new Date(item.pubDate);
   if (Number.isNaN(pubDate.getTime())) return null;
 
-  const team = category === 'kbl' ? matchTeam(`${title} ${description}`) : null;
+  const team = matchTeamFor(category, title, description);
 
   return {
     category,
@@ -304,6 +374,8 @@ function extractOgImage(html, baseUrl) {
 }
 
 module.exports = {
+  NBA_TEAMS,
+  NBA_QUERIES,
   OVERSEAS_PLAYERS,
   BASKETBALL_OUTLETS,
   NAVER_NEWS_ENDPOINT,

@@ -148,3 +148,37 @@ test('og:image를 절대 주소로 만들어 준다', () => {
   );
   assert.equal(extractOgImage('<html></html>', 'https://jumpball.co.kr/n/1'), null);
 });
+
+test('NBA 기사는 구단을 붙이고 제목을 본문보다 우선한다', () => {
+  const nba = normalizeItem(
+    item({
+      title: "'목표는 우승' 미네소타의 에드워즈, 한 걸음씩",
+      description: '지난 시즌 덴버에게 밀린 미네소타는...',
+      originallink: 'https://www.basketkorea.com/n/5',
+      link: '',
+    }),
+    'nba',
+  );
+  // 본문에 먼저 나오는 덴버가 아니라 제목의 미네소타가 붙어야 한다.
+  assert.equal(nba.team, '미네소타 팀버울브스');
+  assert.equal(nba.team_id, '16');
+  assert.equal(nba.category, 'nba');
+});
+
+test('제목에 구단이 없으면 본문에서 찾는다', () => {
+  const nba = normalizeItem(
+    item({
+      title: 'NBA 은퇴 선수, 1조원 잭팟',
+      description: '클리블랜드 캐벌리어스 출신으로...',
+      originallink: 'https://www.rookie.co.kr/n/6',
+      link: '',
+    }),
+    'nba',
+  );
+  assert.equal(nba.team_id, '5');
+});
+
+test('NBA 구단명이 제목에 있으면 일반 매체 기사도 농구로 본다', () => {
+  assert.equal(looksLikeBasketball('레이커스, 필 잭슨 감독 동상 공개', '동아일보'), true);
+  assert.equal(looksLikeBasketball('오늘의 증시 마감', '동아일보'), false);
+});

@@ -17,6 +17,7 @@ const path = require('path');
 
 const {
   KBL_QUERIES,
+  NBA_QUERIES,
   DEFAULT_OVERSEAS_QUERIES,
   naverHeaders,
   naverSearchUrl,
@@ -97,7 +98,7 @@ async function collect(queries, category) {
 async function loadPreviousThumbnails() {
   const known = new Map();
   if (!PREVIOUS_BASE) return known;
-  for (const name of ['all', 'kbl', 'overseas']) {
+  for (const name of ['all', 'kbl', 'overseas', 'nba']) {
     try {
       const res = await fetch(`${PREVIOUS_BASE}/${name}.json`, {
         signal: AbortSignal.timeout(10000),
@@ -163,6 +164,10 @@ async function main() {
   const overseas = await collect(DEFAULT_OVERSEAS_QUERIES, 'overseas');
   console.log(`  검색어 ${overseas.total}개 중 ${overseas.total - overseas.failures}개 성공`);
 
+  console.log('NBA 기사 수집...');
+  const nba = await collect(NBA_QUERIES, 'nba');
+  console.log(`  검색어 ${nba.total}개 중 ${nba.total - nba.failures}개 성공`);
+
   // 전부 실패했다면 자격증명이나 네이버 쪽 문제다. 이때 빈 파일을 내보내면
   // 멀쩡하던 뉴스가 사라지므로, 아무것도 쓰지 않고 실패로 끝낸다.
   if (kbl.failures === kbl.total && overseas.failures === overseas.total) {
@@ -175,7 +180,11 @@ async function main() {
   const groups = {
     kbl: mergeArticles(kbl.lists).slice(0, MAX_ARTICLES),
     overseas: mergeArticles(overseas.lists).slice(0, MAX_ARTICLES),
-    all: mergeArticles([...kbl.lists, ...overseas.lists]).slice(0, MAX_ARTICLES),
+    nba: mergeArticles(nba.lists).slice(0, MAX_ARTICLES),
+    all: mergeArticles([...kbl.lists, ...overseas.lists, ...nba.lists]).slice(
+      0,
+      MAX_ARTICLES,
+    ),
   };
 
   console.log('썸네일 확인...');
