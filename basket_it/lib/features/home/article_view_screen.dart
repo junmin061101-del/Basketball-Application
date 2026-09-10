@@ -5,12 +5,36 @@ import 'package:webview_flutter/webview_flutter.dart';
 
 import '../../core/theme/app_colors.dart';
 import '../../data/models/news_article.dart';
+import 'article_frame_stub.dart'
+    if (dart.library.js_interop) 'article_frame_web.dart';
+
+/// 앱 안에서 띄울 때만 쓰는 모바일 호스트 대응표.
+///
+/// 일부 매체는 PC 페이지에 viewport 메타가 없어 좁은 화면에서 잘려 보인다.
+/// 보통은 스스로 모바일 주소로 옮겨가지만, 그 방식이 "최상위 창을 이동"이라
+/// iframe sandbox가 막는다(안 막으면 앱 전체가 기사로 바뀐다). 그래서 처음부터
+/// 모바일 주소로 연다.
+///
+/// 기사 식별과 "브라우저로 열기"에는 원래 주소를 그대로 쓴다.
+const _mobileHosts = {
+  'basketkorea.com': 'm.basketkorea.com',
+  'www.basketkorea.com': 'm.basketkorea.com',
+};
+
+/// 앱 안에서 열 주소. 대응표에 없으면 원래 주소 그대로.
+String viewerUrl(String url) {
+  final uri = Uri.tryParse(url);
+  if (uri == null) return url;
+  final mobileHost = _mobileHosts[uri.host];
+  if (mobileHost == null) return url;
+  return uri.replace(host: mobileHost).toString();
+}
 
 /// 뉴스 카드를 누르면 열리는 원문 뷰어.
 ///
-/// 앱을 벗어나지 않도록 웹뷰로 전체 화면에 띄우고, 브라우저로 열기·새로고침만
-/// 남긴 단순한 상단바를 둔다. 웹 빌드는 웹뷰 플러그인을 쓸 수 없어
-/// [openArticle]에서 새 탭으로 대신 연다.
+/// 앱을 벗어나지 않도록 원문을 전체 화면으로 띄우고, 닫기와 브라우저로 열기만
+/// 남긴 단순한 상단바를 둔다. 모바일은 webview_flutter를, 웹은 iframe을 쓴다
+/// (webview_flutter가 웹을 지원하지 않는다).
 class ArticleViewScreen extends StatefulWidget {
   final NewsArticle article;
 
@@ -21,13 +45,25 @@ class ArticleViewScreen extends StatefulWidget {
 }
 
 class _ArticleViewScreenState extends State<ArticleViewScreen> {
-  late final WebViewController _controller;
+  /// 웹에서는 만들지 않는다. 웹용 플랫폼 구현이 없어 생성 자체가 실패한다.
+  WebViewController? _controller;
   int _progress = 0;
   bool _failed = false;
+
+  /// 원래 기사 주소. 브라우저로 열 때 쓴다.
+  String get _url => widget.article.url!;
+
+  /// 앱 안에서 띄울 주소. 매체에 따라 모바일 호스트로 바뀔 수 있다.
+  String get _inAppUrl => viewerUrl(_url);
 
   @override
   void initState() {
     super.initState();
+    if (kIsWeb) {
+      // iframe은 교차 출처라 로딩 진행률을 알 수 없다. 바로 보여준다.
+      _progress = 100;
+      return;
+    }
     _controller = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
       ..setBackgroundColor(AppColors.background)
@@ -47,12 +83,15 @@ class _ArticleViewScreenState extends State<ArticleViewScreen> {
           },
         ),
       )
-      ..loadRequest(Uri.parse(widget.article.url!));
+      ..loadRequest(Uri.parse(_inAppUrl));
   }
 
   Future<void> _openInBrowser() async {
-    final uri = Uri.parse(widget.article.url!);
-    await launchUrl(uri, mode: LaunchMode.externalApplication);
+    await launchUrl(
+      Uri.parse(_url),
+      mode: LaunchMode.externalApplication,
+      webOnlyWindowName: '_blank',
+    );
   }
 
   @override
@@ -86,10 +125,14 @@ class _ArticleViewScreenState extends State<ArticleViewScreen> {
               )
             : null,
       ),
-      body: _failed
-          ? _LoadFailed(onOpenInBrowser: _openInBrowser)
-          : WebViewWidget(controller: _controller),
+      body: _body(),
     );
+  }
+
+  Widget _body() {
+    if (_failed) return _LoadFailed(onOpenInBrowser: _openInBrowser);
+    if (kIsWeb) return buildArticleFrame(_inAppUrl);
+    return WebViewWidget(controller: _controller!);
   }
 }
 
@@ -106,11 +149,7 @@ class _LoadFailed extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(
-              Icons.link_off,
-              size: 44,
-              color: AppColors.textTertiary,
-            ),
+            const Icon(Icons.link_off, size: 44, color: AppColors.textTertiary),
             const SizedBox(height: 14),
             Text(
               '기사를 여는 데 실패했어요',
@@ -135,7 +174,7 @@ class _LoadFailed extends StatelessWidget {
   }
 }
 
-/// 기사를 연다. 모바일은 앱 안 웹뷰, 웹 빌드는 새 탭.
+/// 기사를 앱 안에서 연다. 모바일은 웹뷰, 웹은 iframe으로 같은 화면을 쓴다.
 Future<void> openArticle(BuildContext context, NewsArticle article) async {
   final url = article.url;
   if (url == null || url.isEmpty) {
@@ -145,22 +184,6 @@ Future<void> openArticle(BuildContext context, NewsArticle article) async {
     return;
   }
 
-  if (kIsWeb) {
-    // 웹 빌드에서는 webview_flutter를 쓸 수 없어 새 탭으로 연다.
-    final opened = await launchUrl(
-      Uri.parse(url),
-      mode: LaunchMode.externalApplication,
-      webOnlyWindowName: '_blank',
-    );
-    if (!opened && context.mounted) {
-      ScaffoldMessenger.of(context)
-        ..hideCurrentSnackBar()
-        ..showSnackBar(const SnackBar(content: Text('기사를 열지 못했어요.')));
-    }
-    return;
-  }
-
-  if (!context.mounted) return;
   await Navigator.of(context).push(
     MaterialPageRoute(builder: (_) => ArticleViewScreen(article: article)),
   );
