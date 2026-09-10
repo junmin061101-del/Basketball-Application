@@ -298,7 +298,11 @@ class _Thumbnail extends StatelessWidget {
         height: height,
         width: double.infinity,
         fit: BoxFit.cover,
-        // 이미지가 깨지거나 막힌 언론사면 플레이스홀더로 되돌린다.
+        // 웹에서는 CanvasKit이 이미지를 canvas에 그리느라 CORS 헤더를 요구한다.
+        // 그 헤더를 안 보내는 언론사(바스켓코리아 등) 사진이 통째로 안 나오므로,
+        // 바이트를 못 받아오면 <img> 요소로 대신 띄운다. 모바일에는 영향 없다.
+        webHtmlElementStrategy: WebHtmlElementStrategy.fallback,
+        // 그래도 안 되면 플레이스홀더로 되돌린다.
         errorBuilder: (_, _, _) => _placeholder(),
         loadingBuilder: (context, child, progress) {
           if (progress == null) return child;
