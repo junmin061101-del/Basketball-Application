@@ -12,6 +12,12 @@ import '../../core/utils/stable_random.dart';
 abstract class GameRepository {
   Future<List<Game>> getGamesByDate(DateTime date);
   Future<List<PlayerGameStats>> getBoxScore(Game game);
+
+  /// [from]부터 [to]까지(양끝 포함) 하루씩 훑어 모든 경기를 날짜순으로 준다.
+  ///
+  /// 팀별 최근 전적, 다음 경기, 상대 전적처럼 하루치로는 답할 수 없는
+  /// 화면에 쓴다.
+  Future<List<Game>> getGamesInRange(DateTime from, DateTime to);
 }
 
 class MockGameRepository implements GameRepository {
@@ -19,6 +25,25 @@ class MockGameRepository implements GameRepository {
   Future<List<Game>> getGamesByDate(DateTime date) async {
     await Future.delayed(const Duration(milliseconds: 350));
     return _gamesFor(_dateOnly(date));
+  }
+
+  @override
+  Future<List<Game>> getGamesInRange(DateTime from, DateTime to) async {
+    await Future.delayed(const Duration(milliseconds: 350));
+    final start = _dateOnly(from);
+    final end = _dateOnly(to);
+    if (end.isBefore(start)) return const [];
+
+    final games = <Game>[];
+    for (
+      var day = start;
+      !day.isAfter(end);
+      day = day.add(const Duration(days: 1))
+    ) {
+      games.addAll(_gamesFor(day));
+    }
+    games.sort((a, b) => a.startTime.compareTo(b.startTime));
+    return games;
   }
 
   @override

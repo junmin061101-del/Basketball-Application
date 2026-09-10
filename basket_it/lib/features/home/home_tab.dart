@@ -4,8 +4,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/app_colors.dart';
 import '../../data/models/news_article.dart';
 import '../../data/models/team.dart';
+import '../../data/models/player.dart';
 import '../../providers/news_providers.dart';
+import '../../providers/onboarding_providers.dart';
 import '../../providers/repository_providers.dart';
+import '../follow/player_hub_screen.dart';
+import '../follow/team_hub_screen.dart';
+import 'widgets/followed_game_section.dart';
+import 'widgets/news_cards.dart';
 
 /// 홈 탭: KBL 뉴스 + 해외파 한국 선수 뉴스.
 ///
@@ -59,14 +65,16 @@ class HomeTab extends ConsumerWidget {
                   child: ListView(
                     padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
                     children: [
-                      _HeadlineCard(
+                      // 팔로우한 팀의 오늘 경기가 있으면 뉴스보다 위에 온다.
+                      const FollowedGameSection(),
+                      NewsHeadlineCard(
                         article: headline,
                         team: teamById[headline.relatedTeamId],
                       ),
                       const SizedBox(height: 18),
                       for (var i = 0; i < rest.length; i++) ...[
                         if (i > 0) const Divider(height: 22),
-                        _NewsRow(
+                        NewsRow(
                           article: rest[i],
                           team: teamById[rest[i].relatedTeamId],
                         ),
@@ -74,7 +82,7 @@ class HomeTab extends ConsumerWidget {
                       const SizedBox(height: 20),
                       Center(
                         child: Text(
-                          '${_relativeTime(feed.updatedAt)} 업데이트 · 네이버 뉴스 검색',
+                          '${relativeTime(feed.updatedAt)} 업데이트 · 네이버 뉴스 검색',
                           style: Theme.of(context).textTheme.bodySmall,
                         ),
                       ),
@@ -90,28 +98,69 @@ class HomeTab extends ConsumerWidget {
   }
 }
 
-class _CategoryChips extends StatelessWidget {
+/// 분류 칩 + 팔로우한 팀·선수 칩.
+///
+/// 분류 칩은 뉴스 피드를 그 자리에서 걸러주고, 팀·선수 칩은 그 대상만 모아
+/// 놓은 전용 화면으로 넘어간다. 팔로우 수만큼 늘어나므로 가로로 스크롤한다.
+class _CategoryChips extends ConsumerWidget {
   final NewsCategory? selected;
   final ValueChanged<NewsCategory?> onSelected;
 
   const _CategoryChips({required this.selected, required this.onSelected});
 
   @override
-  Widget build(BuildContext context) {
-    final items = <(String, NewsCategory?)>[
+  Widget build(BuildContext context, WidgetRef ref) {
+    final categories = <(String, NewsCategory?)>[
       ('전체', null),
       ('KBL', NewsCategory.kbl),
       ('해외파', NewsCategory.overseas),
     ];
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
-      child: Row(
+
+    final followedTeamIds = ref.watch(followedTeamIdsProvider);
+    final followedPlayerIds = ref.watch(followedPlayerIdsProvider);
+    final teams = (ref.watch(teamsProvider).valueOrNull ?? <Team>[])
+        .where((t) => followedTeamIds.contains(t.id))
+        .toList();
+    final players = (ref.watch(allPlayersProvider).valueOrNull ?? <Player>[])
+        .where((p) => followedPlayerIds.contains(p.id))
+        .toList();
+
+    return SizedBox(
+      height: 52,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
         children: [
-          for (final (label, category) in items) ...[
+          for (final (label, category) in categories) ...[
             _Chip(
               label: label,
               active: selected == category,
               onTap: () => onSelected(category),
+            ),
+            const SizedBox(width: 8),
+          ],
+          if (teams.isNotEmpty || players.isNotEmpty)
+            const _ChipDivider(),
+          for (final team in teams) ...[
+            _Chip(
+              label: team.shortName,
+              active: false,
+              accent: team.primaryColor,
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => TeamHubScreen(team: team)),
+              ),
+            ),
+            const SizedBox(width: 8),
+          ],
+          for (final player in players) ...[
+            _Chip(
+              label: player.name,
+              active: false,
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => PlayerHubScreen(player: player),
+                ),
+              ),
             ),
             const SizedBox(width: 8),
           ],
@@ -121,12 +170,32 @@ class _CategoryChips extends StatelessWidget {
   }
 }
 
+/// 분류 칩과 팔로우 칩을 눈으로 구분해 주는 세로선.
+class _ChipDivider extends StatelessWidget {
+  const _ChipDivider();
+
+  @override
+  Widget build(BuildContext context) => Container(
+    width: 1,
+    margin: const EdgeInsets.fromLTRB(2, 8, 10, 8),
+    color: AppColors.border,
+  );
+}
+
 class _Chip extends StatelessWidget {
   final String label;
   final bool active;
   final VoidCallback onTap;
 
-  const _Chip({required this.label, required this.active, required this.onTap});
+  /// 팀 칩일 때 앞에 찍는 팀 컬러 점.
+  final Color? accent;
+
+  const _Chip({
+    required this.label,
+    required this.active,
+    required this.onTap,
+    this.accent,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -135,6 +204,7 @@ class _Chip extends StatelessWidget {
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        alignment: Alignment.center,
         decoration: BoxDecoration(
           color: active ? AppColors.textPrimary : AppColors.surface,
           borderRadius: BorderRadius.circular(20),
@@ -142,277 +212,28 @@ class _Chip extends StatelessWidget {
             color: active ? AppColors.textPrimary : AppColors.border,
           ),
         ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.w700,
-            color: active ? Colors.white : AppColors.textSecondary,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// 가장 최신 기사 한 건. 큰 썸네일 + 팀 배지 + 굵은 제목 + 한 줄 요약.
-class _HeadlineCard extends ConsumerWidget {
-  final NewsArticle article;
-  final Team? team;
-
-  const _HeadlineCard({required this.article, required this.team});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return InkWell(
-      borderRadius: BorderRadius.circular(20),
-      onTap: () => ref.read(articleOpenerProvider)(context, article),
-      child: Container(
-        decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: AppColors.border),
-        ),
-        clipBehavior: Clip.antiAlias,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Stack(
-              children: [
-                _Thumbnail(article: article, team: team, height: 188),
-                Positioned(
-                  left: 12,
-                  top: 12,
-                  child: _TeamBadge(article: article, team: team),
-                ),
-              ],
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _MetaLine(article: article),
-                  const SizedBox(height: 8),
-                  Text(
-                    article.title,
-                    maxLines: 3,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.headlineMedium
-                        ?.copyWith(fontSize: 20, height: 1.25),
-                  ),
-                  if (article.summary != null) ...[
-                    const SizedBox(height: 8),
-                    Text(
-                      article.summary!,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.bodyMedium,
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// 헤드라인 아래로 이어지는 목록 카드. 작은 정사각 썸네일 + 제목만.
-class _NewsRow extends ConsumerWidget {
-  final NewsArticle article;
-  final Team? team;
-
-  const _NewsRow({required this.article, required this.team});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return InkWell(
-      borderRadius: BorderRadius.circular(12),
-      onTap: () => ref.read(articleOpenerProvider)(context, article),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 2),
         child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
           children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: SizedBox(
-                width: 86,
-                height: 86,
-                child: _Thumbnail(article: article, team: team, height: 86),
+            if (accent != null) ...[
+              Container(
+                width: 7,
+                height: 7,
+                decoration: BoxDecoration(color: accent, shape: BoxShape.circle),
               ),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _MetaLine(article: article),
-                  const SizedBox(height: 6),
-                  Text(
-                    article.title,
-                    maxLines: 3,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.titleMedium
-                        ?.copyWith(height: 1.3),
-                  ),
-                ],
+              const SizedBox(width: 6),
+            ],
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: active ? Colors.white : AppColors.textSecondary,
               ),
             ),
           ],
         ),
       ),
-    );
-  }
-}
-
-/// 썸네일 자리. 기사에 og:image가 있으면 그 이미지를, 없거나 실패하면
-/// 관련 팀 컬러(해외파는 별도 톤)를 쓴 플레이스홀더를 그린다.
-class _Thumbnail extends StatelessWidget {
-  final NewsArticle article;
-  final Team? team;
-  final double height;
-
-  const _Thumbnail({
-    required this.article,
-    required this.team,
-    required this.height,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final url = article.thumbnailUrl;
-    if (url != null && url.isNotEmpty) {
-      return Image.network(
-        url,
-        height: height,
-        width: double.infinity,
-        fit: BoxFit.cover,
-        // 웹에서는 CanvasKit이 이미지를 canvas에 그리느라 CORS 헤더를 요구한다.
-        // 그 헤더를 안 보내는 언론사(바스켓코리아 등) 사진이 통째로 안 나오므로,
-        // 바이트를 못 받아오면 <img> 요소로 대신 띄운다. 모바일에는 영향 없다.
-        webHtmlElementStrategy: WebHtmlElementStrategy.fallback,
-        // 그래도 안 되면 플레이스홀더로 되돌린다.
-        errorBuilder: (_, _, _) => _placeholder(),
-        loadingBuilder: (context, child, progress) {
-          if (progress == null) return child;
-          return _placeholder(showIcon: false);
-        },
-      );
-    }
-    return _placeholder();
-  }
-
-  Color get _baseColor =>
-      team?.primaryColor ??
-      (article.category == NewsCategory.overseas
-          ? const Color(0xFF1C3F94)
-          : AppColors.primary);
-
-  Widget _placeholder({bool showIcon = true}) {
-    return Container(
-      height: height,
-      width: double.infinity,
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            _baseColor.withValues(alpha: 0.5),
-            _baseColor.withValues(alpha: 0.18),
-          ],
-        ),
-      ),
-      child: showIcon
-          ? Stack(
-              clipBehavior: Clip.none,
-              children: [
-                Positioned(
-                  right: -10,
-                  bottom: -14,
-                  child: Icon(
-                    Icons.sports_basketball,
-                    size: height * 0.85,
-                    color: Colors.white.withValues(alpha: 0.24),
-                  ),
-                ),
-              ],
-            )
-          : null,
-    );
-  }
-}
-
-/// 썸네일 좌측 상단에 얹는 팀(또는 해외파) 배지.
-class _TeamBadge extends StatelessWidget {
-  final NewsArticle article;
-  final Team? team;
-
-  const _TeamBadge({required this.article, required this.team});
-
-  @override
-  Widget build(BuildContext context) {
-    final label =
-        team?.shortName ?? article.teamLabel ?? article.category.label;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-      decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.55),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Text(
-        label,
-        style: const TextStyle(
-          color: Colors.white,
-          fontSize: 12,
-          fontWeight: FontWeight.w800,
-          letterSpacing: 0.3,
-        ),
-      ),
-    );
-  }
-}
-
-/// 분류 · 언론사 · 시간 한 줄.
-class _MetaLine extends StatelessWidget {
-  final NewsArticle article;
-
-  const _MetaLine({required this.article});
-
-  @override
-  Widget build(BuildContext context) {
-    final accent = article.category == NewsCategory.overseas
-        ? const Color(0xFF1C3F94)
-        : AppColors.primary;
-    return Row(
-      children: [
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-          decoration: BoxDecoration(
-            color: accent.withValues(alpha: 0.12),
-            borderRadius: BorderRadius.circular(4),
-          ),
-          child: Text(
-            article.category.label,
-            style: TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.w800,
-              color: accent,
-            ),
-          ),
-        ),
-        const SizedBox(width: 8),
-        Flexible(
-          child: Text(
-            '${article.source} · ${_relativeTime(article.publishedAt)}',
-            overflow: TextOverflow.ellipsis,
-            style: Theme.of(context).textTheme.bodySmall,
-          ),
-        ),
-      ],
     );
   }
 }
@@ -477,14 +298,4 @@ class _EmptyNews extends StatelessWidget {
       ),
     );
   }
-}
-
-String _relativeTime(DateTime time) {
-  final diff = DateTime.now().difference(time);
-  if (diff.inMinutes < 1) return '방금 전';
-  if (diff.inMinutes < 60) return '${diff.inMinutes}분 전';
-  if (diff.inHours < 24) return '${diff.inHours}시간 전';
-  if (diff.inDays == 1) return '어제';
-  if (diff.inDays < 7) return '${diff.inDays}일 전';
-  return '${time.month}월 ${time.day}일';
 }

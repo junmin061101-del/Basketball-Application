@@ -22,6 +22,14 @@ typedef ArticleOpener = Future<void> Function(BuildContext, NewsArticle);
 
 final articleOpenerProvider = Provider<ArticleOpener>((ref) => openArticle);
 
+/// 분류를 나누지 않은 전체 뉴스.
+///
+/// 홈 탭 피드([newsFeedProvider])는 선택된 분류에 따라 내용이 바뀌므로,
+/// 팀·선수 화면처럼 "그 대상 기사만" 추려야 하는 곳은 이걸 쓴다.
+final allNewsProvider = FutureProvider<List<NewsArticle>>((ref) {
+  return ref.watch(newsRepositoryProvider).getNews();
+});
+
 /// 홈 탭에서 선택된 뉴스 분류. null이면 전체.
 final newsCategoryFilterProvider = StateProvider<NewsCategory?>((ref) => null);
 

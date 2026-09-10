@@ -7,6 +7,7 @@ import '../../providers/follow_actions.dart';
 import '../../providers/onboarding_providers.dart';
 import '../../providers/repository_providers.dart';
 import '../player/player_detail_screen.dart';
+import 'player_sort.dart';
 
 /// 탐색 - 선수 정보 화면: 검색해서 선수를 찾고, 선택하면 선수 상세로 이동.
 /// 언제든 선수를 팔로우/언팔로우할 수 있다.
@@ -21,11 +22,15 @@ class PlayerSearchScreen extends ConsumerStatefulWidget {
 class _PlayerSearchScreenState extends ConsumerState<PlayerSearchScreen> {
   String _query = '';
 
+  /// 기본은 "내 팀 먼저". 팔로우한 팀 선수를 가나다순으로 먼저 보여준다.
+  PlayerSort _sort = PlayerSort.myTeams;
+
   @override
   Widget build(BuildContext context) {
     final playersAsync = ref.watch(playersByFollowersProvider);
     final teamsAsync = ref.watch(teamsProvider);
     final followedIds = ref.watch(followedPlayerIdsProvider);
+    final followedTeamIds = ref.watch(followedTeamIdsProvider);
 
     return Scaffold(
       appBar: AppBar(title: const Text('선수 정보')),
@@ -45,6 +50,10 @@ class _PlayerSearchScreenState extends ConsumerState<PlayerSearchScreen> {
               ),
             ),
           ),
+          _SortChips(
+            selected: _sort,
+            onSelected: (sort) => setState(() => _sort = sort),
+          ),
           Expanded(
             child: teamsAsync.when(
               loading: () => const _Loading(),
@@ -56,7 +65,13 @@ class _PlayerSearchScreenState extends ConsumerState<PlayerSearchScreen> {
                 return playersAsync.when(
                   loading: () => const _Loading(),
                   error: (err, _) => Center(child: Text('불러오지 못했어요: $err')),
-                  data: (players) {
+                  data: (allPlayers) {
+                    final players = sortPlayers(
+                      allPlayers,
+                      sort: _sort,
+                      followedTeamIds: followedTeamIds,
+                      teamNameOf: (id) => teamLabelOf[id] ?? id,
+                    );
                     final filtered = _query.trim().isEmpty
                         ? players
                         : players
@@ -313,6 +328,74 @@ class _Loading extends StatelessWidget {
   Widget build(BuildContext context) {
     return const Center(
       child: CircularProgressIndicator(color: AppColors.primary),
+    );
+  }
+}
+
+/// 정렬 방식 선택 칩. 홈 필터 칩과 같은 모양을 쓴다.
+class _SortChips extends StatelessWidget {
+  final PlayerSort selected;
+  final ValueChanged<PlayerSort> onSelected;
+
+  const _SortChips({required this.selected, required this.onSelected});
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 46,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.fromLTRB(20, 0, 20, 10),
+        children: [
+          for (final sort in PlayerSort.values) ...[
+            _SortChip(
+              label: sort.label,
+              active: sort == selected,
+              onTap: () => onSelected(sort),
+            ),
+            const SizedBox(width: 8),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _SortChip extends StatelessWidget {
+  final String label;
+  final bool active;
+  final VoidCallback onTap;
+
+  const _SortChip({
+    required this.label,
+    required this.active,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: active ? AppColors.textPrimary : AppColors.surface,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: active ? AppColors.textPrimary : AppColors.border,
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w700,
+            color: active ? Colors.white : AppColors.textSecondary,
+          ),
+        ),
+      ),
     );
   }
 }

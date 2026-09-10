@@ -5,11 +5,12 @@ import '../../core/theme/app_colors.dart';
 import '../../data/models/player.dart';
 import '../../providers/onboarding_providers.dart';
 import '../../providers/repository_providers.dart';
+import '../explore/player_sort.dart';
 import 'login_screen.dart';
 
 /// 온보딩 - 팔로우할 선수 선택 화면.
 ///
-/// 가장 많이 팔로우된 선수가 상단에 노출되며, 이름으로 검색할 수 있다.
+/// 앞 단계에서 고른 팀의 선수가 가나다순으로 먼저 나오고, 이름으로 검색할 수 있다.
 class PlayerFollowScreen extends ConsumerWidget {
   const PlayerFollowScreen({super.key});
 
@@ -37,7 +38,7 @@ class PlayerFollowScreen extends ConsumerWidget {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    '많이 팔로우된 순서로 보여드려요.',
+                    _listHint(ref),
                     style: Theme.of(context).textTheme.bodyMedium,
                   ),
                 ],
@@ -67,11 +68,18 @@ class PlayerFollowScreen extends ConsumerWidget {
                   child: CircularProgressIndicator(color: AppColors.primary),
                 ),
                 error: (err, _) => Center(child: Text('불러오지 못했어요: $err')),
-                data: (players) {
+                data: (allPlayers) {
                   final teamNameOf = <String, String>{
                     for (final t in teamsAsync.valueOrNull ?? [])
                       t.id: '${t.city} ${t.name}',
                   };
+                  // 바로 앞 단계에서 팀을 골랐으므로, 그 팀 선수를 먼저
+                  // 가나다순으로 보여주는 편이 찾기 쉽다.
+                  final players = sortPlayers(
+                    allPlayers,
+                    sort: PlayerSort.myTeams,
+                    followedTeamIds: ref.watch(followedTeamIdsProvider),
+                  );
                   final filtered = query.trim().isEmpty
                       ? players
                       : players
@@ -95,7 +103,7 @@ class PlayerFollowScreen extends ConsumerWidget {
                       final player = filtered[index];
                       final selected = followedIds.contains(player.id);
                       return _PlayerRow(
-                        rank: index + 1,
+                        rank: player.backNumber,
                         player: player,
                         teamLabel: teamNameOf[player.teamId] ?? '',
                         selected: selected,
@@ -137,6 +145,7 @@ class PlayerFollowScreen extends ConsumerWidget {
 }
 
 class _PlayerRow extends StatelessWidget {
+  /// 왼쪽에 흐리게 두는 등번호.
   final int rank;
   final Player player;
   final String teamLabel;
@@ -235,4 +244,11 @@ class _FollowButton extends StatelessWidget {
       ),
     );
   }
+}
+
+/// 목록이 어떤 순서인지 알려주는 안내 문구.
+String _listHint(WidgetRef ref) {
+  final followedTeams = ref.watch(followedTeamIdsProvider);
+  if (followedTeams.isEmpty) return '이름 가나다순으로 보여드려요.';
+  return '팔로우한 팀의 선수를 가나다순으로 먼저 보여드려요.';
 }

@@ -2,7 +2,9 @@ import 'package:basket_it/core/theme/app_theme.dart';
 import 'package:basket_it/data/models/news_article.dart';
 import 'package:basket_it/data/repositories/news_repository.dart';
 import 'package:basket_it/features/home/home_tab.dart';
+import 'package:basket_it/data/mock/mock_kbl_data.dart';
 import 'package:basket_it/providers/news_providers.dart';
+import 'package:basket_it/providers/onboarding_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -52,11 +54,13 @@ Future<void> pumpHome(
   WidgetTester tester,
   NewsRepository repository, {
   List<NewsArticle>? opened,
+  Set<String> followedTeamIds = const {},
 }) async {
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
         newsRepositoryProvider.overrideWithValue(repository),
+        followedTeamIdsProvider.overrideWith((ref) => followedTeamIds),
         if (opened != null)
           articleOpenerProvider.overrideWithValue((context, article) async {
             opened.add(article);
@@ -162,5 +166,48 @@ void main() {
         reason: '$fake 같은 지어낸 내용이 화면에 나오면 안 된다',
       );
     }
+  });
+
+  testWidgets('팔로우한 팀은 필터 칩으로 함께 나온다', (tester) async {
+    await pumpHome(
+      tester,
+      _FakeNewsRepository(feed),
+      followedTeamIds: {'sk', 'lg'},
+    );
+
+    // 팔로우한 팀이 칩으로 덧붙는다. 칩 라벨은 shortName이라
+    // 기사 배지에 쓰이는 팀 표기('서울 SK')와 겹치지 않는다.
+    for (final id in ['sk', 'lg']) {
+      final team = kMockTeams.firstWhere((t) => t.id == id);
+      expect(
+        find.text(team.shortName),
+        findsOneWidget,
+        reason: '${team.shortName} 칩이 보여야 한다',
+      );
+    }
+
+    // 팔로우하지 않은 팀은 칩으로 나오지 않는다.
+    final notFollowed = kMockTeams.where((t) => !['sk', 'lg'].contains(t.id));
+    for (final team in notFollowed) {
+      expect(
+        find.text(team.shortName),
+        findsNothing,
+        reason: '팔로우하지 않은 ${team.shortName} 칩이 보이면 안 된다',
+      );
+    }
+  });
+
+  testWidgets('팔로우가 없으면 분류 칩만 나온다', (tester) async {
+    await pumpHome(tester, _FakeNewsRepository(feed));
+
+    for (final team in kMockTeams) {
+      expect(
+        find.text(team.shortName),
+        findsNothing,
+        reason: '팔로우하지 않은 ${team.shortName} 칩이 보이면 안 된다',
+      );
+    }
+    // 분류 칩은 그대로 있다.
+    expect(find.text('전체'), findsOneWidget);
   });
 }
