@@ -25,6 +25,16 @@ class PlayerSeasonStats {
   final double pf;
   final double plusMinus;
 
+  /// 시즌 누적 더블더블·트리플더블 횟수와 정규시즌 한 경기 최다 득점.
+  /// 리그가 주지 않으면 null이고, 해당 순위 부문은 화면에서 숨는다.
+  final int? doubleDoubles;
+  final int? tripleDoubles;
+  final int? gameHigh;
+
+  /// [oreb]/[dreb]가 실제로 나뉜 값인지. 총합만 아는 선수는 [dreb]에 총합이
+  /// 들어 있어, 공격·수비 리바운드 순위에 넣으면 안 된다.
+  final bool hasReboundSplit;
+
   const PlayerSeasonStats({
     required this.playerId,
     required this.season,
@@ -46,6 +56,10 @@ class PlayerSeasonStats {
     required this.blk,
     required this.pf,
     required this.plusMinus,
+    this.doubleDoubles,
+    this.tripleDoubles,
+    this.gameHigh,
+    this.hasReboundSplit = true,
   });
 
   /// 한 시즌에 여러 팀에서 뛴 선수의 합계 줄을 나타내는 teamId.

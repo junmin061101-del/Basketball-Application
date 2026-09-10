@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart' show Color;
 import 'package:http/http.dart' as http;
 
+import '../models/award_race.dart';
 import '../models/game.dart';
 import '../models/player.dart';
 import '../models/player_game_stats.dart';
@@ -131,6 +132,9 @@ class NbaSource {
         // ESPN은 팔로워 수를 주지 않는다. 없는 값을 지어내지 않고 0으로 둔다.
         followerCount: 0,
         positionLabel: r['positionLabel'] as String?,
+        // 수집기가 name을 한국어로 바꾸고 원래 영문은 nameEn에 남긴다.
+        englishName: r['nameEn'] as String?,
+        photoUrl: r['headshot'] as String?,
       );
     }).toList();
   }
@@ -176,6 +180,9 @@ class NbaSource {
     double d(Map r, String k) => (r[k] as num?)?.toDouble() ?? 0;
     return rows.whereType<Map>().map((r) {
       final reb = d(r, 'reb');
+      // 공격/수비 리바운드는 수집기가 선수별로 따로 받아 온다. 아직 못 받은
+      // 선수는 총합만 있으므로 총합이 맞도록 수비 쪽에 담고 표시해 둔다.
+      final hasSplit = r['oreb'] is num && r['dreb'] is num;
       return PlayerSeasonStats(
         playerId: r['playerId'] as String? ?? '',
         season: season,
@@ -189,19 +196,25 @@ class NbaSource {
         tpa: d(r, 'tpa'),
         ftm: d(r, 'ftm'),
         fta: d(r, 'fta'),
-        // 이 목록은 리바운드 총합만 있다. 리더 순위는 총합(oreb+dreb)만 쓰므로
-        // 총합이 맞도록 수비 쪽에 담는다. 공격/수비 구분이 필요한 선수 상세는
-        // 선수별 스탯을 따로 불러 정확한 값을 쓴다.
-        oreb: 0,
-        dreb: reb,
+        oreb: hasSplit ? d(r, 'oreb') : 0,
+        dreb: hasSplit ? d(r, 'dreb') : reb,
+        hasReboundSplit: hasSplit,
         ast: d(r, 'ast'),
         tov: d(r, 'tov'),
         stl: d(r, 'stl'),
         blk: d(r, 'blk'),
         pf: d(r, 'pf'),
         plusMinus: 0,
+        doubleDoubles: (r['dd2'] as num?)?.toInt(),
+        tripleDoubles: (r['td3'] as num?)?.toInt(),
+        gameHigh: (r['gameHigh'] as num?)?.toInt(),
       );
     }).toList();
+  }
+
+  /// MVP·올해의 수비수·신인왕 레이스(NBA.com 사다리와 시즌 수상 결과).
+  Future<AwardRaces> awardRaces() async {
+    return AwardRaces.parse(await _loadDoc('ladders'));
   }
 
   /// 팀별 시즌 평균.
@@ -277,8 +290,9 @@ class NbaSource {
       name: row['name'] as String? ?? '',
       shortName: row['shortName'] as String? ?? '',
       primaryColor: Color(int.parse('FF$hex', radix: 16)),
-      // ESPN 로고는 원격 URL이라 asset이 아니다. 화면에서 별도로 그린다.
+      // ESPN 로고는 원격 URL이라 asset이 아니다.
       logoAsset: null,
+      logoUrl: row['logo'] as String?,
     );
   }
 }

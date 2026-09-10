@@ -18,6 +18,14 @@
 const fs = require('fs/promises');
 const path = require('path');
 
+const { fetchAwardRaces } = require('./nba-ladders');
+const {
+  fetchWikidataKoreanNames,
+  loadPlayerNames,
+  localizePlayer,
+  localizeTeam,
+} = require('./nba-ko');
+
 const SITE = 'https://site.api.espn.com/apis/site/v2/sports/basketball/nba';
 const CORE = 'https://site.api.espn.com/apis/v2/sports/basketball/nba';
 const WEB = 'https://site.web.api.espn.com/apis/common/v3/sports/basketball/nba';
@@ -316,13 +324,17 @@ async function fetchLeaders() {
       tpa: valueOf('offensive', 'avgThreePointFieldGoalsAttempted'),
       ftm: valueOf('offensive', 'avgFreeThrowsMade'),
       fta: valueOf('offensive', 'avgFreeThrowsAttempted'),
-      // 이 엔드포인트는 리바운드를 공격/수비로 나눠 주지 않는다. 총합만 담는다.
+      // 이 엔드포인트는 리바운드를 공격/수비로 나눠 주지 않는다. 총합만 담고,
+      // 나눈 값은 fetchPlayerSeasonDetails가 선수별로 채운다.
       reb: valueOf('general', 'avgRebounds'),
       ast: valueOf('offensive', 'avgAssists'),
       tov: valueOf('offensive', 'avgTurnovers'),
       stl: valueOf('defensive', 'avgSteals'),
       blk: valueOf('defensive', 'avgBlocks'),
       pf: valueOf('general', 'avgFouls'),
+      // 시즌 누적 횟수.
+      dd2: Math.round(valueOf('general', 'doubleDouble')),
+      td3: Math.round(valueOf('general', 'tripleDouble')),
     });
 
     athletes.push({
@@ -334,11 +346,102 @@ async function fetchLeaders() {
     });
   }
 
+  const seasonInfo = body.requestedSeason ?? body.currentSeason ?? {};
   return {
-    season: body.requestedSeason?.displayName ?? body.currentSeason?.displayName ?? '',
+    season: seasonInfo.displayName ?? '',
+    // ESPN이 시즌을 끝나는 해로 부른다(2025-26 → 2026). 경기 로그 요청에 쓴다.
+    seasonYear: seasonInfo.year ?? null,
     leaders,
     athletes,
   };
+}
+
+/**
+ * 선수 한 명의 시즌 평균에서 공격/수비 리바운드. [season]은 "2025-26".
+ * 시즌 중 트레이드된 선수는 팀별 줄과 합계 줄(teamId 없음)이 함께 와서 합계를 쓴다.
+ */
+function reboundSplit(body, season) {
+  const averages = (body?.categories ?? []).find((c) => c.name === 'averages');
+  if (!averages) return null;
+  const names = averages.names ?? [];
+  const rows = (averages.statistics ?? []).filter((s) => s.season?.displayName === season);
+  if (rows.length === 0) return null;
+  const row = rows.length > 1 ? rows.find((r) => r.teamId == null) ?? rows[0] : rows[0];
+  const at = (key) => {
+    const index = names.indexOf(key);
+    return index < 0 ? NaN : Number(row.stats?.[index]);
+  };
+  const oreb = at('avgOffensiveRebounds');
+  const dreb = at('avgDefensiveRebounds');
+  if (!Number.isFinite(oreb) || !Number.isFinite(dreb)) return null;
+  return { oreb, dreb };
+}
+
+/** 경기 로그에서 정규시즌 한 경기 최다 득점. 프리시즌·플레이인·플레이오프는 뺀다. */
+function seasonHigh(body) {
+  const index = (body?.names ?? []).indexOf('points');
+  if (index < 0) return null;
+  let high = null;
+  for (const type of body.seasonTypes ?? []) {
+    if (!/Regular Season/i.test(type.displayName ?? '')) continue;
+    for (const category of type.categories ?? []) {
+      for (const event of category.events ?? []) {
+        const points = Number(event.stats?.[index]);
+        if (Number.isFinite(points) && (high == null || points > high)) high = points;
+      }
+    }
+  }
+  return high;
+}
+
+/**
+ * 벌크 엔드포인트에 없는 기록(공격/수비 리바운드, 한 경기 최다 득점)을
+ * 선수별로 채운다. [leaders] 항목을 제자리에서 고친다.
+ *
+ * 선수마다 두 번씩 불러야 해서, 지난 실행 이후 경기 수가 그대로인 선수는
+ * 지난 값을 다시 쓴다. 시즌 중에도 하룻밤에 새로 부르는 건 그날 뛴 선수뿐이다.
+ */
+async function fetchPlayerSeasonDetails(leaders, season, seasonYear) {
+  const previous = await getPrevious('nba/leaders.json');
+  const before = new Map();
+  if (previous?.season === season) {
+    for (const row of previous.leaders ?? []) {
+      if ('gameHigh' in row) before.set(row.playerId, row);
+    }
+  }
+
+  const targets = [];
+  let reused = 0;
+  for (const row of leaders) {
+    if (row.gamesPlayed <= 0) continue;
+    const old = before.get(row.playerId);
+    if (old && old.gamesPlayed === row.gamesPlayed) {
+      if ('oreb' in old) Object.assign(row, { oreb: old.oreb, dreb: old.dreb });
+      row.gameHigh = old.gameHigh;
+      reused += 1;
+      continue;
+    }
+    targets.push(row);
+  }
+  console.log(`  재사용 ${reused}명, 새로 조회 ${targets.length}명`);
+
+  let failures = 0;
+  await mapLimit(targets, CONCURRENCY, async (row) => {
+    try {
+      const stats = await getJson(`${WEB}/athletes/${row.playerId}/stats`);
+      const log = await getJson(
+        `${WEB}/athletes/${row.playerId}/gamelog${seasonYear ? `?season=${seasonYear}` : ''}`,
+      );
+      const split = reboundSplit(stats, season);
+      if (split) Object.assign(row, split);
+      // 조회는 됐는데 기록이 없으면 null로 남겨 다음 실행에서 되풀이하지 않는다.
+      row.gameHigh = seasonHigh(log);
+    } catch (_) {
+      // 키를 두지 않아 다음 실행에서 다시 시도된다.
+      failures += 1;
+    }
+  });
+  if (failures > 0) console.warn(`  선수별 기록 실패 ${failures}명 (다음 실행에서 재시도)`);
 }
 
 /**
@@ -525,11 +628,16 @@ async function main() {
   console.log(`  ${players.length}명`);
 
   console.log('스탯 리더 수집...');
-  const { season, leaders, athletes } = await fetchLeaders().catch((e) => {
+  const { season, seasonYear, leaders, athletes } = await fetchLeaders().catch((e) => {
     console.warn(`  리더 실패: ${e.message}`);
-    return { season: '', leaders: [], athletes: [] };
+    return { season: '', seasonYear: null, leaders: [], athletes: [] };
   });
   console.log(`  ${leaders.length}명 (${season})`);
+
+  if (leaders.length > 0) {
+    console.log('공격/수비 리바운드·한 경기 최다 득점 수집...');
+    await fetchPlayerSeasonDetails(leaders, season, seasonYear);
+  }
 
   console.log('팀 시즌 평균 수집...');
   const teamStats = await fetchTeamStats(
@@ -577,10 +685,68 @@ async function main() {
     if (d) Object.assign(p, d);
   }
 
+  // 사다리 기사는 영문이라 한국어로 바꾸기 전에 선수를 맞춘다.
+  console.log('수상 레이스 수집...');
+  const previousLadders = await getPrevious('nba/ladders.json');
+  let awardRaces = previousLadders;
+  if (season) {
+    try {
+      awardRaces = await fetchAwardRaces({
+        teams,
+        players: allPlayers,
+        season,
+        previous: previousLadders,
+      });
+      console.log(
+        `  ${awardRaces.reused ? '지난 결과 재사용' : '새로 확인'} · ` +
+          awardRaces.awards
+            .map((a) => `${a.award} 사다리 ${a.ladder?.entries.length ?? 0}명, 결과 ${a.result ? '있음' : '없음'}`)
+            .join(' / '),
+      );
+    } catch (error) {
+      console.warn(`  수상 레이스 실패: ${error.message}`);
+    }
+  }
+
+  console.log('한국어 변환...');
+  const koreanNames = loadPlayerNames();
+  const notInDictionary = allPlayers.filter((p) => !koreanNames.has(p.id)).map((p) => p.id);
+  const wikidataNames = notInDictionary.length > 0
+    ? await fetchWikidataKoreanNames(notInDictionary)
+    : new Map();
+  const englishOnly = [];
+  for (const p of allPlayers) {
+    if (localizePlayer(p, koreanNames, wikidataNames) == null) englishOnly.push(`${p.id}=${p.nameEn}`);
+  }
+  console.log(
+    `  이름: 사전 ${allPlayers.length - notInDictionary.length}명, ` +
+      `Wikidata ${notInDictionary.length - englishOnly.length}명, 영문 유지 ${englishOnly.length}명`,
+  );
+  if (englishOnly.length > 0) {
+    console.log(`  tools/nba-player-names-ko.json에 추가할 선수: ${englishOnly.join(', ')}`);
+  }
+  const koreanTeams = teams.map(localizeTeam);
+
+  const koreanNameOf = new Map(allPlayers.map((p) => [p.id, p.name]));
+  const localizeCandidate = (c) => (c ? { ...c, name: koreanNameOf.get(c.playerId) ?? c.nameEn } : null);
+  const ladders = awardRaces && {
+    checkedAt: awardRaces.checkedAt,
+    currentSeason: awardRaces.currentSeason,
+    awards: awardRaces.awards.map((a) => ({
+      award: a.award,
+      ladder: a.ladder && { ...a.ladder, entries: a.ladder.entries.map(localizeCandidate) },
+      result: a.result && {
+        ...a.result,
+        winner: localizeCandidate(a.result.winner),
+        finalists: a.result.finalists.map(localizeCandidate),
+      },
+    })),
+  };
+
   await fs.mkdir(path.join(outDir, 'boxscores'), { recursive: true });
   const generatedAt = new Date().toISOString();
   const files = {
-    teams,
+    teams: koreanTeams,
     standings,
     games,
     players: allPlayers,
@@ -601,6 +767,11 @@ async function main() {
     );
   }
   console.log(`boxscores/: ${boxScores.length}경기`);
+  if (ladders) {
+    const file = path.join(outDir, 'ladders.json');
+    await fs.writeFile(file, JSON.stringify({ generated_at: generatedAt, ...ladders }));
+    console.log(`${file}: ${ladders.awards.length}개 상`);
+  }
 }
 
 // 직접 실행할 때만 수집한다. 테스트에서는 함수만 가져다 쓴다.
@@ -611,4 +782,11 @@ if (require.main === module) {
   });
 }
 
-module.exports = { fetchBoxScores, fetchLeaders, madeAttempted, mapLimit };
+module.exports = {
+  fetchBoxScores,
+  fetchLeaders,
+  madeAttempted,
+  mapLimit,
+  reboundSplit,
+  seasonHigh,
+};

@@ -7,6 +7,7 @@ import '../../../data/models/team.dart';
 import '../../../providers/follow_feed_providers.dart';
 import '../../../providers/onboarding_providers.dart';
 import '../../../providers/repository_providers.dart';
+import '../../follow/team_hub_screen.dart';
 import '../../games/game_detail_screen.dart';
 
 /// 홈 맨 위에 붙는 "내 팀 오늘 경기" 섹션.
@@ -275,12 +276,15 @@ class _TeamSide extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // NBA는 ESPN 로고를 쓰고, 로고가 없으면 팀 컬러 바탕에 이름 두 글자.
+    final crest =
+        team?.logoUrl != null ? TeamCrest(team: team!, size: 34) : null;
     return Column(
       crossAxisAlignment: alignEnd
           ? CrossAxisAlignment.end
           : CrossAxisAlignment.start,
       children: [
-        Container(
+        crest ?? Container(
           width: 34,
           height: 34,
           decoration: BoxDecoration(

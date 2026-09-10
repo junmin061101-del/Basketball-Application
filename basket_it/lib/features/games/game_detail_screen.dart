@@ -386,12 +386,12 @@ class _TopPerformerCard extends StatelessWidget {
                   const SizedBox(height: 10),
                   Row(
                     children: [
-                      _MiniStat(label: 'REB', value: '${stats.reb}'),
+                      _MiniStat(label: '리바운드', value: '${stats.reb}'),
                       const SizedBox(width: 14),
-                      _MiniStat(label: 'AST', value: '${stats.ast}'),
+                      _MiniStat(label: '어시스트', value: '${stats.ast}'),
                       const SizedBox(width: 14),
                       _MiniStat(
-                        label: 'FG',
+                        label: '야투',
                         value: '${stats.fgm}/${stats.fga}',
                       ),
                     ],
@@ -622,36 +622,38 @@ class _StatCol {
   const _StatCol(
     this.label,
     this.value, {
-    this.width = 46,
+    this.width = 56,
     this.emphasize = false,
   });
 }
 
 String _pct(double ratio) => (ratio * 100).toStringAsFixed(1);
 
+/// 머리글은 네이버 스포츠 박스스코어처럼 한국어로 적는다.
 final _boxScoreColumns = <_StatCol>[
-  _StatCol('MIN', (s) => '${s.minutes}'),
-  _StatCol('PTS', (s) => '${s.points}', emphasize: true),
-  _StatCol('REB', (s) => '${s.reb}'),
-  _StatCol('AST', (s) => '${s.ast}'),
-  _StatCol('STL', (s) => '${s.stl}'),
-  _StatCol('BLK', (s) => '${s.blk}'),
-  _StatCol('FGM', (s) => '${s.fgm}'),
-  _StatCol('FGA', (s) => '${s.fga}'),
-  _StatCol('FG%', (s) => _pct(s.fgPct), width: 52),
-  _StatCol('3PM', (s) => '${s.tpm}'),
-  _StatCol('3PA', (s) => '${s.tpa}'),
-  _StatCol('3P%', (s) => _pct(s.tpPct), width: 52),
-  _StatCol('FTM', (s) => '${s.ftm}'),
-  _StatCol('FTA', (s) => '${s.fta}'),
-  _StatCol('FT%', (s) => _pct(s.ftPct), width: 52),
-  _StatCol('OREB', (s) => '${s.oreb}', width: 52),
-  _StatCol('DREB', (s) => '${s.dreb}', width: 52),
-  _StatCol('TOV', (s) => '${s.tov}'),
-  _StatCol('PF', (s) => '${s.pf}'),
+  _StatCol('출전', (s) => '${s.minutes}'),
+  _StatCol('득점', (s) => '${s.points}', emphasize: true),
+  _StatCol('리바운드', (s) => '${s.reb}', width: 74),
+  _StatCol('어시스트', (s) => '${s.ast}', width: 74),
+  _StatCol('스틸', (s) => '${s.stl}'),
+  _StatCol('블록', (s) => '${s.blk}'),
+  _StatCol('야투 성공', (s) => '${s.fgm}', width: 80),
+  _StatCol('야투 시도', (s) => '${s.fga}', width: 80),
+  _StatCol('야투율', (s) => _pct(s.fgPct), width: 66),
+  _StatCol('3점 성공', (s) => '${s.tpm}', width: 76),
+  _StatCol('3점 시도', (s) => '${s.tpa}', width: 76),
+  _StatCol('3점슛률', (s) => _pct(s.tpPct), width: 72),
+  _StatCol('자유투 성공', (s) => '${s.ftm}', width: 90),
+  _StatCol('자유투 시도', (s) => '${s.fta}', width: 90),
+  _StatCol('자유투율', (s) => _pct(s.ftPct), width: 74),
+  _StatCol('공격 리바', (s) => '${s.oreb}', width: 80),
+  _StatCol('수비 리바', (s) => '${s.dreb}', width: 80),
+  _StatCol('턴오버', (s) => '${s.tov}', width: 66),
+  _StatCol('파울', (s) => '${s.pf}'),
   _StatCol(
-    '+/-',
+    '득실마진',
     (s) => s.plusMinus > 0 ? '+${s.plusMinus}' : '${s.plusMinus}',
+    width: 74,
   ),
 ];
 

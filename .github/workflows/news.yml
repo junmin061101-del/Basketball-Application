@@ -21,6 +21,8 @@ on:
     paths:
       - 'basket_it/tools/fetch-news.js'
       - 'basket_it/tools/fetch-nba.js'
+      - 'basket_it/tools/nba-*.js'
+      - 'basket_it/tools/nba-player-names-ko.json'
       - 'basket_it/functions/news-source.js'
       - '.github/workflows/news.yml'
 
@@ -81,6 +83,7 @@ jobs:
             <li><a href="nba/players.json">nba/players.json</a></li>
             <li><a href="nba/leaders.json">nba/leaders.json</a></li>
             <li><a href="nba/team_stats.json">nba/team_stats.json</a></li>
+            <li><a href="nba/ladders.json">nba/ladders.json</a></li>
           </ul>
           HTML
 

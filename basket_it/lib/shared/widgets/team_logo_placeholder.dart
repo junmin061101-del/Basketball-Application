@@ -22,6 +22,19 @@ class TeamLogoPlaceholder extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final logoAsset = team.logoAsset;
+    final logoUrl = team.logoUrl;
+    final label = Text(
+      team.shortName.length > 4
+          ? team.shortName.substring(0, 3)
+          : team.shortName,
+      textAlign: TextAlign.center,
+      style: TextStyle(
+        color: team.primaryColor,
+        fontWeight: FontWeight.w900,
+        fontSize: size * 0.24,
+        letterSpacing: -0.5,
+      ),
+    );
     return Stack(
       clipBehavior: Clip.none,
       children: [
@@ -37,20 +50,18 @@ class TeamLogoPlaceholder extends StatelessWidget {
             ),
           ),
           alignment: Alignment.center,
-          child: logoAsset == null
-              ? Text(
-                  team.shortName.length > 4
-                      ? team.shortName.substring(0, 3)
-                      : team.shortName,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: team.primaryColor,
-                    fontWeight: FontWeight.w900,
-                    fontSize: size * 0.24,
-                    letterSpacing: -0.5,
-                  ),
+          child: logoAsset != null
+              ? Image.asset(logoAsset, width: size * 0.65)
+              : logoUrl != null
+              ? Image.network(
+                  logoUrl,
+                  width: size * 0.65,
+                  height: size * 0.65,
+                  fit: BoxFit.contain,
+                  webHtmlElementStrategy: WebHtmlElementStrategy.fallback,
+                  errorBuilder: (context, error, stackTrace) => label,
                 )
-              : Image.asset(logoAsset, width: size * 0.65),
+              : label,
         ),
         if (selected)
           Positioned(

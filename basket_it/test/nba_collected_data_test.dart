@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:basket_it/data/models/award_race.dart';
 import 'package:basket_it/data/models/game.dart';
 import 'package:basket_it/data/models/player.dart';
 import 'package:basket_it/data/models/player_bio.dart';
@@ -17,8 +18,11 @@ final files = <String, Object>{
   'players': {
     'players': [
       {
-        'id': 'p1', 'name': 'LeBron James', 'teamId': '13', 'position': 'sf',
+        // 수집기가 이름을 한국어로 바꾸고 영문은 nameEn에 남긴다
+        'id': 'p1', 'name': '르브론 제임스', 'nameEn': 'LeBron James',
+        'teamId': '13', 'position': 'sf',
         'positionLabel': '포워드', 'backNumber': 23,
+        'headshot': 'https://a.espncdn.com/i/headshots/nba/players/full/1966.png',
         'height': "6' 9\"", 'weight': '250 lbs', 'college': null,
         'birthDate': '1984-12-30T08:00Z',
         'draftYear': 2003, 'draftRound': 1, 'draftPick': 1,
@@ -65,6 +69,12 @@ final files = <String, Object>{
         'ast': 8.0,
         'stl': 1.2,
         'blk': 0.6,
+        // 선수별로 따로 받아 온 값
+        'oreb': 1.1,
+        'dreb': 6.2,
+        'dd2': 30,
+        'td3': 8,
+        'gameHigh': 45,
       },
       {
         'playerId': 'p2',
@@ -80,6 +90,80 @@ final files = <String, Object>{
         'gamesPlayed': 2,
         'points': 40.0,
         'reb': 1.0,
+      },
+    ],
+  },
+  'teams': {
+    'teams': [
+      {
+        'id': '13', 'city': 'LA', 'name': '레이커스', 'shortName': 'LA 레이커스',
+        'abbreviation': 'LAL', 'color': '#552583',
+        'logo': 'https://a.espncdn.com/i/teamlogos/nba/500/lal.png',
+      },
+    ],
+  },
+  'ladders': {
+    'currentSeason': '2025-26',
+    'awards': [
+      {
+        'award': 'mvp',
+        'ladder': {
+          'title': 'Kia MVP Ladder: final pick',
+          'url': 'https://www.nba.com/news/kia-mvp-ladder-april-17-2026-edition',
+          'publishedAt': '2026-04-17T11:01:29Z',
+          'season': '2025-26',
+          'author': 'Shaun Powell',
+          'entries': [
+            {
+              'rank': 2, 'name': '니콜라 요키치', 'nameEn': 'Nikola Jokić',
+              'playerId': '3112335', 'teamId': '7',
+              'previousRank': 3, 'movement': 'up',
+            },
+            {
+              'rank': 1, 'name': '셰이 길저스-알렉산더',
+              'nameEn': 'Shai Gilgeous-Alexander', 'playerId': '4278073',
+              'teamId': '25', 'previousRank': 2, 'movement': 'up',
+            },
+            {
+              // 선수 목록에서 못 찾은 선수: 영문 이름 그대로, id 없음
+              'rank': 6, 'name': 'Someone Retired', 'nameEn': 'Someone Retired',
+              'playerId': null, 'teamId': '12', 'previousRank': null,
+              'movement': 'new',
+            },
+          ],
+        },
+        'result': {
+          'season': '2025-26',
+          'url': 'https://www.nba.com/news/2025-2026-regular-season-awards',
+          'winner': {
+            'name': '셰이 길저스-알렉산더', 'nameEn': 'Shai Gilgeous-Alexander',
+            'playerId': '4278073', 'teamId': '25',
+          },
+          'finalists': [
+            {
+              'name': '셰이 길저스-알렉산더', 'nameEn': 'Shai Gilgeous-Alexander',
+              'playerId': '4278073', 'teamId': '25', 'isWinner': true,
+            },
+            {
+              'name': '니콜라 요키치', 'nameEn': 'Nikola Jokić',
+              'playerId': '3112335', 'teamId': '7', 'isWinner': false,
+            },
+          ],
+        },
+      },
+      {
+        // NBA.com이 DPOY 사다리를 싣지 않는다 → 결과만
+        'award': 'dpoy',
+        'ladder': null,
+        'result': {
+          'season': '2025-26',
+          'url': 'https://www.nba.com/news/2025-2026-regular-season-awards',
+          'winner': {
+            'name': '빅터 웸반야마', 'nameEn': 'Victor Wembanyama',
+            'playerId': '5104157', 'teamId': '24',
+          },
+          'finalists': [],
+        },
       },
     ],
   },
@@ -157,11 +241,26 @@ const lebron = Player(
 
 void main() {
   group('스탯 리더', () {
-    test('가장 많이 뛴 선수의 70% 미만 출전자는 순위에서 뺀다', () async {
+    test('리더 목록은 출전 수로 거르지 않는다 (자격은 랭킹 부문마다 따진다)', () async {
+      // 70% 출전 기준은 경기당 기록에만 해당한다. 더블더블·최다 득점 같은
+      // 누적 기록은 적게 뛴 선수도 들어가야 해서 저장소에서는 거르지 않는다.
       final repo = NbaPlayerRepository(source());
       final stats = await repo.getCurrentSeasonStatsForAllPlayers();
-      // 80경기의 70% = 56경기. p1(80), p2(56)는 남고 p4(2경기 40점)는 빠진다.
-      expect(stats.map((s) => s.playerId), unorderedEquals(['p1', 'p2']));
+      expect(stats.map((s) => s.playerId), unorderedEquals(['p1', 'p2', 'p4']));
+    });
+
+    test('공격/수비 리바운드와 누적 기록을 읽는다', () async {
+      final stats = await source().leaders();
+      final p1 = stats.firstWhere((s) => s.playerId == 'p1');
+      expect(p1.hasReboundSplit, isTrue);
+      expect([p1.oreb, p1.dreb], [1.1, 6.2]);
+      expect([p1.doubleDoubles, p1.tripleDoubles, p1.gameHigh], [30, 8, 45]);
+
+      // 선수별 기록을 아직 못 받은 선수: 총합은 맞고, 나뉜 값은 없다고 표시
+      final p2 = stats.firstWhere((s) => s.playerId == 'p2');
+      expect(p2.hasReboundSplit, isFalse);
+      expect(p2.reb, 3.0);
+      expect(p2.doubleDoubles, isNull);
     });
 
     test('리바운드 총합이 그대로 유지된다', () async {
@@ -413,6 +512,61 @@ void main() {
       ]);
       expect(seasons.single.isTotals, isFalse);
       expect(seasons.single.teamId, lebron.teamId);
+    });
+  });
+
+  group('한국어 표기', () {
+    test('선수는 한국어 이름과 영문 이름·사진을 함께 갖는다', () async {
+      final p1 = (await source().players()).firstWhere((p) => p.id == 'p1');
+      expect(p1.name, '르브론 제임스');
+      expect(p1.englishName, 'LeBron James');
+      expect(p1.photoUrl, endsWith('1966.png'));
+    });
+
+    test('한글로도, 영문(대소문자 무관)으로도 검색된다', () async {
+      final repo = NbaPlayerRepository(source());
+      expect((await repo.searchPlayersByName('르브론')).map((p) => p.id), ['p1']);
+      expect((await repo.searchPlayersByName('lebron')).map((p) => p.id), ['p1']);
+      expect(await repo.searchPlayersByName('커리'), isEmpty);
+    });
+
+    test('팀은 한국어 이름과 ESPN 로고를 갖는다', () async {
+      final team = (await source().teams()).single;
+      expect(team.fullName, 'LA 레이커스');
+      expect(team.shortName, 'LA 레이커스');
+      expect(team.logoUrl, endsWith('lal.png'));
+    });
+  });
+
+  group('수상 레이스', () {
+    test('사다리는 순위순으로 정렬하고 변화·선수 id를 읽는다', () async {
+      final races = await source().awardRaces();
+      final ladder = races.raceOf(AwardType.mvp).ladder!;
+      expect(ladder.entries.map((e) => e.rank), [1, 2, 6]);
+      expect(ladder.entries.first.name, '셰이 길저스-알렉산더');
+      expect(ladder.entries.first.movement, RankMovement.up);
+      expect(ladder.entries.last.playerId, isNull);
+      expect(ladder.entries.last.movement, RankMovement.newEntry);
+      expect(ladder.author, 'Shaun Powell');
+      expect(ladder.season, '2025-26');
+    });
+
+    test('수상 결과: 수상자와 후보(수상자 표시 포함)', () async {
+      final result = (await source().awardRaces()).raceOf(AwardType.mvp).result!;
+      expect(result.winner!.playerId, '4278073');
+      expect(result.finalists.where((f) => f.isWinner).single.playerId, '4278073');
+    });
+
+    test('사다리가 없는 상도 수상 결과는 보여준다', () async {
+      final race = (await source().awardRaces()).raceOf(AwardType.dpoy);
+      expect(race.ladder, isNull);
+      expect(race.result!.winner!.name, '빅터 웸반야마');
+    });
+
+    test('수집 결과에 없는 상은 빈 레이스로 준다', () async {
+      final race = (await source().awardRaces()).raceOf(AwardType.roy);
+      expect(race.ladder, isNull);
+      expect(race.result, isNull);
     });
   });
 }

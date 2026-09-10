@@ -207,38 +207,74 @@ class _HeroHeader extends StatelessWidget {
                             height: 1.05,
                           ),
                         ),
+                        if (player.englishName != null &&
+                            player.englishName != player.name) ...[
+                          const SizedBox(height: 4),
+                          Text(
+                            player.englishName!,
+                            style: const TextStyle(
+                              color: Colors.white60,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ],
                       ],
                     ),
                   ),
-                  Container(
-                    width: 92,
-                    height: 108,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.14),
-                      borderRadius: const BorderRadius.only(
-                        topLeft: Radius.circular(16),
-                        topRight: Radius.circular(16),
-                      ),
-                      border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.25),
-                      ),
-                    ),
-                    alignment: Alignment.center,
-                    child: Text(
-                      playerInitial(player.name),
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 34,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                  ),
+                  _HeaderPhoto(player: player),
                 ],
               ),
             ),
           ),
         ],
       ),
+    );
+  }
+}
+
+/// 헤더 오른쪽 선수 사진. 사진이 없으면 이름 글자로 대신한다.
+class _HeaderPhoto extends StatelessWidget {
+  final Player player;
+
+  const _HeaderPhoto({required this.player});
+
+  @override
+  Widget build(BuildContext context) {
+    final initial = Center(
+      child: Text(
+        playerInitial(player.name),
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 34,
+          fontWeight: FontWeight.w900,
+        ),
+      ),
+    );
+    const radius = BorderRadius.only(
+      topLeft: Radius.circular(16),
+      topRight: Radius.circular(16),
+    );
+    final url = player.photoUrl;
+    return Container(
+      width: 92,
+      height: 108,
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.14),
+        borderRadius: radius,
+        border: Border.all(color: Colors.white.withValues(alpha: 0.25)),
+      ),
+      child: url == null
+          ? initial
+          : ClipRRect(
+              borderRadius: radius,
+              child: Image.network(
+                url,
+                fit: BoxFit.cover,
+                webHtmlElementStrategy: WebHtmlElementStrategy.fallback,
+                errorBuilder: (context, error, stackTrace) => initial,
+              ),
+            ),
     );
   }
 }
@@ -362,11 +398,11 @@ class _SeasonQuickCard extends StatelessWidget {
           const SizedBox(height: 10),
           Row(
             children: [
-              _Stat(label: 'PPG', value: latest.points.toStringAsFixed(1)),
-              _Stat(label: 'RPG', value: latest.reb.toStringAsFixed(1)),
-              _Stat(label: 'APG', value: latest.ast.toStringAsFixed(1)),
-              _Stat(label: 'SPG', value: latest.stl.toStringAsFixed(1)),
-              _Stat(label: 'BPG', value: latest.blk.toStringAsFixed(1)),
+              _Stat(label: '득점', value: latest.points.toStringAsFixed(1)),
+              _Stat(label: '리바운드', value: latest.reb.toStringAsFixed(1)),
+              _Stat(label: '어시스트', value: latest.ast.toStringAsFixed(1)),
+              _Stat(label: '스틸', value: latest.stl.toStringAsFixed(1)),
+              _Stat(label: '블록', value: latest.blk.toStringAsFixed(1)),
             ],
           ),
         ],
@@ -391,11 +427,11 @@ class _TodayStatsCard extends StatelessWidget {
       ),
       child: Row(
         children: [
-          _Stat(label: 'PTS', value: '${stats.points}'),
-          _Stat(label: 'REB', value: '${stats.reb}'),
-          _Stat(label: 'AST', value: '${stats.ast}'),
-          _Stat(label: 'STL', value: '${stats.stl}'),
-          _Stat(label: 'BLK', value: '${stats.blk}'),
+          _Stat(label: '득점', value: '${stats.points}'),
+          _Stat(label: '리바운드', value: '${stats.reb}'),
+          _Stat(label: '어시스트', value: '${stats.ast}'),
+          _Stat(label: '스틸', value: '${stats.stl}'),
+          _Stat(label: '블록', value: '${stats.blk}'),
         ],
       ),
     );
@@ -447,7 +483,7 @@ class _SeasonCol {
   const _SeasonCol(
     this.label,
     this.value, {
-    this.width = 52,
+    this.width = 62,
     this.emphasize = false,
   });
 }
@@ -455,32 +491,39 @@ class _SeasonCol {
 String _pct(double ratio) => (ratio * 100).toStringAsFixed(1);
 String _f1(double v) => v.toStringAsFixed(1);
 
+/// 머리글은 네이버 스포츠 선수 기록표처럼 한국어로 적는다.
 final _seasonColumns = <_SeasonCol>[
-  _SeasonCol('GP', (s, _) => '${s.gamesPlayed}'),
-  // 팀 표기는 표가 줄마다 계산해서 넘긴다(시즌별 소속팀, 합계 줄은 TOT).
-  _SeasonCol('팀', (_, teamLabel) => teamLabel, width: 56),
-  _SeasonCol('MIN', (s, _) => _f1(s.minutes)),
-  _SeasonCol('PTS', (s, _) => _f1(s.points), emphasize: true),
-  _SeasonCol('FGM', (s, _) => _f1(s.fgm)),
-  _SeasonCol('FGA', (s, _) => _f1(s.fga)),
-  _SeasonCol('FG%', (s, _) => _pct(s.fgPct), width: 56),
-  _SeasonCol('3PM', (s, _) => _f1(s.tpm)),
-  _SeasonCol('3PA', (s, _) => _f1(s.tpa)),
-  _SeasonCol('3P%', (s, _) => _pct(s.tpPct), width: 56),
-  _SeasonCol('FTM', (s, _) => _f1(s.ftm)),
-  _SeasonCol('FTA', (s, _) => _f1(s.fta)),
-  _SeasonCol('FT%', (s, _) => _pct(s.ftPct), width: 56),
-  _SeasonCol('OREB', (s, _) => _f1(s.oreb), width: 56),
-  _SeasonCol('DREB', (s, _) => _f1(s.dreb), width: 56),
-  _SeasonCol('REB', (s, _) => _f1(s.reb)),
-  _SeasonCol('AST', (s, _) => _f1(s.ast)),
-  _SeasonCol('TOV', (s, _) => _f1(s.tov)),
-  _SeasonCol('STL', (s, _) => _f1(s.stl)),
-  _SeasonCol('BLK', (s, _) => _f1(s.blk)),
-  _SeasonCol('PF', (s, _) => _f1(s.pf)),
+  _SeasonCol('경기', (s, _) => '${s.gamesPlayed}', width: 52),
+  // 팀 표기는 표가 줄마다 계산해서 넘긴다(시즌별 소속팀, 여러 팀 합계 줄은 합계).
+  _SeasonCol('팀', (_, teamLabel) => teamLabel, width: 108),
+  _SeasonCol('출전시간', (s, _) => _f1(s.minutes), width: 74),
+  _SeasonCol('득점', (s, _) => _f1(s.points), emphasize: true),
+  _SeasonCol('야투 성공', (s, _) => _f1(s.fgm), width: 80),
+  _SeasonCol('야투 시도', (s, _) => _f1(s.fga), width: 80),
+  _SeasonCol('야투율', (s, _) => _pct(s.fgPct), width: 66),
+  _SeasonCol('3점 성공', (s, _) => _f1(s.tpm), width: 76),
+  _SeasonCol('3점 시도', (s, _) => _f1(s.tpa), width: 76),
+  _SeasonCol('3점슛률', (s, _) => _pct(s.tpPct), width: 72),
+  _SeasonCol('자유투 성공', (s, _) => _f1(s.ftm), width: 90),
+  _SeasonCol('자유투 시도', (s, _) => _f1(s.fta), width: 90),
+  _SeasonCol('자유투율', (s, _) => _pct(s.ftPct), width: 74),
+  _SeasonCol('공격 리바', (s, _) => _f1(s.oreb), width: 80),
+  _SeasonCol('수비 리바', (s, _) => _f1(s.dreb), width: 80),
+  _SeasonCol('리바운드', (s, _) => _f1(s.reb), width: 74),
+  _SeasonCol('어시스트', (s, _) => _f1(s.ast), width: 74),
+  _SeasonCol('턴오버', (s, _) => _f1(s.tov), width: 66),
+  _SeasonCol('스틸', (s, _) => _f1(s.stl)),
+  _SeasonCol('블록', (s, _) => _f1(s.blk)),
+  _SeasonCol('파울', (s, _) => _f1(s.pf)),
+  // ESPN 시즌 평균에는 득실마진이 없어 0으로 온다. 0.0으로 적으면 실제 기록처럼 보인다.
   _SeasonCol(
-    '+/-',
-    (s, _) => s.plusMinus > 0 ? '+${_f1(s.plusMinus)}' : _f1(s.plusMinus),
+    '득실마진',
+    (s, _) => s.plusMinus == 0
+        ? '-'
+        : s.plusMinus > 0
+        ? '+${_f1(s.plusMinus)}'
+        : _f1(s.plusMinus),
+    width: 74,
   ),
 ];
 
@@ -494,9 +537,9 @@ class _SeasonStatsTable extends StatelessWidget {
 
   const _SeasonStatsTable({required this.history, required this.teamById});
 
-  /// 한 줄의 팀 표기. 여러 팀 기록을 합친 줄은 TOT.
+  /// 한 줄의 팀 표기. 여러 팀 기록을 합친 줄은 합계.
   String _teamLabelOf(PlayerSeasonStats s) {
-    if (s.isTotals) return 'TOT';
+    if (s.isTotals) return '합계';
     return teamById[s.teamId]?.shortName ?? s.teamId.toUpperCase();
   }
 

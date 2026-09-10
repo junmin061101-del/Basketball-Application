@@ -169,7 +169,8 @@ class _TeamHeader extends ConsumerWidget {
   }
 }
 
-/// 팀 로고 자리. 실제 엠블럼 파일이 들어오면 [Team.logoAsset]을 그린다.
+/// 팀 로고. 엠블럼 파일([Team.logoAsset])이나 원격 로고([Team.logoUrl])가
+/// 있으면 그리고, 없으면 팀 컬러 바탕에 이름 두 글자를 쓴다.
 class TeamCrest extends StatelessWidget {
   final Team team;
   final double size;
@@ -182,6 +183,21 @@ class TeamCrest extends StatelessWidget {
     if (asset != null) {
       return Image.asset(asset, width: size, height: size, fit: BoxFit.contain);
     }
+    final url = team.logoUrl;
+    if (url != null) {
+      return Image.network(
+        url,
+        width: size,
+        height: size,
+        fit: BoxFit.contain,
+        webHtmlElementStrategy: WebHtmlElementStrategy.fallback,
+        errorBuilder: (context, error, stackTrace) => _fallback(),
+      );
+    }
+    return _fallback();
+  }
+
+  Widget _fallback() {
     return Container(
       width: size,
       height: size,

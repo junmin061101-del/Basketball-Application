@@ -59,7 +59,7 @@ class ExploreTab extends StatelessWidget {
                   ),
                   _MenuCard(
                     icon: Icons.emoji_events_rounded,
-                    title: '스탯 리더',
+                    title: '랭킹',
                     color: const Color(0xFFC8102E),
                     onTap: () => Navigator.of(context).push(
                       MaterialPageRoute(

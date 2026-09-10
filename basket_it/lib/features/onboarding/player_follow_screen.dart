@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/theme/app_colors.dart';
-import '../../core/utils/player_display.dart';
 import '../../data/models/player.dart';
 import '../../providers/onboarding_providers.dart';
 import '../../providers/repository_providers.dart';
+import '../../shared/widgets/player_avatar.dart';
 import '../explore/player_sort.dart';
 import 'login_screen.dart';
 
@@ -84,7 +84,7 @@ class PlayerFollowScreen extends ConsumerWidget {
                   final filtered = query.trim().isEmpty
                       ? players
                       : players
-                            .where((p) => p.name.contains(query.trim()))
+                            .where((p) => p.matchesQuery(query))
                             .toList();
 
                   if (filtered.isEmpty) {
@@ -178,17 +178,7 @@ class _PlayerRow extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 8),
-            CircleAvatar(
-              radius: 20,
-              backgroundColor: AppColors.surfaceElevated,
-              child: Text(
-                playerInitial(player.name),
-                style: const TextStyle(
-                  color: AppColors.textPrimary,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ),
+            PlayerAvatar(player: player),
             const SizedBox(width: 12),
             Expanded(
               child: Column(

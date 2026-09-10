@@ -122,12 +122,10 @@ class NbaPlayerRepository implements PlayerRepository {
 
   @override
   Future<List<Player>> searchPlayersByName(String query) async {
-    final trimmed = query.trim().toLowerCase();
-    if (trimmed.isEmpty) return getPlayers();
+    if (query.trim().isEmpty) return getPlayers();
     final players = await _source.players();
-    return players
-        .where((p) => p.name.toLowerCase().contains(trimmed))
-        .toList();
+    // 한국어 이름("웸반야마")과 영문 이름("wemby")을 모두 받는다.
+    return players.where((p) => p.matchesQuery(query)).toList();
   }
 
   @override
@@ -271,25 +269,15 @@ class NbaPlayerRepository implements PlayerRepository {
     return result;
   }
 
-  /// 전 선수 이번 시즌 평균. 수집기가 한 번에 받아둔 것을 쓴다.
+  /// 전 선수 이번 시즌 기록. 수집기가 한 번에 받아둔 것을 쓴다.
   ///
-  /// 한두 경기만 뛴 선수가 평균 40점으로 1위에 오르지 않도록, 가장 많이 뛴
-  /// 선수의 70% 이상 출전한 선수만 남긴다. NBA 공식 기록 순위도 팀 경기의
-  /// 70%를 기준으로 한다. 고정 경기 수가 아니라 비율이라 시즌 초에도 목록이
-  /// 비지 않는다.
+  /// 출전 수로 거르지 않고 전원을 준다. 순위 자격은 부문마다 다르다
+  /// (경기당 기록은 출전 70%, 성공률은 누적 성공 개수, 더블더블은 제한 없음).
+  /// 그 판단은 랭킹 화면의 부문 정의(ranking_categories.dart)가 한다.
   @override
-  Future<List<PlayerSeasonStats>> getCurrentSeasonStatsForAllPlayers() async {
-    final all = await _source.leaders();
-    if (all.isEmpty) return all;
-    final maxGames = all
-        .map((s) => s.gamesPlayed)
-        .reduce((a, b) => a > b ? a : b);
-    final minimum = (maxGames * qualifyingRatio).ceil();
-    return all.where((s) => s.gamesPlayed >= minimum).toList();
+  Future<List<PlayerSeasonStats>> getCurrentSeasonStatsForAllPlayers() {
+    return _source.leaders();
   }
-
-  /// 기록 순위에 들어가기 위한 최소 출전 비율.
-  static const qualifyingRatio = 0.7;
 
   static double _statAt(List<String> names, List<String> stats, String key) {
     final index = names.indexOf(key);

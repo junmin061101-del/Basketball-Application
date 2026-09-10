@@ -13,6 +13,9 @@ class Team {
   final Color primaryColor;
   final String? logoAsset;
 
+  /// 원격 엠블럼 이미지. NBA는 ESPN이 주는 공식 로고, KBL은 아직 없다.
+  final String? logoUrl;
+
   const Team({
     required this.id,
     required this.city,
@@ -20,6 +23,7 @@ class Team {
     required this.shortName,
     required this.primaryColor,
     this.logoAsset,
+    this.logoUrl,
   });
 
   /// "서울 SK" 형태의 전체 명칭.

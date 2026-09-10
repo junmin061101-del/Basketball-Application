@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/theme/app_colors.dart';
-import '../../core/utils/player_display.dart';
 import '../../data/models/player.dart';
 import '../../providers/follow_actions.dart';
 import '../../providers/onboarding_providers.dart';
 import '../../providers/repository_providers.dart';
+import '../../shared/widgets/player_avatar.dart';
 import '../player/player_detail_screen.dart';
 import 'player_sort.dart';
 
@@ -43,7 +43,7 @@ class _PlayerSearchScreenState extends ConsumerState<PlayerSearchScreen> {
               onChanged: (value) => setState(() => _query = value),
               style: const TextStyle(color: AppColors.textPrimary),
               decoration: const InputDecoration(
-                hintText: '선수 이름으로 검색',
+                hintText: '선수 이름으로 검색 (한글·영문)',
                 prefixIcon: Icon(
                   Icons.search,
                   color: AppColors.textTertiary,
@@ -76,7 +76,7 @@ class _PlayerSearchScreenState extends ConsumerState<PlayerSearchScreen> {
                     final filtered = _query.trim().isEmpty
                         ? players
                         : players
-                              .where((p) => p.name.contains(_query.trim()))
+                              .where((p) => p.matchesQuery(_query))
                               .toList();
                     if (filtered.isEmpty) {
                       return Center(
@@ -167,19 +167,7 @@ class _FollowingStrip extends ConsumerWidget {
                           Stack(
                             clipBehavior: Clip.none,
                             children: [
-                              CircleAvatar(
-                                radius: 26,
-                                backgroundColor: AppColors.surfaceElevated,
-                                child: Text(
-                                  player.name.substring(
-                                    player.name.length - 1,
-                                  ),
-                                  style: const TextStyle(
-                                    color: AppColors.textPrimary,
-                                    fontWeight: FontWeight.w800,
-                                  ),
-                                ),
-                              ),
+                              PlayerAvatar(player: player, radius: 26),
                               Positioned(
                                 right: -2,
                                 bottom: -2,
@@ -250,17 +238,7 @@ class _PlayerRow extends ConsumerWidget {
         padding: const EdgeInsets.symmetric(vertical: 10),
         child: Row(
           children: [
-            CircleAvatar(
-              radius: 20,
-              backgroundColor: AppColors.surfaceElevated,
-              child: Text(
-                playerInitial(player.name),
-                style: const TextStyle(
-                  color: AppColors.textPrimary,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ),
+            PlayerAvatar(player: player),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
