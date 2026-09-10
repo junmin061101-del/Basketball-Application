@@ -1,0 +1,90 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 각 사용자는 자신의 팔로우(팀/선수) 문서만 읽고 쓸 수 있다.
+    match /users/{uid} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+    }
+
+    // 승부예측 투표: 로그인(게스트 포함)한 사용자는 모두 읽을 수 있고,
+    // 자기 uid로만 만들거나 바꿀 수 있다. 문서 id는 "{gameId}_{uid}".
+    match /predictionVotes/{voteId} {
+      allow read: if request.auth != null;
+      allow create, update: if request.auth != null
+        && request.resource.data.uid == request.auth.uid
+        && voteId == request.resource.data.gameId + '_' + request.auth.uid;
+      allow delete: if request.auth != null && resource.data.uid == request.auth.uid;
+    }
+
+    // 승부예측 토론 댓글: 로그인한 사용자는 읽기/작성, 본인 것만 삭제.
+    match /predictionComments/{commentId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.text is string
+        && request.resource.data.text.size() > 0
+        && request.resource.data.text.size() <= 300;
+      allow delete: if request.auth != null && resource.data.uid == request.auth.uid;
+    }
+
+    // 커뮤니티 게시글: 로그인한 사용자는 모두 읽고 쓸 수 있다.
+    // 글 수정/삭제는 작성자만. 다만 좋아요(likedBy)와 댓글 수(commentCount)는
+    // 다른 사람도 바꿀 수 있어야 하므로, 그 두 필드만 바뀌는 업데이트는 허용한다.
+    match /communityPosts/{postId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.title is string
+        && request.resource.data.title.size() > 0
+        && request.resource.data.title.size() <= 100
+        && request.resource.data.body is string
+        && request.resource.data.body.size() <= 2000;
+      allow update: if request.auth != null
+        && (
+          resource.data.uid == request.auth.uid
+          || request.resource.data.diff(resource.data).affectedKeys()
+               .hasOnly(['likedBy', 'commentCount'])
+        );
+      allow delete: if request.auth != null && resource.data.uid == request.auth.uid;
+    }
+
+    // 신고: 로그인한 사용자가 자기 이름으로 접수만 할 수 있다.
+    // 다른 사람 신고 내역을 볼 수 없도록 읽기는 막고(운영자는 콘솔에서 확인),
+    // 같은 대상을 여러 번 신고해도 문서 id가 같아 한 건으로만 남는다.
+    match /reports/{reportId} {
+      allow read: if false;
+      allow create, update: if request.auth != null
+        && request.resource.data.reporterUid == request.auth.uid
+        && reportId == request.resource.data.targetId + '_' + request.auth.uid
+        && request.resource.data.reason is string
+        && request.resource.data.detail is string
+        && request.resource.data.detail.size() <= 200;
+      allow delete: if false;
+    }
+
+    // 뉴스 캐시와 검색어 설정은 서버(Cloud Functions)만 쓰고 읽는다.
+    // 앱은 getBasketballNews 함수를 통해서만 뉴스를 받으므로 클라이언트
+    // 직접 접근은 막는다. (Admin SDK는 규칙을 우회한다)
+    match /newsCache/{docId} {
+      allow read, write: if false;
+    }
+    match /newsImageCache/{docId} {
+      allow read, write: if false;
+    }
+    match /config/{docId} {
+      allow read, write: if false;
+    }
+
+    // 커뮤니티 댓글: 로그인한 사용자는 읽기/작성, 본인 것만 삭제.
+    match /communityComments/{commentId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.text is string
+        && request.resource.data.text.size() > 0
+        && request.resource.data.text.size() <= 500;
+      allow delete: if request.auth != null && resource.data.uid == request.auth.uid;
+    }
+  }
+}

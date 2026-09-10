@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "85596612349",
+    "project_id": "basket-it-kbl",
+    "storage_bucket": "basket-it-kbl.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:85596612349:android:97c6b0f7d6e0bc69cc0094",
+        "android_client_info": {
+          "package_name": "com.basketit.basket_it"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAnSull6Zt3cIx0OMLUqx_XAMkXPxnrtpM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

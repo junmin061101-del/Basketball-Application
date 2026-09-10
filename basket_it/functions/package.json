@@ -1,0 +1,19 @@
+{
+  "name": "basket-it-functions",
+  "description": "Basket it 백엔드 함수 (농구 뉴스 수집)",
+  "main": "index.js",
+  "engines": {
+    "node": "20"
+  },
+  "scripts": {
+    "serve": "firebase emulators:start --only functions",
+    "deploy": "firebase deploy --only functions",
+    "test": "node --test test/*.test.js",
+    "test:pipeline": "firebase emulators:exec --only firestore --project demo-basket \"node test/pipeline.e2e.js\""
+  },
+  "dependencies": {
+    "firebase-admin": "^12.6.0",
+    "firebase-functions": "^6.1.0"
+  },
+  "private": true
+}

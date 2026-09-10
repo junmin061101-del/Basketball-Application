@@ -1,0 +1,77 @@
+# 네이버 뉴스를 주기적으로 모아 GitHub Pages에 정적 JSON으로 올린다.
+#
+# 앱은 이 JSON만 읽으므로 Client ID/Secret이 앱에 들어가지 않는다.
+# Cloud Functions(유료 Blaze 요금제)를 쓰지 않기 위한 구성이다.
+#
+# 사전 준비
+#   1. 저장소 Settings > Secrets and variables > Actions 에 다음을 등록
+#        NAVER_CLIENT_ID, NAVER_CLIENT_SECRET
+#      (ncloud.com 콘솔 > NAVER API HUB > 검색 API의 Application key.
+#       구 developers.naver.com 검색 API는 API HUB로 이관됐다)
+#   2. 저장소 Settings > Pages 에서 Source를 "GitHub Actions"로 변경
+name: 뉴스 수집
+
+on:
+  schedule:
+    # 20분마다. GitHub 부하에 따라 몇 분 늦게 도는 건 정상이다.
+    - cron: '*/20 * * * *'
+  workflow_dispatch: # 수동 실행
+  push:
+    branches: [main]
+    paths:
+      - 'basket_it/tools/fetch-news.js'
+      - 'basket_it/functions/news-source.js'
+      - '.github/workflows/news.yml'
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# 앞선 실행이 아직 돌고 있으면 기다린다. 취소하면 뉴스가 비는 순간이 생긴다.
+concurrency:
+  group: news-pages
+  cancel-in-progress: false
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: 뉴스 수집
+        working-directory: basket_it
+        env:
+          NAVER_CLIENT_ID: ${{ secrets.NAVER_CLIENT_ID }}
+          NAVER_CLIENT_SECRET: ${{ secrets.NAVER_CLIENT_SECRET }}
+          # 지난 결과의 썸네일을 재사용해 기사 페이지를 다시 긁지 않는다.
+          NEWS_PREVIOUS_BASE_URL: ${{ vars.NEWS_BASE_URL || format('https://{0}.github.io/{1}/news', github.repository_owner, github.event.repository.name) }}
+        run: node tools/fetch-news.js ../dist-news/news
+
+      - name: 안내 페이지 추가
+        run: |
+          cat > dist-news/index.html <<'HTML'
+          <!doctype html><meta charset="utf-8">
+          <title>Basket it 뉴스 데이터</title>
+          <h1>Basket it 뉴스 데이터</h1>
+          <p>앱이 읽는 정적 JSON입니다.</p>
+          <ul>
+            <li><a href="news/all.json">news/all.json</a></li>
+            <li><a href="news/kbl.json">news/kbl.json</a></li>
+            <li><a href="news/overseas.json">news/overseas.json</a></li>
+          </ul>
+          HTML
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist-news
+
+      - id: deploy
+        uses: actions/deploy-pages@v4
