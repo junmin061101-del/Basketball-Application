@@ -3,8 +3,10 @@ import 'dart:async';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../data/models/league.dart';
 import '../data/models/news_article.dart';
 import '../data/repositories/news_repository.dart';
+import 'repository_providers.dart';
 import '../features/home/article_view_screen.dart';
 
 /// 실제 뉴스 주입 지점.
@@ -31,7 +33,14 @@ final allNewsProvider = FutureProvider<List<NewsArticle>>((ref) {
 });
 
 /// 홈 탭에서 선택된 뉴스 분류. null이면 전체.
-final newsCategoryFilterProvider = StateProvider<NewsCategory?>((ref) => null);
+///
+/// 리그를 바꾸면 그 리그 기사로 자동으로 옮겨간다. NBA를 보러 갔는데
+/// KBL 기사가 남아 있으면 안 된다.
+final newsCategoryFilterProvider = StateProvider<NewsCategory?>((ref) {
+  return ref.watch(selectedLeagueProvider) == League.nba
+      ? NewsCategory.nba
+      : null;
+});
 
 /// 뉴스를 다시 확인하는 주기.
 ///

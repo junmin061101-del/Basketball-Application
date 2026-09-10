@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../common/league_switch.dart';
 
 import '../../core/theme/app_colors.dart';
 import '../../data/models/game.dart';
@@ -25,6 +26,8 @@ class GamesTab extends ConsumerWidget {
       appBar: AppBar(title: const Text('게임')),
       body: Column(
         children: [
+          const LeagueSwitch(),
+          const SizedBox(height: 4),
           const DateCalendarBar(),
           const SizedBox(height: 4),
           Expanded(

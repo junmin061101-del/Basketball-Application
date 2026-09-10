@@ -4,10 +4,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/app_colors.dart';
 import '../../data/models/news_article.dart';
 import '../../data/models/team.dart';
+import '../../data/models/league.dart';
 import '../../data/models/player.dart';
 import '../../providers/news_providers.dart';
 import '../../providers/onboarding_providers.dart';
 import '../../providers/repository_providers.dart';
+import '../common/league_switch.dart';
 import '../follow/player_hub_screen.dart';
 import '../follow/team_hub_screen.dart';
 import 'widgets/followed_game_section.dart';
@@ -31,6 +33,7 @@ class HomeTab extends ConsumerWidget {
       appBar: AppBar(title: const Text('홈')),
       body: Column(
         children: [
+          const LeagueSwitch(),
           _CategoryChips(
             selected: filter,
             onSelected: (c) =>
@@ -110,11 +113,15 @@ class _CategoryChips extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final categories = <(String, NewsCategory?)>[
-      ('전체', null),
-      ('KBL', NewsCategory.kbl),
-      ('해외파', NewsCategory.overseas),
-    ];
+    // 리그에 맞는 분류만 보여준다. KBL을 보는 사람에게 NBA 칩은 군더더기다.
+    final league = ref.watch(selectedLeagueProvider);
+    final categories = league == League.nba
+        ? const <(String, NewsCategory?)>[('NBA', NewsCategory.nba)]
+        : const <(String, NewsCategory?)>[
+            ('전체', null),
+            ('KBL', NewsCategory.kbl),
+            ('해외파', NewsCategory.overseas),
+          ];
 
     final followedTeamIds = ref.watch(followedTeamIdsProvider);
     final followedPlayerIds = ref.watch(followedPlayerIdsProvider);

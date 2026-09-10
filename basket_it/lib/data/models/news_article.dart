@@ -1,18 +1,20 @@
 import 'package:flutter/foundation.dart';
 
 /// 뉴스 분류: KBL 소식 / 해외파 한국 선수 소식.
-enum NewsCategory { kbl, overseas }
+enum NewsCategory { kbl, overseas, nba }
 
 extension NewsCategoryLabel on NewsCategory {
   String get label => switch (this) {
     NewsCategory.kbl => 'KBL',
     NewsCategory.overseas => '해외파',
+    NewsCategory.nba => 'NBA',
   };
 
   /// 서버(getBasketballNews)가 쓰는 문자열 값.
   String get wireName => switch (this) {
     NewsCategory.kbl => 'kbl',
     NewsCategory.overseas => 'overseas',
+    NewsCategory.nba => 'nba',
   };
 }
 
@@ -66,9 +68,11 @@ class NewsArticle {
     final publishedAt = DateTime.tryParse(pubDate);
     if (publishedAt == null) return null;
 
-    final category = json['category'] == 'overseas'
-        ? NewsCategory.overseas
-        : NewsCategory.kbl;
+    final category = switch (json['category']) {
+      'overseas' => NewsCategory.overseas,
+      'nba' => NewsCategory.nba,
+      _ => NewsCategory.kbl,
+    };
     final description = json['description'] as String?;
 
     return NewsArticle(
