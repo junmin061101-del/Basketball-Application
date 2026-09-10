@@ -161,6 +161,8 @@ class NbaSource {
           draftYear: (r['draftYear'] as num?)?.toInt(),
           draftRound: (r['draftRound'] as num?)?.toInt(),
           draftPick: (r['draftPick'] as num?)?.toInt(),
+          citizenship: r['citizenship'] as String?,
+          birthCountry: r['birthCountry'] as String?,
         ),
     };
   }
@@ -308,6 +310,12 @@ class NbaPlayerExtra {
   final int? draftRound;
   final int? draftPick;
 
+  /// ESPN이 알려준 국적. 비어 있는 선수가 많다.
+  final String? citizenship;
+
+  /// 출생 국가. 국적과 다를 수 있다(카이리 어빙은 호주 출생).
+  final String? birthCountry;
+
   const NbaPlayerExtra({
     this.headshot,
     this.height,
@@ -319,5 +327,7 @@ class NbaPlayerExtra {
     this.draftYear,
     this.draftRound,
     this.draftPick,
+    this.citizenship,
+    this.birthCountry,
   });
 }

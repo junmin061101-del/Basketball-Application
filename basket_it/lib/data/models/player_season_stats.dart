@@ -48,6 +48,12 @@ class PlayerSeasonStats {
     required this.plusMinus,
   });
 
+  /// 한 시즌에 여러 팀에서 뛴 선수의 합계 줄을 나타내는 teamId.
+  static const totalsTeamId = '';
+
+  /// 여러 팀 기록을 합친 줄인지.
+  bool get isTotals => teamId == totalsTeamId;
+
   double get reb => oreb + dreb;
   double get fgPct => fga == 0 ? 0 : fgm / fga;
   double get tpPct => tpa == 0 ? 0 : tpm / tpa;

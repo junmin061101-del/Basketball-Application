@@ -381,22 +381,33 @@ async function fetchTeamStats(teams, pointsAgainstByTeam) {
 }
 
 /**
- * 선수별 드래프트 정보. 벌크 엔드포인트에 없어 선수마다 부른다.
+ * 선수별 드래프트·국적 정보. 벌크 엔드포인트에 없어 선수마다 부른다.
  *
- * 드래프트는 한 번 정해지면 바뀌지 않으므로 지난 실행 결과를 먼저 쓰고,
- * 거기 없는 선수(새로 들어온 선수)만 새로 부른다.
+ * 둘 다 거의 바뀌지 않으므로 지난 실행 결과를 먼저 쓰고, 거기 없는
+ * 선수(새로 들어온 선수)만 새로 부른다. 같은 요청 한 번으로 둘 다 받는다.
+ *
+ * 국적은 citizenship과 출생 국가를 원본 그대로 따로 담는다. 해외에서
+ * 태어나 다른 나라 국적인 선수가 있어 어느 쪽을 보여줄지는 앱이 정한다.
  */
 async function fetchDrafts(playerIds) {
   const previous = await getPrevious('nba/players.json');
   const known = new Map();
   for (const p of previous?.players ?? []) {
-    if ('draftYear' in p) {
-      known.set(p.id, { draftYear: p.draftYear, draftRound: p.draftRound, draftPick: p.draftPick });
+    // 국적을 모으기 전 결과에는 birthCountry 키가 없다. 그런 선수는
+    // 재사용하지 않고 다시 불러 국적까지 채운다.
+    if ('draftYear' in p && 'birthCountry' in p) {
+      known.set(p.id, {
+        draftYear: p.draftYear,
+        draftRound: p.draftRound,
+        draftPick: p.draftPick,
+        birthCountry: p.birthCountry,
+        citizenship: p.citizenship ?? null,
+      });
     }
   }
 
   const missing = playerIds.filter((id) => !known.has(id));
-  console.log(`  드래프트: 재사용 ${playerIds.length - missing.length}명, 새로 조회 ${missing.length}명`);
+  console.log(`  드래프트·국적: 재사용 ${playerIds.length - missing.length}명, 새로 조회 ${missing.length}명`);
 
   let failures = 0;
   await mapLimit(missing, CONCURRENCY, async (id) => {
@@ -408,6 +419,8 @@ async function fetchDrafts(playerIds) {
         draftYear: d?.year ?? null,
         draftRound: d?.round ?? null,
         draftPick: d?.selection ?? null,
+        birthCountry: body.birthPlace?.country ?? null,
+        citizenship: body.citizenship ?? null,
       });
     } catch (error) {
       // 실패한 선수는 기록하지 않아 다음 실행에서 다시 시도된다.

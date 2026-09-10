@@ -98,8 +98,7 @@ class PlayerDetailScreen extends ConsumerWidget {
                 seasonHistoryAsync.when(
                   loading: () => const _LoadingBlock(),
                   error: (err, _) => Text('불러오지 못했어요: $err'),
-                  data: (history) =>
-                      _SeasonQuickCard(latest: history.first),
+                  data: (history) => _SeasonQuickCard(latest: history.first),
                 ),
                 const SizedBox(height: 28),
                 Text('시즌별 기록', style: Theme.of(context).textTheme.titleLarge),
@@ -114,7 +113,15 @@ class PlayerDetailScreen extends ConsumerWidget {
                   error: (err, _) => Text('불러오지 못했어요: $err'),
                   data: (history) => _SeasonStatsTable(
                     history: history,
-                    teamLabel: team?.shortName ?? player.teamId.toUpperCase(),
+                    // 시즌마다 그때 뛴 팀을 찾아 적는다. 현재 팀 하나를 모든
+                    // 줄에 찍으면 르브론의 클리블랜드·마이애미 시절이 전부
+                    // 지금 팀으로 나온다.
+                    teamById: {
+                      for (final t
+                          in ref.watch(teamsProvider).valueOrNull ??
+                              const <Team>[])
+                        t.id: t,
+                    },
                   ),
                 ),
               ],
@@ -124,7 +131,6 @@ class PlayerDetailScreen extends ConsumerWidget {
       ),
     );
   }
-
 }
 
 class _HeroHeader extends StatelessWidget {
@@ -246,12 +252,12 @@ class _BioGrid extends StatelessWidget {
   Widget build(BuildContext context) {
     final now = DateTime.now();
     final rows = [
-      (('키', bio.heightLabel), ('국적', bio.country)),
+      (('키', bio.heightLabel), (bio.countryTitle, bio.countryLabel)),
       (
         ('생년월일', '${bio.birthLabel} (${bio.ageAt(now)}세)'),
         ('드래프트', bio.draftLabel),
       ),
-      (('몸무게', '${bio.weightKg}kg'), ('출신 대학', bio.college)),
+      (('몸무게', '${bio.weightKg}kg'), ('출신 대학', bio.collegeLabel)),
     ];
 
     return Container(
@@ -326,9 +332,7 @@ class _LoadingBlock extends StatelessWidget {
   Widget build(BuildContext context) {
     return const Padding(
       padding: EdgeInsets.symmetric(vertical: 24),
-      child: Center(
-        child: CircularProgressIndicator(color: AppColors.primary),
-      ),
+      child: Center(child: CircularProgressIndicator(color: AppColors.primary)),
     );
   }
 }
@@ -352,9 +356,8 @@ class _SeasonQuickCard extends StatelessWidget {
         children: [
           Text(
             '${latest.season} · ${latest.gamesPlayed}경기 출전',
-            style: Theme.of(
-              context,
-            ).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
+            style: Theme.of(context).textTheme.bodySmall
+                ?.copyWith(color: AppColors.textSecondary),
           ),
           const SizedBox(height: 10),
           Row(
@@ -454,6 +457,7 @@ String _f1(double v) => v.toStringAsFixed(1);
 
 final _seasonColumns = <_SeasonCol>[
   _SeasonCol('GP', (s, _) => '${s.gamesPlayed}'),
+  // 팀 표기는 표가 줄마다 계산해서 넘긴다(시즌별 소속팀, 합계 줄은 TOT).
   _SeasonCol('팀', (_, teamLabel) => teamLabel, width: 56),
   _SeasonCol('MIN', (s, _) => _f1(s.minutes)),
   _SeasonCol('PTS', (s, _) => _f1(s.points), emphasize: true),
@@ -476,9 +480,7 @@ final _seasonColumns = <_SeasonCol>[
   _SeasonCol('PF', (s, _) => _f1(s.pf)),
   _SeasonCol(
     '+/-',
-    (s, _) => s.plusMinus > 0
-        ? '+${_f1(s.plusMinus)}'
-        : _f1(s.plusMinus),
+    (s, _) => s.plusMinus > 0 ? '+${_f1(s.plusMinus)}' : _f1(s.plusMinus),
   ),
 ];
 
@@ -488,9 +490,15 @@ const _seasonHeaderHeight = 34.0;
 
 class _SeasonStatsTable extends StatelessWidget {
   final List<PlayerSeasonStats> history;
-  final String teamLabel;
+  final Map<String, Team> teamById;
 
-  const _SeasonStatsTable({required this.history, required this.teamLabel});
+  const _SeasonStatsTable({required this.history, required this.teamById});
+
+  /// 한 줄의 팀 표기. 여러 팀 기록을 합친 줄은 TOT.
+  String _teamLabelOf(PlayerSeasonStats s) {
+    if (s.isTotals) return 'TOT';
+    return teamById[s.teamId]?.shortName ?? s.teamId.toUpperCase();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -518,9 +526,8 @@ class _SeasonStatsTable extends StatelessWidget {
                     padding: const EdgeInsets.only(left: 12),
                     child: Text(
                       '시즌',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
+                      style: Theme.of(context).textTheme.bodySmall
+                          ?.copyWith(fontWeight: FontWeight.w700),
                     ),
                   ),
                   for (final s in history)
@@ -581,7 +588,7 @@ class _SeasonStatsTable extends StatelessWidget {
                                   ),
                                 ),
                                 child: Text(
-                                  col.value(s, teamLabel),
+                                  col.value(s, _teamLabelOf(s)),
                                   style: col.emphasize
                                       ? const TextStyle(
                                           fontWeight: FontWeight.w800,

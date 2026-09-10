@@ -140,7 +140,12 @@ class NbaPlayerRepository implements PlayerRepository {
       birthDate:
           DateTime.tryParse(extra?.birthDate ?? '')?.toLocal() ??
           DateTime(1970),
-      country: 'USA',
+      // 국적이 있으면 국적을, 없으면 출생 국가를 쓰고 그 사실을 표시한다.
+      // 둘 다 없으면 비워 '-'로 보인다. 'USA'로 채우면 요키치·돈치치까지
+      // 미국으로 나온다.
+      country: extra?.citizenship ?? extra?.birthCountry ?? '',
+      countryIsBirthplace:
+          extra?.citizenship == null && extra?.birthCountry != null,
       college: extra?.college ?? '',
       // 조회 전이면 -1(화면에 '-'), 조회했는데 기록이 없으면 0(미지명).
       draftYear: extra == null || !extra.draftKnown
@@ -184,8 +189,22 @@ class NbaPlayerRepository implements PlayerRepository {
     final names = (category['names'] as List?)?.cast<String>() ?? const [];
     final seasons = (category['statistics'] as List?) ?? const [];
 
+    // 시즌 중 트레이드된 선수는 한 시즌이 팀별 줄 + 합계 줄로 나뉘어 온다
+    // (돈치치 2024-25: DAL 22경기 / LAL 28경기 / Totals 50경기). 합계 줄에는
+    // teamId가 없다. 줄이 하나뿐인 시즌에서 teamId가 빠진 건 합계가 아니라
+    // 그냥 누락이라 보고 현재 팀으로 채운다.
+    final rowsPerSeason = <String, int>{};
+    for (final season in seasons.whereType<Map>()) {
+      final name = season['season']?['displayName'] as String? ?? '';
+      rowsPerSeason[name] = (rowsPerSeason[name] ?? 0) + 1;
+    }
+
     final result = <PlayerSeasonStats>[];
     for (final season in seasons.whereType<Map>()) {
+      final seasonName = season['season']?['displayName'] as String? ?? '';
+      final rawTeamId = season['teamId'];
+      final isTotals =
+          rawTeamId == null && (rowsPerSeason[seasonName] ?? 0) > 1;
       final stats = (season['stats'] as List?)?.cast<String>() ?? const [];
       double at(String key) => _statAt(names, stats, key);
       // "7.9-18.9"처럼 성공-시도가 한 칸에 들어온다.
@@ -208,8 +227,13 @@ class NbaPlayerRepository implements PlayerRepository {
       result.add(
         PlayerSeasonStats(
           playerId: player.id,
-          season: season['season']?['displayName'] as String? ?? '',
-          teamId: player.teamId,
+          season: seasonName,
+          // 시즌마다 그때 뛴 팀이 따로 온다. 현재 소속팀을 모든 시즌에 찍으면
+          // 르브론의 클리블랜드·마이애미 시절이 전부 지금 팀으로 나온다.
+          // 합계 줄은 빈 문자열로 두고 화면에서 합계로 표시한다.
+          teamId: isTotals
+              ? PlayerSeasonStats.totalsTeamId
+              : '${rawTeamId ?? player.teamId}',
           gamesPlayed: at('gamesPlayed').round(),
           minutes: at('avgMinutes'),
           points: at('avgPoints'),
@@ -234,7 +258,16 @@ class NbaPlayerRepository implements PlayerRepository {
     // ESPN은 오래된 시즌부터 준다(르브론이면 2003-04가 맨 앞). 앱은 최근
     // 시즌이 0번이라고 가정하므로 뒤집는다. "2025-26"은 문자열 비교로도
     // 시간 순서와 같다.
-    result.sort((a, b) => b.season.compareTo(a.season));
+    //
+    // 같은 시즌 안에서는 합계 줄을 맨 앞에 둔다. "이 시즌 평균"이 맨 앞 줄을
+    // 쓰므로, 트레이드된 선수도 한 팀 부분 기록이 아니라 시즌 전체가 나온다.
+    // 나머지 팀별 줄은 많이 뛴 팀 먼저.
+    result.sort((a, b) {
+      final bySeason = b.season.compareTo(a.season);
+      if (bySeason != 0) return bySeason;
+      if (a.isTotals != b.isTotals) return a.isTotals ? -1 : 1;
+      return b.gamesPlayed.compareTo(a.gamesPlayed);
+    });
     return result;
   }
 
@@ -248,9 +281,9 @@ class NbaPlayerRepository implements PlayerRepository {
   Future<List<PlayerSeasonStats>> getCurrentSeasonStatsForAllPlayers() async {
     final all = await _source.leaders();
     if (all.isEmpty) return all;
-    final maxGames = all.map((s) => s.gamesPlayed).reduce(
-      (a, b) => a > b ? a : b,
-    );
+    final maxGames = all
+        .map((s) => s.gamesPlayed)
+        .reduce((a, b) => a > b ? a : b);
     final minimum = (maxGames * qualifyingRatio).ceil();
     return all.where((s) => s.gamesPlayed >= minimum).toList();
   }
