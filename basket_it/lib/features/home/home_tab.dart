@@ -42,7 +42,8 @@ class HomeTab extends ConsumerWidget {
               data: (feed) {
                 if (feed.articles.isEmpty) {
                   return _EmptyNews(
-                    onRetry: () => ref.read(newsFeedProvider.notifier).refresh(),
+                    onRetry: () =>
+                        ref.read(newsFeedProvider.notifier).refresh(),
                   );
                 }
                 final teamById = {
@@ -53,14 +54,11 @@ class HomeTab extends ConsumerWidget {
 
                 return RefreshIndicator(
                   color: AppColors.primary,
-                  onRefresh: () => ref.read(newsFeedProvider.notifier).refresh(),
+                  onRefresh: () =>
+                      ref.read(newsFeedProvider.notifier).refresh(),
                   child: ListView(
                     padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
                     children: [
-                      if (feed.isSample) ...[
-                        const _SampleNotice(),
-                        const SizedBox(height: 14),
-                      ],
                       _HeadlineCard(
                         article: headline,
                         team: teamById[headline.relatedTeamId],
@@ -76,9 +74,7 @@ class HomeTab extends ConsumerWidget {
                       const SizedBox(height: 20),
                       Center(
                         child: Text(
-                          feed.isSample
-                              ? '샘플 뉴스 · 뉴스 서버 연결 후 실제 기사로 바뀌어요'
-                              : '${_relativeTime(feed.updatedAt)} 업데이트 · 네이버 뉴스 검색',
+                          '${_relativeTime(feed.updatedAt)} 업데이트 · 네이버 뉴스 검색',
                           style: Theme.of(context).textTheme.bodySmall,
                         ),
                       ),
@@ -202,10 +198,8 @@ class _HeadlineCard extends ConsumerWidget {
                     article.title,
                     maxLines: 3,
                     overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                      fontSize: 20,
-                      height: 1.25,
-                    ),
+                    style: Theme.of(context).textTheme.headlineMedium
+                        ?.copyWith(fontSize: 20, height: 1.25),
                   ),
                   if (article.summary != null) ...[
                     const SizedBox(height: 8),
@@ -262,9 +256,8 @@ class _NewsRow extends ConsumerWidget {
                     article.title,
                     maxLines: 3,
                     overflow: TextOverflow.ellipsis,
-                    style: Theme.of(
-                      context,
-                    ).textTheme.titleMedium?.copyWith(height: 1.3),
+                    style: Theme.of(context).textTheme.titleMedium
+                        ?.copyWith(height: 1.3),
                   ),
                 ],
               ),
@@ -420,40 +413,6 @@ class _MetaLine extends StatelessWidget {
           ),
         ),
       ],
-    );
-  }
-}
-
-/// 실제 뉴스를 못 가져와 샘플을 보여주는 중임을 분명히 알린다.
-/// 공개 서비스에서 가짜 기사가 진짜처럼 보이면 안 된다.
-class _SampleNotice extends StatelessWidget {
-  const _SampleNotice();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-      decoration: BoxDecoration(
-        color: AppColors.surfaceElevated,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Row(
-        children: [
-          const Icon(
-            Icons.info_outline,
-            size: 18,
-            color: AppColors.textSecondary,
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              '뉴스 서버에 아직 연결되지 않아 샘플 기사를 보여주고 있어요. 실제 기사가 아니에요.',
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
-          ),
-        ],
-      ),
     );
   }
 }

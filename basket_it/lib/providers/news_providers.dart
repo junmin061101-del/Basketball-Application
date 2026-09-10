@@ -16,12 +16,6 @@ final newsRepositoryProvider = Provider<NewsRepository>((ref) {
   return StaticJsonNewsRepository();
 });
 
-/// 뉴스 서버가 아직 준비되지 않았을 때 보여줄 샘플. 실제 기사인 척하지 않도록
-/// 화면 위에 "샘플 뉴스" 안내를 함께 띄운다([NewsFeed.isSample]).
-final sampleNewsRepositoryProvider = Provider<NewsRepository>((ref) {
-  return MockNewsRepository();
-});
-
 /// 기사를 여는 방법. 기본은 앱 안 웹뷰(웹 빌드는 새 탭)이며,
 /// 테스트에서는 이 provider를 덮어써 실제로 어떤 기사가 열렸는지 확인한다.
 typedef ArticleOpener = Future<void> Function(BuildContext, NewsArticle);
@@ -50,14 +44,10 @@ class NewsFeed {
   /// 이번 폴링에서 새로 들어온 기사 수(0이면 변화 없음).
   final int newCount;
 
-  /// 뉴스 서버를 못 불러 샘플 기사를 대신 보여주는 중인지.
-  final bool isSample;
-
   const NewsFeed({
     required this.articles,
     required this.updatedAt,
     this.newCount = 0,
-    this.isSample = false,
   });
 }
 
@@ -84,20 +74,9 @@ class NewsFeedNotifier extends AutoDisposeAsyncNotifier<NewsFeed> {
     _timer = Timer.periodic(newsPollInterval, (_) => _poll());
     ref.onDispose(() => _timer?.cancel());
 
-    try {
-      final articles = await repository.getNews(category: category);
-      return NewsFeed(articles: articles, updatedAt: DateTime.now());
-    } on NewsUnavailableException {
-      // 뉴스 서버를 아직 못 붙였어도 앱이 빈 화면이 되지 않도록 샘플로 대신한다.
-      final articles = await ref
-          .read(sampleNewsRepositoryProvider)
-          .getNews(category: category);
-      return NewsFeed(
-        articles: articles,
-        updatedAt: DateTime.now(),
-        isSample: true,
-      );
-    }
+    // 실패하면 그대로 예외를 올린다. 가짜 기사로 대신 채우지 않는다.
+    final articles = await repository.getNews(category: category);
+    return NewsFeed(articles: articles, updatedAt: DateTime.now());
   }
 
   /// 사용자가 당겨서 새로고침했을 때. 로딩 스피너 없이 목록만 갱신한다.
@@ -119,8 +98,7 @@ class NewsFeedNotifier extends AutoDisposeAsyncNotifier<NewsFeed> {
           .getNews(category: category);
 
       final previous = state.valueOrNull;
-      // 샘플을 보여주던 중에 서버가 살아나면 진짜 기사로 통째로 갈아끼운다.
-      if (previous == null || previous.isSample) {
+      if (previous == null) {
         state = AsyncValue.data(
           NewsFeed(articles: fetched, updatedAt: DateTime.now()),
         );

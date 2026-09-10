@@ -14,7 +14,10 @@ import '../models/news_article.dart';
 ///   Client ID/Secret이 앱에 들어가지 않는다.
 /// - [FunctionsNewsRepository] — Firebase Blaze 요금제로 올라갈 경우.
 ///   호출할 때마다 실시간으로 네이버를 검색한다.
-/// - [MockNewsRepository] — 네트워크 없이 UI만 확인할 때.
+///
+/// 뉴스를 못 가져왔을 때 대신 보여줄 가짜 기사 같은 건 두지 않는다.
+/// 지어낸 선수와 지어낸 경기 결과가 진짜 기사처럼 보이기 때문이다.
+/// 실패하면 [NewsUnavailableException]을 던지고 화면은 오류 상태를 보여준다.
 abstract class NewsRepository {
   /// 최신순으로 정렬된 뉴스 목록. [category]가 null이면 KBL+해외파 전체.
   Future<List<NewsArticle>> getNews({NewsCategory? category});
@@ -154,128 +157,4 @@ class FunctionsNewsRepository implements NewsRepository {
     'unavailable' => '네트워크 연결을 확인해주세요.',
     _ => '뉴스를 불러오지 못했어요. 잠시 후 다시 시도해주세요.',
   };
-}
-
-/// 네트워크 없이 홈 탭 UI만 확인할 때 쓰는 목업. 실제 서비스에는 쓰지 않는다.
-class MockNewsRepository implements NewsRepository {
-  @override
-  Future<List<NewsArticle>> getNews({NewsCategory? category}) async {
-    await Future.delayed(const Duration(milliseconds: 450));
-    final now = DateTime.now();
-    final all = _articles(now)
-      ..sort((a, b) => b.publishedAt.compareTo(a.publishedAt));
-    if (category == null) return all;
-    return all.where((a) => a.category == category).toList();
-  }
-
-  List<NewsArticle> _articles(DateTime now) => [
-    NewsArticle(
-      id: 'n1',
-      title: '정승우, 시즌 3번째 트리플더블…KCC 연장 접전 끝 승리',
-      source: '점프볼',
-      publishedAt: now.subtract(const Duration(minutes: 35)),
-      category: NewsCategory.kbl,
-      relatedTeamId: 'kcc',
-      teamLabel: '부산 KCC',
-      summary: '4쿼터 막판 동점 3점슛에 이어 연장에서 결승 득점까지. 부산 KCC가 홈에서 원주 DB를 꺾었다.',
-    ),
-    NewsArticle(
-      id: 'n2',
-      title: '서준영 "우승 반지 끼고 싶다"…원주 DB 재계약 협상 급물살',
-      source: '바스켓코리아',
-      publishedAt: now.subtract(const Duration(hours: 2, minutes: 10)),
-      category: NewsCategory.kbl,
-      relatedTeamId: 'db',
-      teamLabel: '원주 DB',
-      summary: '리그 최다 팔로워 선수 서준영이 잔류 의사를 밝혔다. 구단은 다년 계약을 제안한 것으로 알려졌다.',
-    ),
-    NewsArticle(
-      id: 'n3',
-      title: '[해외파] 박준혁, G리그 데뷔전 18득점 7리바운드 "적응 끝났다"',
-      source: '루키',
-      publishedAt: now.subtract(const Duration(hours: 3)),
-      category: NewsCategory.overseas,
-      teamLabel: '해외파',
-      summary: '미국 진출 한국 선수 박준혁이 첫 경기부터 존재감을 보였다. 현지 언론도 "즉시 전력감"이라 평가.',
-    ),
-    NewsArticle(
-      id: 'n4',
-      title: '안양 정관장, 5연승으로 단독 선두…오지훈 리그 MVP 후보 급부상',
-      source: '스포츠조선',
-      publishedAt: now.subtract(const Duration(hours: 5)),
-      category: NewsCategory.kbl,
-      relatedTeamId: 'kgc',
-      teamLabel: '안양 정관장',
-    ),
-    NewsArticle(
-      id: 'n5',
-      title: '[해외파] 김도현, 스페인 ACB 리그 이적 확정…"유럽에서 증명하겠다"',
-      source: '점프볼',
-      publishedAt: now.subtract(const Duration(hours: 7, minutes: 20)),
-      category: NewsCategory.overseas,
-      teamLabel: '해외파',
-      summary: '국내 리그 출신 포워드 김도현이 스페인 1부 리그 구단과 2년 계약에 합의했다.',
-    ),
-    NewsArticle(
-      id: 'n6',
-      title: '서울 SK, 김선우 발목 부상으로 2주 결장…플레이오프 변수',
-      source: '바스켓코리아',
-      publishedAt: now.subtract(const Duration(hours: 11)),
-      category: NewsCategory.kbl,
-      relatedTeamId: 'sk',
-      teamLabel: '서울 SK',
-    ),
-    NewsArticle(
-      id: 'n7',
-      title: 'KBL 올스타전 팬 투표 개막…첫날 1위는 임도윤',
-      source: 'KBL',
-      publishedAt: now.subtract(const Duration(days: 1, hours: 1)),
-      category: NewsCategory.kbl,
-      relatedTeamId: 'mobis',
-      teamLabel: '울산 현대모비스',
-    ),
-    NewsArticle(
-      id: 'n8',
-      title: '[해외파] 이승현, NCAA 컨퍼런스 이주의 선수 선정',
-      source: '루키',
-      publishedAt: now.subtract(const Duration(days: 1, hours: 6)),
-      category: NewsCategory.overseas,
-      teamLabel: '해외파',
-    ),
-    NewsArticle(
-      id: 'n9',
-      title: '창원 LG 전현식, 블록 8개로 시즌 한 경기 최다 기록 경신',
-      source: '스포츠조선',
-      publishedAt: now.subtract(const Duration(days: 2)),
-      category: NewsCategory.kbl,
-      relatedTeamId: 'lg',
-      teamLabel: '창원 LG',
-    ),
-    NewsArticle(
-      id: 'n10',
-      title: '[해외파] 최민재, 일본 B리그 시즌 첫 더블더블…팀 3연승 견인',
-      source: '바스켓코리아',
-      publishedAt: now.subtract(const Duration(days: 2, hours: 9)),
-      category: NewsCategory.overseas,
-      teamLabel: '해외파',
-    ),
-    NewsArticle(
-      id: 'n11',
-      title: '고양 소노, 홈 10연패 끝…최준우 30득점 폭발',
-      source: '점프볼',
-      publishedAt: now.subtract(const Duration(days: 3)),
-      category: NewsCategory.kbl,
-      relatedTeamId: 'sono',
-      teamLabel: '고양 소노',
-    ),
-    NewsArticle(
-      id: 'n12',
-      title: '대구 한국가스공사, 송민석 중심 리바운드 1위…"골밑 지배력이 승리 비결"',
-      source: 'KBL',
-      publishedAt: now.subtract(const Duration(days: 4, hours: 2)),
-      category: NewsCategory.kbl,
-      relatedTeamId: 'kogas',
-      teamLabel: '대구 한국가스공사',
-    ),
-  ];
 }

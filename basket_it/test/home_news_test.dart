@@ -145,13 +145,22 @@ void main() {
     expect(find.text('서울 SK, 창원 LG 꺾고 4연승'), findsNothing);
   });
 
-  testWidgets('뉴스 서버를 못 부르면 샘플임을 분명히 알린다', (tester) async {
+  testWidgets('뉴스를 못 불러오면 오류를 보여주고 가짜 기사는 절대 안 보여준다', (tester) async {
     await pumpHome(tester, _BrokenNewsRepository());
 
-    expect(
-      find.textContaining('샘플 기사를 보여주고 있어요'),
-      findsOneWidget,
-      reason: '가짜 기사가 진짜처럼 보이면 안 된다',
-    );
+    // 실패했을 때 지어낸 기사를 대신 채우면 진짜 기사처럼 읽힌다.
+    // 공개 서비스에서는 하면 안 되므로, 실패는 실패로 보여준다.
+    expect(find.textContaining('뉴스 서버 설정이 아직 끝나지 않았어요'), findsOneWidget);
+    expect(find.text('다시 시도'), findsOneWidget);
+
+    // 기사 카드가 하나도 그려지지 않아야 한다.
+    expect(find.byType(Card), findsNothing);
+    for (final fake in ['정승우', '서준영', '박준혁', '트리플더블']) {
+      expect(
+        find.textContaining(fake),
+        findsNothing,
+        reason: '$fake 같은 지어낸 내용이 화면에 나오면 안 된다',
+      );
+    }
   });
 }
