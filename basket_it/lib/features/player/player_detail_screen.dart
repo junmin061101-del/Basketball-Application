@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/theme/app_colors.dart';
+import '../../core/utils/player_display.dart';
 import '../../data/models/player.dart';
 import '../../data/models/player_bio.dart';
 import '../../data/models/player_game_stats.dart';
@@ -183,7 +184,7 @@ class _HeroHeader extends StatelessWidget {
                           ),
                         const SizedBox(height: 4),
                         Text(
-                          '${player.position.label} · #${player.backNumber}',
+                          '${player.positionText} · #${player.backNumber}',
                           style: const TextStyle(
                             color: Colors.white70,
                             fontWeight: FontWeight.w600,
@@ -218,7 +219,7 @@ class _HeroHeader extends StatelessWidget {
                     ),
                     alignment: Alignment.center,
                     child: Text(
-                      player.name.substring(player.name.length - 1),
+                      playerInitial(player.name),
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 34,

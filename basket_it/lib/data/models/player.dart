@@ -26,6 +26,13 @@ class Player {
   final int backNumber;
   final int followerCount;
 
+  /// 화면에 그대로 보여줄 포지션 표기.
+  ///
+  /// 리그마다 알려주는 정밀도가 다르다. ESPN은 NBA 선수를 가드/포워드/센터
+  /// 세 가지로만 주므로, [position] enum을 그대로 쓰면 "가드"를
+  /// "포인트가드"라고 적게 된다. 값이 있으면 이쪽을 먼저 쓴다.
+  final String? positionLabel;
+
   const Player({
     required this.id,
     required this.name,
@@ -33,7 +40,11 @@ class Player {
     required this.position,
     required this.backNumber,
     this.followerCount = 0,
+    this.positionLabel,
   });
+
+  /// 화면에 보여줄 포지션. 리그가 알려준 표기가 있으면 그걸 쓴다.
+  String get positionText => positionLabel ?? position.label;
 
   @override
   bool operator ==(Object other) => other is Player && other.id == id;

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/theme/app_colors.dart';
+import '../../core/utils/player_display.dart';
 import '../../data/models/player.dart';
 import '../../data/models/player_season_stats.dart';
 import '../../data/models/team.dart';
@@ -190,7 +191,7 @@ class _TopLeaderCard extends StatelessWidget {
                   radius: 30,
                   backgroundColor: AppColors.surfaceElevated,
                   child: Text(
-                    player.name.substring(player.name.length - 1),
+                    playerInitial(player.name),
                     style: const TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.w800,
@@ -327,7 +328,7 @@ class _LeaderRow extends StatelessWidget {
               radius: 18,
               backgroundColor: AppColors.surfaceElevated,
               child: Text(
-                player.name.substring(player.name.length - 1),
+                playerInitial(player.name),
                 style: const TextStyle(
                   color: AppColors.textPrimary,
                   fontWeight: FontWeight.w700,

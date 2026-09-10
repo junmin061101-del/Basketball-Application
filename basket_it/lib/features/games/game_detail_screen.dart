@@ -380,7 +380,7 @@ class _TopPerformerCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    '${team.fullName} · ${player.position.label}',
+                    '${team.fullName} · ${player.positionText}',
                     style: Theme.of(context).textTheme.bodyMedium,
                   ),
                   const SizedBox(height: 10),

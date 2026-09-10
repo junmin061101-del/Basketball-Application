@@ -208,7 +208,7 @@ class _RosterRow extends StatelessWidget {
               ),
             ),
             Text(
-              player.position.label,
+              player.positionText,
               style: Theme.of(context).textTheme.bodySmall,
             ),
             const SizedBox(width: 10),

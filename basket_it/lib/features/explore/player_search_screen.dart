@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/theme/app_colors.dart';
+import '../../core/utils/player_display.dart';
 import '../../data/models/player.dart';
 import '../../providers/follow_actions.dart';
 import '../../providers/onboarding_providers.dart';
@@ -253,7 +254,7 @@ class _PlayerRow extends ConsumerWidget {
               radius: 20,
               backgroundColor: AppColors.surfaceElevated,
               child: Text(
-                player.name.substring(player.name.length - 1),
+                playerInitial(player.name),
                 style: const TextStyle(
                   color: AppColors.textPrimary,
                   fontWeight: FontWeight.w700,
@@ -271,7 +272,7 @@ class _PlayerRow extends ConsumerWidget {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    '$teamLabel · ${player.position.label} · #${player.backNumber}',
+                    '$teamLabel · ${player.positionText} · #${player.backNumber}',
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
                 ],

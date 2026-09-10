@@ -196,7 +196,7 @@ class _PlayerHeader extends StatelessWidget {
                       ),
                     ),
                     child: Text(
-                      '${team!.name} · ${player.position.label} · #${player.backNumber}',
+                      '${team!.name} · ${player.positionText} · #${player.backNumber}',
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w700,
@@ -206,7 +206,7 @@ class _PlayerHeader extends StatelessWidget {
                   )
                 else
                   Text(
-                    '${player.position.label} · #${player.backNumber}',
+                    '${player.positionText} · #${player.backNumber}',
                     style: const TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w700,

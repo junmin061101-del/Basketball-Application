@@ -122,6 +122,7 @@ class NbaSource {
         backNumber: (r['backNumber'] as num?)?.toInt() ?? 0,
         // ESPN은 팔로워 수를 주지 않는다. 없는 값을 지어내지 않고 0으로 둔다.
         followerCount: 0,
+        positionLabel: r['positionLabel'] as String?,
       );
     }).toList();
   }
