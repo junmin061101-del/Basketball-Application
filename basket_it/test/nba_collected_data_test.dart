@@ -6,7 +6,8 @@ import 'package:basket_it/data/models/player.dart';
 import 'package:basket_it/data/models/player_bio.dart';
 import 'package:basket_it/data/models/player_season_stats.dart';
 import 'package:basket_it/data/repositories/nba_repositories.dart';
-import 'package:basket_it/data/repositories/nba_source.dart';
+import 'package:basket_it/data/repositories/collected_repositories.dart';
+import 'package:basket_it/data/repositories/league_data_source.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -208,7 +209,8 @@ final files = <String, Object>{
   },
 };
 
-NbaSource source() => NbaSource(
+LeagueDataSource source() => LeagueDataSource(
+  leagueLabel: 'NBA',
   baseUrl: base,
   client: MockClient((request) async {
     final path = request.url.path
@@ -272,7 +274,7 @@ void main() {
   });
 
   test('팀 시즌 평균을 읽는다 (실점 포함)', () async {
-    final stats = await NbaTeamRepository(source()).getTeamSeasonStats();
+    final stats = await CollectedTeamRepository(source()).getTeamSeasonStats();
     final lal = stats.single;
     expect(lal.pointsFor, 116.3);
     expect(lal.pointsAgainst, 112.4);
@@ -281,7 +283,7 @@ void main() {
 
   group('박스스코어', () {
     test('끝난 경기는 수집된 기록을 준다', () async {
-      final lines = await NbaGameRepository(source())
+      final lines = await CollectedGameRepository(source())
           .getBoxScore(game('g1', GameStatus.finished));
       final line = lines.single;
       expect(line.points, 8);
@@ -295,7 +297,7 @@ void main() {
 
     test('예정 경기는 요청하지 않고 빈 목록', () async {
       expect(
-        await NbaGameRepository(source())
+        await CollectedGameRepository(source())
             .getBoxScore(game('g1', GameStatus.scheduled)),
         isEmpty,
       );
@@ -303,7 +305,7 @@ void main() {
 
     test('아직 파일이 없는 경기는 오류 대신 빈 목록', () async {
       expect(
-        await NbaGameRepository(source())
+        await CollectedGameRepository(source())
             .getBoxScore(game('nope', GameStatus.finished)),
         isEmpty,
       );

@@ -2,7 +2,7 @@ import 'dart:convert';
 
 import 'package:basket_it/data/models/player.dart';
 import 'package:basket_it/data/repositories/nba_repositories.dart';
-import 'package:basket_it/data/repositories/nba_source.dart';
+import 'package:basket_it/data/repositories/league_data_source.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -61,7 +61,7 @@ final player = Player(
 
 NbaPlayerRepository repoReturning(http.Response Function() handler) =>
     NbaPlayerRepository(
-      NbaSource(baseUrl: 'https://example.test/nba'),
+      LeagueDataSource(baseUrl: 'https://example.test/nba', leagueLabel: 'NBA'),
       client: MockClient((_) async => handler()),
     );
 
@@ -124,7 +124,7 @@ void main() {
     final repository = repoReturning(() => http.Response('nope', 500));
     await expectLater(
       repository.getSeasonStatsHistory(player),
-      throwsA(isA<NbaUnavailableException>()),
+      throwsA(isA<LeagueDataUnavailableException>()),
     );
   });
 }

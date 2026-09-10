@@ -21,6 +21,7 @@ on:
     paths:
       - 'basket_it/tools/fetch-news.js'
       - 'basket_it/tools/fetch-nba.js'
+      - 'basket_it/tools/fetch-kbl.js'
       - 'basket_it/tools/nba-*.js'
       - 'basket_it/tools/nba-player-names-ko.json'
       - 'basket_it/functions/news-source.js'
@@ -66,6 +67,14 @@ jobs:
           NBA_PREVIOUS_BASE_URL: ${{ vars.NEWS_SITE_URL || format('https://{0}.github.io/{1}', github.repository_owner, github.event.repository.name) }}
         run: node tools/fetch-nba.js ../dist-news/nba
 
+      - name: KBL 데이터 수집
+        working-directory: basket_it
+        # KBL 공식 홈페이지가 쓰는 API. 키가 필요 없다.
+        env:
+          # 끝난 경기 박스스코어·지난 시즌 기록은 바뀌지 않으므로 지난 결과를 다시 쓴다.
+          KBL_PREVIOUS_BASE_URL: ${{ vars.NEWS_SITE_URL || format('https://{0}.github.io/{1}', github.repository_owner, github.event.repository.name) }}
+        run: node tools/fetch-kbl.js ../dist-news/kbl
+
       - name: 안내 페이지 추가
         run: |
           cat > dist-news/index.html <<'HTML'
@@ -84,6 +93,13 @@ jobs:
             <li><a href="nba/leaders.json">nba/leaders.json</a></li>
             <li><a href="nba/team_stats.json">nba/team_stats.json</a></li>
             <li><a href="nba/ladders.json">nba/ladders.json</a></li>
+            <li><a href="kbl/teams.json">kbl/teams.json</a></li>
+            <li><a href="kbl/standings.json">kbl/standings.json</a></li>
+            <li><a href="kbl/games.json">kbl/games.json</a></li>
+            <li><a href="kbl/players.json">kbl/players.json</a></li>
+            <li><a href="kbl/leaders.json">kbl/leaders.json</a></li>
+            <li><a href="kbl/player_seasons.json">kbl/player_seasons.json</a></li>
+            <li><a href="kbl/team_stats.json">kbl/team_stats.json</a></li>
           </ul>
           HTML
 

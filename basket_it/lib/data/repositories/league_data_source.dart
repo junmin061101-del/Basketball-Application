@@ -12,24 +12,42 @@ import '../models/team.dart';
 import '../models/team_season_stats.dart';
 import '../models/team_standing.dart';
 
-/// GitHub Actions가 ESPN에서 모아 GitHub Pages에 올려둔 NBA 데이터를 읽는다.
+/// GitHub Actions가 모아 GitHub Pages에 올려둔 리그 데이터를 읽는다.
 ///
-/// 팀·순위·일정·로스터를 주는 ESPN 엔드포인트에는 CORS 헤더가 없어 앱이
-/// 직접 못 부른다. 그래서 수집기가 만들어 둔 정적 JSON을 쓴다.
+/// NBA는 ESPN에서, KBL은 KBL 공식 홈페이지가 쓰는 API에서 모은다. 두 원본
+/// 모두 앱이 직접 부를 수 없어(CORS가 없거나 전용 헤더가 필요하다) 수집기가
+/// 같은 모양의 정적 JSON으로 만들어 두고, 앱은 이 클래스 하나로 읽는다.
 /// 한 번 읽은 결과는 메모리에 들고 있어 화면을 오갈 때마다 다시 받지 않는다.
-class NbaSource {
-  static const defaultBaseUrl = String.fromEnvironment(
+class LeagueDataSource {
+  static const nbaBaseUrl = String.fromEnvironment(
     'NBA_BASE_URL',
     defaultValue:
         'https://junmin061101-del.github.io/Basketball-Application/nba',
   );
 
+  static const kblBaseUrl = String.fromEnvironment(
+    'KBL_BASE_URL',
+    defaultValue:
+        'https://junmin061101-del.github.io/Basketball-Application/kbl',
+  );
+
   final String baseUrl;
+
+  /// 오류 문구에 넣는 리그 이름("NBA", "KBL").
+  final String leagueLabel;
   final http.Client _client;
 
-  NbaSource({String? baseUrl, http.Client? client})
-    : baseUrl = baseUrl ?? defaultBaseUrl,
-      _client = client ?? http.Client();
+  LeagueDataSource({
+    required this.baseUrl,
+    required this.leagueLabel,
+    http.Client? client,
+  }) : _client = client ?? http.Client();
+
+  LeagueDataSource.nba({http.Client? client})
+    : this(baseUrl: nbaBaseUrl, leagueLabel: 'NBA', client: client);
+
+  LeagueDataSource.kbl({http.Client? client})
+    : this(baseUrl: kblBaseUrl, leagueLabel: 'KBL', client: client);
 
   final Map<String, Future<Map<dynamic, dynamic>>> _cache = {};
 
@@ -48,19 +66,23 @@ class NbaSource {
       try {
         response = await _client.get(uri).timeout(const Duration(seconds: 20));
       } catch (_) {
-        throw const NbaUnavailableException('네트워크 연결을 확인해주세요.');
+        throw const LeagueDataUnavailableException('네트워크 연결을 확인해주세요.');
       }
       if (response.statusCode == 404) {
-        throw const NbaUnavailableException('아직 NBA 데이터가 준비되지 않았어요.');
+        throw LeagueDataUnavailableException(
+          '아직 $leagueLabel 데이터가 준비되지 않았어요.',
+        );
       }
       if (response.statusCode != 200) {
-        throw const NbaUnavailableException('NBA 데이터를 불러오지 못했어요.');
+        throw LeagueDataUnavailableException('$leagueLabel 데이터를 불러오지 못했어요.');
       }
       try {
         final decoded = jsonDecode(utf8.decode(response.bodyBytes));
         return decoded is Map ? decoded : const {};
       } catch (_) {
-        throw const NbaUnavailableException('NBA 데이터 형식을 읽지 못했어요.');
+        throw LeagueDataUnavailableException(
+          '$leagueLabel 데이터 형식을 읽지 못했어요.',
+        );
       }
     });
   }
@@ -129,17 +151,18 @@ class NbaSource {
           _ => PlayerPosition.sf,
         },
         backNumber: (r['backNumber'] as num?)?.toInt() ?? 0,
-        // ESPN은 팔로워 수를 주지 않는다. 없는 값을 지어내지 않고 0으로 둔다.
+        // 두 원본 모두 팔로워 수를 주지 않는다. 없는 값을 지어내지 않고 0으로 둔다.
         followerCount: 0,
         positionLabel: r['positionLabel'] as String?,
-        // 수집기가 name을 한국어로 바꾸고 원래 영문은 nameEn에 남긴다.
+        // NBA는 수집기가 name을 한국어로 바꾸고 원래 영문을 nameEn에 남긴다.
+        // KBL은 원래 한국어 이름이고 nameEn은 KBL이 주는 영문 표기다.
         englishName: r['nameEn'] as String?,
         photoUrl: r['headshot'] as String?,
       );
     }).toList();
   }
 
-  /// 지금 로스터에 없는 선수 id. 리더·박스스코어에만 나오는 선수들이다.
+  /// 지금 로스터에 없는 선수 id. 기록·박스스코어에만 나오는 선수들이다.
   Future<Set<String>> offRosterIds() async {
     final rows = await _load('players');
     return {
@@ -149,11 +172,12 @@ class NbaSource {
   }
 
   /// 선수 사진·신장·대학처럼 Player에 담기지 않는 정보.
-  Future<Map<String, NbaPlayerExtra>> playerExtras() async {
+  /// KBL은 원본에 신상이 없어 대부분 비어 있다.
+  Future<Map<String, PlayerExtra>> playerExtras() async {
     final rows = await _load('players');
     return {
       for (final r in rows.whereType<Map>())
-        (r['id'] as String? ?? ''): NbaPlayerExtra(
+        (r['id'] as String? ?? ''): PlayerExtra(
           headshot: r['headshot'] as String?,
           height: r['height'] as String?,
           weight: r['weight'] as String?,
@@ -171,48 +195,68 @@ class NbaSource {
     };
   }
 
-  /// 이번 시즌 전 선수 평균. 스탯 리더에 쓴다.
+  /// 이번 시즌 전 선수 평균. 랭킹에 쓴다.
   Future<List<PlayerSeasonStats>> leaders() async {
     final doc = await _loadDoc('leaders');
     final season = doc['season'] as String? ?? '';
     final rows = doc['leaders'];
     if (rows is! List) return const [];
-    double d(Map r, String k) => (r[k] as num?)?.toDouble() ?? 0;
-    return rows.whereType<Map>().map((r) {
-      final reb = d(r, 'reb');
-      // 공격/수비 리바운드는 수집기가 선수별로 따로 받아 온다. 아직 못 받은
-      // 선수는 총합만 있으므로 총합이 맞도록 수비 쪽에 담고 표시해 둔다.
-      final hasSplit = r['oreb'] is num && r['dreb'] is num;
-      return PlayerSeasonStats(
-        playerId: r['playerId'] as String? ?? '',
-        season: season,
-        teamId: r['teamId'] as String? ?? '',
-        gamesPlayed: (r['gamesPlayed'] as num?)?.toInt() ?? 0,
-        minutes: d(r, 'minutes'),
-        points: d(r, 'points'),
-        fgm: d(r, 'fgm'),
-        fga: d(r, 'fga'),
-        tpm: d(r, 'tpm'),
-        tpa: d(r, 'tpa'),
-        ftm: d(r, 'ftm'),
-        fta: d(r, 'fta'),
-        oreb: hasSplit ? d(r, 'oreb') : 0,
-        dreb: hasSplit ? d(r, 'dreb') : reb,
-        hasReboundSplit: hasSplit,
-        ast: d(r, 'ast'),
-        tov: d(r, 'tov'),
-        stl: d(r, 'stl'),
-        blk: d(r, 'blk'),
-        pf: d(r, 'pf'),
-        plusMinus: 0,
-        doubleDoubles: (r['dd2'] as num?)?.toInt(),
-        tripleDoubles: (r['td3'] as num?)?.toInt(),
-        gameHigh: (r['gameHigh'] as num?)?.toInt(),
-      );
-    }).toList();
+    return rows.whereType<Map>().map((r) => _toSeasonStats(r, season)).toList();
   }
 
-  /// MVP·올해의 수비수·신인왕 레이스(NBA.com 사다리와 시즌 수상 결과).
+  /// 선수별 시즌 평균(최근 시즌이 맨 앞). 수집기가 시즌별 기록까지 모아 두는
+  /// 리그(KBL)에서 선수 상세의 시즌별 기록으로 쓴다.
+  Future<Map<String, List<PlayerSeasonStats>>> playerSeasons() async {
+    final doc = await _loadDoc('player_seasons');
+    final rows = doc['rows'];
+    if (rows is! List) return const {};
+    final byPlayer = <String, List<PlayerSeasonStats>>{};
+    for (final r in rows.whereType<Map>()) {
+      final stats = _toSeasonStats(r, r['season'] as String? ?? '');
+      byPlayer.putIfAbsent(stats.playerId, () => []).add(stats);
+    }
+    for (final seasons in byPlayer.values) {
+      seasons.sort((a, b) => b.season.compareTo(a.season));
+    }
+    return byPlayer;
+  }
+
+  PlayerSeasonStats _toSeasonStats(Map r, String season) {
+    double d(String k) => (r[k] as num?)?.toDouble() ?? 0;
+    final reb = d('reb');
+    // NBA 벌크 목록은 리바운드 총합만 줘서 공격/수비는 선수별로 따로 받아
+    // 온다. 아직 못 받은 선수는 총합이 맞도록 수비 쪽에 담고 표시해 둔다.
+    final hasSplit = r['oreb'] is num && r['dreb'] is num;
+    return PlayerSeasonStats(
+      playerId: r['playerId'] as String? ?? '',
+      season: season,
+      teamId: r['teamId'] as String? ?? '',
+      teamName: r['teamName'] as String?,
+      gamesPlayed: (r['gamesPlayed'] as num?)?.toInt() ?? 0,
+      minutes: d('minutes'),
+      points: d('points'),
+      fgm: d('fgm'),
+      fga: d('fga'),
+      tpm: d('tpm'),
+      tpa: d('tpa'),
+      ftm: d('ftm'),
+      fta: d('fta'),
+      oreb: hasSplit ? d('oreb') : 0,
+      dreb: hasSplit ? d('dreb') : reb,
+      hasReboundSplit: hasSplit,
+      ast: d('ast'),
+      tov: d('tov'),
+      stl: d('stl'),
+      blk: d('blk'),
+      pf: d('pf'),
+      plusMinus: 0,
+      doubleDoubles: (r['dd2'] as num?)?.toInt(),
+      tripleDoubles: (r['td3'] as num?)?.toInt(),
+      gameHigh: (r['gameHigh'] as num?)?.toInt(),
+    );
+  }
+
+  /// MVP·올해의 수비수·신인왕 레이스(NBA.com 사다리와 시즌 수상 결과). NBA만 있다.
   Future<AwardRaces> awardRaces() async {
     return AwardRaces.parse(await _loadDoc('ladders'));
   }
@@ -249,7 +293,7 @@ class NbaSource {
     final Map<dynamic, dynamic> doc;
     try {
       doc = await _loadDoc('boxscores/$gameId');
-    } on NbaUnavailableException {
+    } on LeagueDataUnavailableException {
       // 끝나기 전이거나 아직 수집 전인 경기는 파일이 없다.
       _cache.remove('boxscores/$gameId');
       return const [];
@@ -290,31 +334,31 @@ class NbaSource {
       name: row['name'] as String? ?? '',
       shortName: row['shortName'] as String? ?? '',
       primaryColor: Color(int.parse('FF$hex', radix: 16)),
-      // ESPN 로고는 원격 URL이라 asset이 아니다.
+      // 로고는 원격 URL이라 asset이 아니다.
       logoAsset: null,
       logoUrl: row['logo'] as String?,
     );
   }
 }
 
-/// NBA 데이터를 못 가져왔을 때. 화면에 그대로 보여줄 한국어 메시지를 담는다.
-class NbaUnavailableException implements Exception {
+/// 리그 데이터를 못 가져왔을 때. 화면에 그대로 보여줄 한국어 메시지를 담는다.
+class LeagueDataUnavailableException implements Exception {
   final String message;
-  const NbaUnavailableException(this.message);
+  const LeagueDataUnavailableException(this.message);
 
   @override
   String toString() => message;
 }
 
-/// Player 모델에 자리가 없는 NBA 전용 정보.
-class NbaPlayerExtra {
+/// Player 모델에 자리가 없는 선수 정보.
+class PlayerExtra {
   final String? headshot;
   final String? height;
   final String? weight;
   final String? college;
   final String? birthDate;
 
-  /// ESPN이 주는 포지션 표기(가드/포워드/센터). enum보다 이쪽이 정확하다.
+  /// 원본이 주는 포지션 표기(가드/포워드/센터). enum보다 이쪽이 정확하다.
   final String? positionLabel;
 
   /// 드래프트 정보를 조회했는지. false면 아직 모르는 것이고,
@@ -324,13 +368,13 @@ class NbaPlayerExtra {
   final int? draftRound;
   final int? draftPick;
 
-  /// ESPN이 알려준 국적. 비어 있는 선수가 많다.
+  /// 원본이 알려준 국적. 비어 있는 선수가 많다.
   final String? citizenship;
 
   /// 출생 국가. 국적과 다를 수 있다(카이리 어빙은 호주 출생).
   final String? birthCountry;
 
-  const NbaPlayerExtra({
+  const PlayerExtra({
     this.headshot,
     this.height,
     this.weight,

@@ -1,13 +1,25 @@
 import 'package:basket_it/core/theme/app_theme.dart';
 import 'package:basket_it/data/models/news_article.dart';
+import 'package:basket_it/data/models/team.dart';
 import 'package:basket_it/data/repositories/news_repository.dart';
 import 'package:basket_it/features/home/home_tab.dart';
-import 'package:basket_it/data/mock/mock_kbl_data.dart';
+import 'package:basket_it/providers/game_providers.dart';
 import 'package:basket_it/providers/news_providers.dart';
 import 'package:basket_it/providers/onboarding_providers.dart';
+import 'package:basket_it/providers/repository_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+import 'support/fake_repositories.dart';
+
+/// 칩 테스트에 쓰는 팀. 실제 KBL 데이터는 네트워크에서 오므로 여기서 넣어 준다.
+const testTeams = [
+  Team(id: 'sk', city: '서울', name: 'SK', shortName: 'SK', primaryColor: Color(0xFFAB0028)),
+  Team(id: 'lg', city: '창원', name: 'LG', shortName: 'LG', primaryColor: Color(0xFF550E10)),
+  Team(id: 'kgc', city: '안양', name: '정관장', shortName: '정관장', primaryColor: Color(0xFFCF1F25)),
+  Team(id: 'kcc', city: '부산', name: 'KCC', shortName: 'KCC', primaryColor: Color(0xFF07215A)),
+];
 
 /// 카테고리별로 무엇을 요청받았는지 기록하는 가짜 Repository.
 class _FakeNewsRepository implements NewsRepository {
@@ -60,6 +72,13 @@ Future<void> pumpHome(
     ProviderScope(
       overrides: [
         newsRepositoryProvider.overrideWithValue(repository),
+        teamRepositoryProvider.overrideWithValue(
+          const FakeTeamRepository(testTeams),
+        ),
+        playerRepositoryProvider.overrideWithValue(
+          const FakePlayerRepository(),
+        ),
+        gameRepositoryProvider.overrideWithValue(const FakeGameRepository()),
         followedTeamIdsProvider.overrideWith((ref) => followedTeamIds),
         if (opened != null)
           articleOpenerProvider.overrideWithValue((context, article) async {
@@ -178,7 +197,7 @@ void main() {
     // 팔로우한 팀이 칩으로 덧붙는다. 칩 라벨은 shortName이라
     // 기사 배지에 쓰이는 팀 표기('서울 SK')와 겹치지 않는다.
     for (final id in ['sk', 'lg']) {
-      final team = kMockTeams.firstWhere((t) => t.id == id);
+      final team = testTeams.firstWhere((t) => t.id == id);
       expect(
         find.text(team.shortName),
         findsOneWidget,
@@ -187,7 +206,7 @@ void main() {
     }
 
     // 팔로우하지 않은 팀은 칩으로 나오지 않는다.
-    final notFollowed = kMockTeams.where((t) => !['sk', 'lg'].contains(t.id));
+    final notFollowed = testTeams.where((t) => !['sk', 'lg'].contains(t.id));
     for (final team in notFollowed) {
       expect(
         find.text(team.shortName),
@@ -200,7 +219,7 @@ void main() {
   testWidgets('팔로우가 없으면 분류 칩만 나온다', (tester) async {
     await pumpHome(tester, _FakeNewsRepository(feed));
 
-    for (final team in kMockTeams) {
+    for (final team in testTeams) {
       expect(
         find.text(team.shortName),
         findsNothing,

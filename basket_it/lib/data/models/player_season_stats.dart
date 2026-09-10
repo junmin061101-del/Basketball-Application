@@ -7,6 +7,10 @@ class PlayerSeasonStats {
   final String playerId;
   final String season; // 예: "2025-26"
   final String teamId;
+
+  /// 원본이 준 팀 이름. 지금은 없는 옛 구단처럼 [teamId]로 팀을 못 찾을 때
+  /// 화면이 대신 쓴다.
+  final String? teamName;
   final int gamesPlayed;
   final double minutes;
   final double points;
@@ -39,6 +43,7 @@ class PlayerSeasonStats {
     required this.playerId,
     required this.season,
     required this.teamId,
+    this.teamName,
     required this.gamesPlayed,
     required this.minutes,
     required this.points,

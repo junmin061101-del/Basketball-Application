@@ -55,7 +55,9 @@ class PlayerDetailScreen extends ConsumerWidget {
                 bioAsync.when(
                   loading: () => const _LoadingBlock(),
                   error: (err, _) => Text('불러오지 못했어요: $err'),
-                  data: (bio) => _BioGrid(bio: bio),
+                  // 신상을 하나도 모르면(KBL) '-'만 늘어놓지 않고 칸을 숨긴다.
+                  data: (bio) =>
+                      bio.isEmpty ? const SizedBox.shrink() : _BioGrid(bio: bio),
                 ),
                 const SizedBox(height: 16),
                 SizedBox(
@@ -98,7 +100,10 @@ class PlayerDetailScreen extends ConsumerWidget {
                 seasonHistoryAsync.when(
                   loading: () => const _LoadingBlock(),
                   error: (err, _) => Text('불러오지 못했어요: $err'),
-                  data: (history) => _SeasonQuickCard(latest: history.first),
+                  // 한 경기도 안 뛴 신인은 기록이 없다.
+                  data: (history) => history.isEmpty
+                      ? const _NoRecords()
+                      : _SeasonQuickCard(latest: history.first),
                 ),
                 const SizedBox(height: 28),
                 Text('시즌별 기록', style: Theme.of(context).textTheme.titleLarge),
@@ -111,7 +116,9 @@ class PlayerDetailScreen extends ConsumerWidget {
                 seasonHistoryAsync.when(
                   loading: () => const _LoadingBlock(),
                   error: (err, _) => Text('불러오지 못했어요: $err'),
-                  data: (history) => _SeasonStatsTable(
+                  data: (history) => history.isEmpty
+                      ? const _NoRecords()
+                      : _SeasonStatsTable(
                     history: history,
                     // 시즌마다 그때 뛴 팀을 찾아 적는다. 현재 팀 하나를 모든
                     // 줄에 찍으면 르브론의 클리블랜드·마이애미 시절이 전부
@@ -290,10 +297,10 @@ class _BioGrid extends StatelessWidget {
     final rows = [
       (('키', bio.heightLabel), (bio.countryTitle, bio.countryLabel)),
       (
-        ('생년월일', '${bio.birthLabel} (${bio.ageAt(now)}세)'),
+        ('생년월일', bio.birthWithAgeLabel(now)),
         ('드래프트', bio.draftLabel),
       ),
-      (('몸무게', '${bio.weightKg}kg'), ('출신 대학', bio.collegeLabel)),
+      (('몸무게', bio.weightLabel), ('출신 대학', bio.collegeLabel)),
     ];
 
     return Container(
@@ -356,6 +363,21 @@ class _BioCell extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _NoRecords extends StatelessWidget {
+  const _NoRecords();
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      child: Text(
+        '아직 기록이 없어요',
+        style: Theme.of(context).textTheme.bodyMedium,
       ),
     );
   }
@@ -540,7 +562,10 @@ class _SeasonStatsTable extends StatelessWidget {
   /// 한 줄의 팀 표기. 여러 팀 기록을 합친 줄은 합계.
   String _teamLabelOf(PlayerSeasonStats s) {
     if (s.isTotals) return '합계';
-    return teamById[s.teamId]?.shortName ?? s.teamId.toUpperCase();
+    // 지금은 없는 옛 구단은 팀 목록에 없어 원본이 준 이름을 쓴다.
+    return teamById[s.teamId]?.shortName ??
+        s.teamName ??
+        s.teamId.toUpperCase();
   }
 
   @override
