@@ -5,7 +5,10 @@ import 'package:http/http.dart' as http;
 
 import '../models/game.dart';
 import '../models/player.dart';
+import '../models/player_game_stats.dart';
+import '../models/player_season_stats.dart';
 import '../models/team.dart';
+import '../models/team_season_stats.dart';
 import '../models/team_standing.dart';
 
 /// GitHub Actions가 ESPN에서 모아 GitHub Pages에 올려둔 NBA 데이터를 읽는다.
@@ -27,12 +30,19 @@ class NbaSource {
     : baseUrl = baseUrl ?? defaultBaseUrl,
       _client = client ?? http.Client();
 
-  final Map<String, Future<List<dynamic>>> _cache = {};
+  final Map<String, Future<Map<dynamic, dynamic>>> _cache = {};
 
   /// `<name>.json`을 읽어 그 안의 `<name>` 배열을 준다.
-  Future<List<dynamic>> _load(String name) {
-    return _cache.putIfAbsent(name, () async {
-      final uri = Uri.parse('$baseUrl/$name.json');
+  Future<List<dynamic>> _load(String name) async {
+    final doc = await _loadDoc(name);
+    final list = doc[name];
+    return list is List ? list : const [];
+  }
+
+  /// `<path>.json` 문서 전체를 읽는다. 결과는 캐시한다.
+  Future<Map<dynamic, dynamic>> _loadDoc(String path) {
+    return _cache.putIfAbsent(path, () async {
+      final uri = Uri.parse('$baseUrl/$path.json');
       final http.Response response;
       try {
         response = await _client.get(uri).timeout(const Duration(seconds: 20));
@@ -47,9 +57,7 @@ class NbaSource {
       }
       try {
         final decoded = jsonDecode(utf8.decode(response.bodyBytes));
-        if (decoded is! Map) return const [];
-        final list = decoded[name];
-        return list is List ? list : const [];
+        return decoded is Map ? decoded : const {};
       } catch (_) {
         throw const NbaUnavailableException('NBA 데이터 형식을 읽지 못했어요.');
       }
@@ -127,6 +135,15 @@ class NbaSource {
     }).toList();
   }
 
+  /// 지금 로스터에 없는 선수 id. 리더·박스스코어에만 나오는 선수들이다.
+  Future<Set<String>> offRosterIds() async {
+    final rows = await _load('players');
+    return {
+      for (final r in rows.whereType<Map>())
+        if (r['offRoster'] == true) r['id'] as String? ?? '',
+    };
+  }
+
   /// 선수 사진·신장·대학처럼 Player에 담기지 않는 정보.
   Future<Map<String, NbaPlayerExtra>> playerExtras() async {
     final rows = await _load('players');
@@ -139,8 +156,115 @@ class NbaSource {
           college: r['college'] as String?,
           birthDate: r['birthDate'] as String?,
           positionLabel: r['positionLabel'] as String?,
+          // 키가 아예 없으면 아직 조회 전, null이면 미지명.
+          draftKnown: r.containsKey('draftYear'),
+          draftYear: (r['draftYear'] as num?)?.toInt(),
+          draftRound: (r['draftRound'] as num?)?.toInt(),
+          draftPick: (r['draftPick'] as num?)?.toInt(),
         ),
     };
+  }
+
+  /// 이번 시즌 전 선수 평균. 스탯 리더에 쓴다.
+  Future<List<PlayerSeasonStats>> leaders() async {
+    final doc = await _loadDoc('leaders');
+    final season = doc['season'] as String? ?? '';
+    final rows = doc['leaders'];
+    if (rows is! List) return const [];
+    double d(Map r, String k) => (r[k] as num?)?.toDouble() ?? 0;
+    return rows.whereType<Map>().map((r) {
+      final reb = d(r, 'reb');
+      return PlayerSeasonStats(
+        playerId: r['playerId'] as String? ?? '',
+        season: season,
+        teamId: r['teamId'] as String? ?? '',
+        gamesPlayed: (r['gamesPlayed'] as num?)?.toInt() ?? 0,
+        minutes: d(r, 'minutes'),
+        points: d(r, 'points'),
+        fgm: d(r, 'fgm'),
+        fga: d(r, 'fga'),
+        tpm: d(r, 'tpm'),
+        tpa: d(r, 'tpa'),
+        ftm: d(r, 'ftm'),
+        fta: d(r, 'fta'),
+        // 이 목록은 리바운드 총합만 있다. 리더 순위는 총합(oreb+dreb)만 쓰므로
+        // 총합이 맞도록 수비 쪽에 담는다. 공격/수비 구분이 필요한 선수 상세는
+        // 선수별 스탯을 따로 불러 정확한 값을 쓴다.
+        oreb: 0,
+        dreb: reb,
+        ast: d(r, 'ast'),
+        tov: d(r, 'tov'),
+        stl: d(r, 'stl'),
+        blk: d(r, 'blk'),
+        pf: d(r, 'pf'),
+        plusMinus: 0,
+      );
+    }).toList();
+  }
+
+  /// 팀별 시즌 평균.
+  Future<List<TeamSeasonStats>> teamStats() async {
+    final rows = await _load('team_stats');
+    double d(Map r, String k) => (r[k] as num?)?.toDouble() ?? 0;
+    return rows.whereType<Map>().map((r) {
+      return TeamSeasonStats(
+        teamId: r['teamId'] as String? ?? '',
+        pointsFor: d(r, 'pointsFor'),
+        pointsAgainst: d(r, 'pointsAgainst'),
+        rebounds: d(r, 'rebounds'),
+        assists: d(r, 'assists'),
+        steals: d(r, 'steals'),
+        blocks: d(r, 'blocks'),
+        fgm: d(r, 'fgm'),
+        fga: d(r, 'fga'),
+        tpm: d(r, 'tpm'),
+        tpa: d(r, 'tpa'),
+        ftm: d(r, 'ftm'),
+        fta: d(r, 'fta'),
+        oreb: d(r, 'oreb'),
+        dreb: d(r, 'dreb'),
+        tov: d(r, 'tov'),
+        pf: d(r, 'pf'),
+      );
+    }).toList();
+  }
+
+  /// 한 경기 박스스코어. 아직 기록이 없는 경기(예정)는 빈 목록.
+  Future<List<PlayerGameStats>> boxScore(String gameId) async {
+    final Map<dynamic, dynamic> doc;
+    try {
+      doc = await _loadDoc('boxscores/$gameId');
+    } on NbaUnavailableException {
+      // 끝나기 전이거나 아직 수집 전인 경기는 파일이 없다.
+      _cache.remove('boxscores/$gameId');
+      return const [];
+    }
+    final rows = doc['lines'];
+    if (rows is! List) return const [];
+    int i(Map r, String k) => (r[k] as num?)?.toInt() ?? 0;
+    return rows.whereType<Map>().map((r) {
+      return PlayerGameStats(
+        playerId: r['playerId'] as String? ?? '',
+        gameId: gameId,
+        teamId: r['teamId'] as String? ?? '',
+        minutes: i(r, 'minutes'),
+        points: i(r, 'points'),
+        fgm: i(r, 'fgm'),
+        fga: i(r, 'fga'),
+        tpm: i(r, 'tpm'),
+        tpa: i(r, 'tpa'),
+        ftm: i(r, 'ftm'),
+        fta: i(r, 'fta'),
+        oreb: i(r, 'oreb'),
+        dreb: i(r, 'dreb'),
+        ast: i(r, 'ast'),
+        tov: i(r, 'tov'),
+        stl: i(r, 'stl'),
+        blk: i(r, 'blk'),
+        pf: i(r, 'pf'),
+        plusMinus: i(r, 'plusMinus'),
+      );
+    }).toList();
   }
 
   Team _toTeam(Map row) {
@@ -177,6 +301,13 @@ class NbaPlayerExtra {
   /// ESPN이 주는 포지션 표기(가드/포워드/센터). enum보다 이쪽이 정확하다.
   final String? positionLabel;
 
+  /// 드래프트 정보를 조회했는지. false면 아직 모르는 것이고,
+  /// true인데 [draftYear]가 null이면 미지명 선수다.
+  final bool draftKnown;
+  final int? draftYear;
+  final int? draftRound;
+  final int? draftPick;
+
   const NbaPlayerExtra({
     this.headshot,
     this.height,
@@ -184,5 +315,9 @@ class NbaPlayerExtra {
     this.college,
     this.birthDate,
     this.positionLabel,
+    this.draftKnown = false,
+    this.draftYear,
+    this.draftRound,
+    this.draftPick,
   });
 }

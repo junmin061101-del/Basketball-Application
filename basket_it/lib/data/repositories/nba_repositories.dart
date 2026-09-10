@@ -36,10 +36,9 @@ class NbaTeamRepository implements TeamRepository {
   @override
   Future<List<TeamStanding>> getStandings() => _source.standings();
 
-  /// ESPN에서 팀 시즌 평균까지는 모으지 않는다.
-  /// 없는 값을 지어내지 않고 빈 목록을 준다. 화면은 빈 상태를 보여준다.
+  /// 수집기가 팀마다 받아둔 시즌 평균. 실점은 순위 데이터에서 온다.
   @override
-  Future<List<TeamSeasonStats>> getTeamSeasonStats() async => const [];
+  Future<List<TeamSeasonStats>> getTeamSeasonStats() => _source.teamStats();
 }
 
 /// NBA 경기. 수집기가 올려둔 일정·결과를 읽는다.
@@ -68,9 +67,12 @@ class NbaGameRepository implements GameRepository {
     }).toList()..sort((a, b) => a.startTime.compareTo(b.startTime));
   }
 
-  /// 경기별 박스스코어는 수집하지 않는다(경기 수 × 선수 수만큼 요청이 는다).
+  /// 수집기가 끝난·진행 중 경기마다 받아둔 박스스코어. 예정 경기는 빈 목록.
   @override
-  Future<List<PlayerGameStats>> getBoxScore(Game game) async => const [];
+  Future<List<PlayerGameStats>> getBoxScore(Game game) async {
+    if (game.status == GameStatus.scheduled) return const [];
+    return _source.boxScore(game.id);
+  }
 }
 
 /// NBA 선수.
@@ -100,10 +102,14 @@ class NbaPlayerRepository implements PlayerRepository {
     return null;
   }
 
+  /// 팀 선수단. 리더 목록·박스스코어에서만 합쳐 둔 로스터 밖 선수는 뺀다.
   @override
   Future<List<Player>> getPlayersByTeam(String teamId) async {
     final players = await _source.players();
-    return players.where((p) => p.teamId == teamId).toList();
+    final offRoster = await _source.offRosterIds();
+    return players
+        .where((p) => p.teamId == teamId && !offRoster.contains(p.id))
+        .toList();
   }
 
   /// ESPN은 팔로워 수를 주지 않는다. 지어낸 인기순 대신 이름순으로 준다.
@@ -136,10 +142,12 @@ class NbaPlayerRepository implements PlayerRepository {
           DateTime(1970),
       country: 'USA',
       college: extra?.college ?? '',
-      // ESPN 로스터에는 드래프트 정보가 없다. 0은 화면에서 '-'로 표시된다.
-      draftYear: 0,
-      draftRound: 0,
-      draftPick: 0,
+      // 조회 전이면 -1(화면에 '-'), 조회했는데 기록이 없으면 0(미지명).
+      draftYear: extra == null || !extra.draftKnown
+          ? PlayerBio.draftUnknown
+          : extra.draftYear ?? 0,
+      draftRound: extra?.draftRound ?? 0,
+      draftPick: extra?.draftPick ?? 0,
     );
   }
 
@@ -223,14 +231,32 @@ class NbaPlayerRepository implements PlayerRepository {
         ),
       );
     }
+    // ESPN은 오래된 시즌부터 준다(르브론이면 2003-04가 맨 앞). 앱은 최근
+    // 시즌이 0번이라고 가정하므로 뒤집는다. "2025-26"은 문자열 비교로도
+    // 시간 순서와 같다.
+    result.sort((a, b) => b.season.compareTo(a.season));
     return result;
   }
 
-  /// 557명치를 한 명씩 부르면 요청이 감당이 안 된다.
-  /// 스탯 리더 화면은 NBA에서 빈 상태를 보여준다.
+  /// 전 선수 이번 시즌 평균. 수집기가 한 번에 받아둔 것을 쓴다.
+  ///
+  /// 한두 경기만 뛴 선수가 평균 40점으로 1위에 오르지 않도록, 가장 많이 뛴
+  /// 선수의 70% 이상 출전한 선수만 남긴다. NBA 공식 기록 순위도 팀 경기의
+  /// 70%를 기준으로 한다. 고정 경기 수가 아니라 비율이라 시즌 초에도 목록이
+  /// 비지 않는다.
   @override
-  Future<List<PlayerSeasonStats>> getCurrentSeasonStatsForAllPlayers() async =>
-      const [];
+  Future<List<PlayerSeasonStats>> getCurrentSeasonStatsForAllPlayers() async {
+    final all = await _source.leaders();
+    if (all.isEmpty) return all;
+    final maxGames = all.map((s) => s.gamesPlayed).reduce(
+      (a, b) => a > b ? a : b,
+    );
+    final minimum = (maxGames * qualifyingRatio).ceil();
+    return all.where((s) => s.gamesPlayed >= minimum).toList();
+  }
+
+  /// 기록 순위에 들어가기 위한 최소 출전 비율.
+  static const qualifyingRatio = 0.7;
 
   static double _statAt(List<String> names, List<String> stats, String key) {
     final index = names.indexOf(key);

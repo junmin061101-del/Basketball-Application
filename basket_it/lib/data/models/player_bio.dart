@@ -37,5 +37,18 @@ class PlayerBio {
   String get birthLabel =>
       '${birthDate.year}.${birthDate.month.toString().padLeft(2, '0')}.${birthDate.day.toString().padLeft(2, '0')}';
 
-  String get draftLabel => '$draftYear년 $draftRound라운드 $draftPick순위';
+  /// 드래프트 정보를 아직 모를 때 [draftYear]에 넣는 값.
+  ///
+  /// 조회에 실패한 선수를 "미지명"이라고 적으면 틀린 정보가 된다.
+  /// 모르는 것과 뽑히지 않은 것을 구분한다.
+  static const draftUnknown = -1;
+
+  /// 드래프트에 뽑히지 않은 선수는 연도가 0으로 온다.
+  bool get isUndrafted => draftYear == 0;
+
+  String get draftLabel {
+    if (draftYear < 0) return '-';
+    if (isUndrafted) return '미지명';
+    return '$draftYear년 $draftRound라운드 $draftPick순위';
+  }
 }
