@@ -11,6 +11,7 @@ import '../models/player_season_stats.dart';
 import '../models/team.dart';
 import '../models/team_season_stats.dart';
 import '../models/team_standing.dart';
+import '../team_logo_assets.dart';
 
 /// GitHub Actions가 모아 GitHub Pages에 올려둔 리그 데이터를 읽는다.
 ///
@@ -337,8 +338,8 @@ class LeagueDataSource {
       name: row['name'] as String? ?? '',
       shortName: row['shortName'] as String? ?? '',
       primaryColor: Color(int.parse('FF$hex', radix: 16)),
-      // 로고는 원격 URL이라 asset이 아니다.
-      logoAsset: null,
+      // KBL은 앱에 넣어 둔 공식 아이콘을 쓴다. NBA는 원격 ESPN 로고만 있다.
+      logoAsset: kblLogoAssets[row['id']],
       logoUrl: row['logo'] as String?,
     );
   }

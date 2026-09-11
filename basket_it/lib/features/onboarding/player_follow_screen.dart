@@ -6,12 +6,14 @@ import '../../data/models/player.dart';
 import '../../providers/onboarding_providers.dart';
 import '../../providers/repository_providers.dart';
 import '../../shared/widgets/player_avatar.dart';
+import '../common/league_switch.dart';
 import '../explore/player_sort.dart';
 import 'login_screen.dart';
 
 /// 온보딩 - 팔로우할 선수 선택 화면.
 ///
 /// 앞 단계에서 고른 팀의 선수가 가나다순으로 먼저 나오고, 이름으로 검색할 수 있다.
+/// 위쪽 리그 전환으로 KBL과 NBA 선수를 함께 고를 수 있다.
 class PlayerFollowScreen extends ConsumerWidget {
   const PlayerFollowScreen({super.key});
 
@@ -46,6 +48,11 @@ class PlayerFollowScreen extends ConsumerWidget {
               ),
             ),
             const SizedBox(height: 16),
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 4),
+              child: LeagueSwitch(),
+            ),
+            const SizedBox(height: 12),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24),
               child: TextField(
@@ -134,7 +141,12 @@ class PlayerFollowScreen extends ConsumerWidget {
                       MaterialPageRoute(builder: (_) => const LoginScreen()),
                     );
                   },
-                  child: const Text('다음'),
+                  // 리그를 바꾸면 다른 리그에서 고른 선수가 안 보이므로 합계를 알려준다.
+                  child: Text(
+                    followedIds.isEmpty
+                        ? '다음'
+                        : '다음 · ${followedIds.length}명 선택',
+                  ),
                 ),
               ),
             ),

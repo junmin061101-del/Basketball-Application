@@ -51,6 +51,10 @@ dependencies:
   http: ^1.6.0
   web: ^1.1.1
 
+  # 날짜 선택기 등 기본 위젯 문구를 한국어로
+  flutter_localizations:
+    sdk: flutter
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -72,6 +76,10 @@ flutter:
   # included with your application, so that you can use the icons in
   # the material Icons class.
   uses-material-design: true
+
+  # KBL 구단 공식 아이콘(KBL 홈페이지 SVG를 PNG로 옮긴 것)
+  assets:
+    - assets/logos/kbl/
 
   # To add assets to your application, add an assets section, like this:
   # assets:

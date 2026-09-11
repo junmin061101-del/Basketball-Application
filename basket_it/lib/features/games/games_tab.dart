@@ -41,12 +41,7 @@ class GamesTab extends ConsumerWidget {
                   error: (err, _) => Center(child: Text('불러오지 못했어요: $err')),
                   data: (games) {
                     if (games.isEmpty) {
-                      return Center(
-                        child: Text(
-                          '이 날짜엔 예정된 경기가 없어요',
-                          style: Theme.of(context).textTheme.bodyMedium,
-                        ),
-                      );
+                      return _NoGames(selectedDate: selectedDate);
                     }
                     final sorted = _sortWithFollowedFirst(games, followedIds);
                     return ListView.separated(
@@ -100,6 +95,70 @@ class GamesTab extends ConsumerWidget {
     }
     return [...pinned, ...rest];
   }
+}
+
+/// 고른 날짜에 경기가 없을 때.
+///
+/// 비시즌이나 휴식일에 빈 화면만 보이면 경기가 없는 건지 앱이 고장 난 건지
+/// 알 수 없다. 가장 가까운 앞뒤 경기일로 바로 갈 수 있게 한다.
+class _NoGames extends ConsumerWidget {
+  final DateTime selectedDate;
+
+  const _NoGames({required this.selectedDate});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final days = ref.watch(gameDaysProvider).valueOrNull ?? const <DateTime>[];
+    DateTime? next;
+    DateTime? previous;
+    for (final day in days) {
+      if (day.isAfter(selectedDate)) {
+        next ??= day;
+      } else if (day.isBefore(selectedDate)) {
+        previous = day;
+      }
+    }
+    final nextDay = next;
+    final previousDay = previous;
+    void select(DateTime day) =>
+        ref.read(selectedGameDateProvider.notifier).state = day;
+
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              '이 날짜엔 경기가 없어요',
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
+            if (nextDay != null) ...[
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: () => select(nextDay),
+                child: Text('다음 경기 · ${_dayLabel(nextDay)}'),
+              ),
+            ],
+            if (previousDay != null) ...[
+              const SizedBox(height: 8),
+              TextButton(
+                onPressed: () => select(previousDay),
+                child: Text('지난 경기 · ${_dayLabel(previousDay)}'),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// "10월 4일 (일)". 올해가 아니면 연도를 붙인다.
+String _dayLabel(DateTime day) {
+  const weekdays = ['월', '화', '수', '목', '금', '토', '일'];
+  final year = day.year == DateTime.now().year ? '' : '${day.year}년 ';
+  return '$year${day.month}월 ${day.day}일 (${weekdays[day.weekday - 1]})';
 }
 
 class _Loading extends StatelessWidget {

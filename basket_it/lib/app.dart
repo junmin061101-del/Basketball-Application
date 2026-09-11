@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'core/theme/app_theme.dart';
 import 'features/auth/auth_gate.dart';
@@ -21,6 +22,11 @@ class BasketItApp extends StatelessWidget {
       theme: AppTheme.light,
       darkTheme: AppTheme.light,
       themeMode: ThemeMode.light,
+      // 한국 사용자용 앱이다. 날짜 선택기 같은 기본 위젯 문구("Sep 14" 등)도
+      // 한국어로 나오게 한다.
+      locale: const Locale('ko', 'KR'),
+      supportedLocales: const [Locale('ko', 'KR'), Locale('en', 'US')],
+      localizationsDelegates: GlobalMaterialLocalizations.delegates,
       home: firebaseReady ? const AuthGate() : const SplashScreen(),
     );
   }

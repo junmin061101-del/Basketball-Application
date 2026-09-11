@@ -94,12 +94,18 @@ class _DateCalendarBarState extends ConsumerState<DateCalendarBar> {
     if (picked == null) return;
     final normalized = DateTime(picked.year, picked.month, picked.day);
     ref.read(selectedGameDateProvider.notifier).state = normalized;
-    _centerOn(normalized, animate: true);
   }
 
   @override
   Widget build(BuildContext context) {
     final selected = ref.watch(selectedGameDateProvider);
+    // 날짜는 여기(칸·달력)뿐 아니라 "다음 경기" 버튼에서도 바뀐다.
+    // 어디서 바뀌든 날짜 바가 그 날로 따라가게 한다.
+    ref.listen<DateTime>(selectedGameDateProvider, (previous, next) {
+      if (previous != next) _centerOn(next, animate: true);
+    });
+    final gameDays =
+        ref.watch(gameDaysProvider).valueOrNull?.toSet() ?? const <DateTime>{};
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -139,10 +145,9 @@ class _DateCalendarBarState extends ConsumerState<DateCalendarBar> {
                 date: date,
                 selected: isSelected,
                 isToday: isToday,
-                onTap: () {
-                  ref.read(selectedGameDateProvider.notifier).state = date;
-                  _centerOn(date, animate: true);
-                },
+                hasGames: gameDays.contains(date),
+                onTap: () =>
+                    ref.read(selectedGameDateProvider.notifier).state = date,
               );
             },
           ),
@@ -165,12 +170,16 @@ class _DateCell extends StatelessWidget {
   final DateTime date;
   final bool selected;
   final bool isToday;
+
+  /// 그날 경기가 있는지. 날짜 아래 점으로 표시해 경기일을 한눈에 찾게 한다.
+  final bool hasGames;
   final VoidCallback onTap;
 
   const _DateCell({
     required this.date,
     required this.selected,
     required this.isToday,
+    required this.hasGames,
     required this.onTap,
   });
 
@@ -210,6 +219,20 @@ class _DateCell extends StatelessWidget {
                 fontSize: 18,
                 fontWeight: FontWeight.w800,
                 color: selected ? Colors.white : AppColors.textPrimary,
+              ),
+            ),
+            const SizedBox(height: 3),
+            // 점이 없는 날도 자리를 남겨 칸 높이가 들쭉날쭉하지 않게 한다.
+            Container(
+              width: 4,
+              height: 4,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: !hasGames
+                    ? Colors.transparent
+                    : selected
+                    ? Colors.white
+                    : AppColors.primary,
               ),
             ),
           ],

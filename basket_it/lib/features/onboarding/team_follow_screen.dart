@@ -6,9 +6,13 @@ import '../../data/models/team.dart';
 import '../../providers/onboarding_providers.dart';
 import '../../providers/repository_providers.dart';
 import '../../shared/widgets/team_logo_placeholder.dart';
+import '../common/league_switch.dart';
 import 'player_follow_screen.dart';
 
 /// 온보딩 - 팔로우할 팀 선택 화면.
+///
+/// 위쪽 리그 전환으로 KBL과 NBA 팀을 함께 고를 수 있다. 두 리그 팀 id는
+/// 겹치지 않아(KBL "sk", NBA "13") 한 집합에 같이 담는다.
 class TeamFollowScreen extends ConsumerWidget {
   const TeamFollowScreen({super.key});
 
@@ -34,13 +38,18 @@ class TeamFollowScreen extends ConsumerWidget {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    '여러 팀을 선택할 수 있어요. 나중에 언제든 바꿀 수 있어요.',
+                    'KBL과 NBA 팀을 함께 고를 수 있어요. 나중에 언제든 바꿀 수 있어요.',
                     style: Theme.of(context).textTheme.bodyMedium,
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 16),
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 4),
+              child: LeagueSwitch(),
+            ),
+            const SizedBox(height: 12),
             Expanded(
               child: teamsAsync.when(
                 loading: () => const Center(
@@ -91,7 +100,12 @@ class TeamFollowScreen extends ConsumerWidget {
                       ),
                     );
                   },
-                  child: const Text('다음'),
+                  // 리그를 바꾸면 다른 리그에서 고른 팀이 안 보이므로 합계를 알려준다.
+                  child: Text(
+                    followedIds.isEmpty
+                        ? '다음'
+                        : '다음 · ${followedIds.length}팀 선택',
+                  ),
                 ),
               ),
             ),

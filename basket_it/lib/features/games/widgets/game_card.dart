@@ -107,9 +107,10 @@ class _StatusRow extends StatelessWidget {
           ),
         );
       case GameStatus.scheduled:
-        return const Text(
-          '경기 예정',
-          style: TextStyle(
+        // NBA는 한국 시간으로 새벽·오전에 열려 시각이 없으면 헷갈린다.
+        return Text(
+          '경기 예정 · ${_tipOffLabel(game.startTime)}',
+          style: const TextStyle(
             color: AppColors.textTertiary,
             fontSize: 12,
             fontWeight: FontWeight.w700,
@@ -117,6 +118,13 @@ class _StatusRow extends StatelessWidget {
         );
     }
   }
+}
+
+/// 기기 시간 기준 "오전 8:30".
+String _tipOffLabel(DateTime time) {
+  final hour = time.hour % 12 == 0 ? 12 : time.hour % 12;
+  final minute = time.minute.toString().padLeft(2, '0');
+  return '${time.hour < 12 ? '오전' : '오후'} $hour:$minute';
 }
 
 class _TeamRow extends StatelessWidget {
