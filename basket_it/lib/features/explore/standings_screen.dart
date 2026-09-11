@@ -10,8 +10,9 @@ import '../../shared/widgets/team_logo_placeholder.dart';
 import 'team_detail_screen.dart';
 
 /// 탐색 - 팀 순위 화면: 승/패/승률/게임차 + 득점/리바운드/야투% 등 상세 팀 기록.
+/// NBA는 동부·서부 컨퍼런스별로 표를 나눠 각각 1위부터 매긴다.
 /// 팀 칸은 왼쪽에 고정하고 나머지 스탯은 가로로 스크롤한다. 스탯 헤더를
-/// 탭하면 그 항목 기준으로 다시 정렬된다.
+/// 탭하면 그 표 안에서 그 항목 기준으로 다시 정렬된다.
 class StandingsScreen extends ConsumerWidget {
   const StandingsScreen({super.key});
 
@@ -36,10 +37,27 @@ class StandingsScreen extends ConsumerWidget {
               error: (err, _) => Center(child: Text('불러오지 못했어요: $err')),
               data: (stats) {
                 final statsByTeam = {for (final s in stats) s.teamId: s};
-                return _StandingsTable(
-                  standings: standings,
-                  teamById: teamById,
-                  statsByTeam: statsByTeam,
+                // 30팀이면 화면을 넘으므로 세로로 스크롤한다.
+                return ListView(
+                  padding: const EdgeInsets.only(bottom: 16),
+                  children: [
+                    for (final group in groupStandings(standings)) ...[
+                      if (group.title != null)
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(20, 18, 20, 0),
+                          child: Text(
+                            group.title!,
+                            style: Theme.of(context).textTheme.titleLarge,
+                          ),
+                        ),
+                      _StandingsTable(
+                        key: ValueKey(group.title),
+                        standings: group.rows,
+                        teamById: teamById,
+                        statsByTeam: statsByTeam,
+                      ),
+                    ],
+                  ],
                 );
               },
             ),
@@ -125,6 +143,7 @@ class _StandingsTable extends StatefulWidget {
   final Map<String, TeamSeasonStats> statsByTeam;
 
   const _StandingsTable({
+    super.key,
     required this.standings,
     required this.teamById,
     required this.statsByTeam,
@@ -135,7 +154,7 @@ class _StandingsTable extends StatefulWidget {
 }
 
 class _StandingsTableState extends State<_StandingsTable> {
-  // null이면 기본(승률순) 정렬.
+  // null이면 기본(순위순) 정렬.
   int? _sortColIndex;
   bool _desc = true;
 

@@ -5,6 +5,7 @@ import '../../core/theme/app_colors.dart';
 import '../../data/models/game.dart';
 import '../../data/models/news_article.dart';
 import '../../data/models/team.dart';
+import '../../data/models/team_standing.dart';
 import '../../providers/follow_feed_providers.dart';
 import '../../providers/repository_providers.dart';
 import '../explore/team_detail_screen.dart';
@@ -103,9 +104,10 @@ class _TeamHeader extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final standings = ref.watch(standingsProvider).valueOrNull;
     final standing = standings?.where((s) => s.teamId == team.id).firstOrNull;
-    final rank = standing == null
+    // NBA는 컨퍼런스 안 순위("동부 3위")다. 30팀 전체 순번을 쓰면 틀린다.
+    final rankLabel = standings == null
         ? null
-        : standings!.indexOf(standing) + 1;
+        : rankLabelOf(standings, team.id);
     final form = ref.watch(recentFormProvider(team.id)).valueOrNull;
 
     return Container(
@@ -150,7 +152,7 @@ class _TeamHeader extends ConsumerWidget {
                 const SizedBox(height: 8),
                 Text(
                   [
-                    if (rank != null) '리그 $rank위',
+                    ?rankLabel,
                     if (standing != null) '${standing.wins}승 ${standing.losses}패',
                     if (form != null && form.played > 0) '최근5 ${form.record}',
                   ].join(' · '),

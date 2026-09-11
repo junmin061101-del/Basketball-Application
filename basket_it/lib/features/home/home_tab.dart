@@ -2,9 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/theme/app_colors.dart';
-import '../../data/models/news_article.dart';
 import '../../data/models/team.dart';
-import '../../data/models/league.dart';
 import '../../data/models/player.dart';
 import '../../providers/news_providers.dart';
 import '../../providers/onboarding_providers.dart';
@@ -15,17 +13,17 @@ import '../follow/team_hub_screen.dart';
 import 'widgets/followed_game_section.dart';
 import 'widgets/news_cards.dart';
 
-/// 홈 탭: KBL 뉴스 + 해외파 한국 선수 뉴스.
+/// 홈 탭: 리그 전환(KBL / NBA)에 따라 그 리그 뉴스 한 섹션을 보여준다.
 ///
-/// 기사는 Cloud Functions(`getBasketballNews`)가 네이버 뉴스에서 모아준 것을
-/// 그대로 쓴다. 맨 위 한 건은 큰 썸네일의 헤드라인 카드로, 나머지는 작은
-/// 정사각 썸네일 리스트로 보여주고, 누르면 원문을 웹뷰로 연다.
+/// KBL 섹션에는 해외파 한국 선수 소식도 함께 들어 있다. 기사는 GitHub
+/// Actions가 네이버 뉴스에서 모아둔 것을 그대로 쓴다. 맨 위 한 건은 큰
+/// 썸네일의 헤드라인 카드로, 나머지는 작은 정사각 썸네일 리스트로 보여주고,
+/// 누르면 원문을 앱 안에서 연다.
 class HomeTab extends ConsumerWidget {
   const HomeTab({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final filter = ref.watch(newsCategoryFilterProvider);
     final feedAsync = ref.watch(newsFeedProvider);
     final teamsAsync = ref.watch(teamsProvider);
 
@@ -34,11 +32,7 @@ class HomeTab extends ConsumerWidget {
       body: Column(
         children: [
           const LeagueSwitch(),
-          _CategoryChips(
-            selected: filter,
-            onSelected: (c) =>
-                ref.read(newsCategoryFilterProvider.notifier).state = c,
-          ),
+          const _FollowChips(),
           Expanded(
             child: feedAsync.when(
               loading: () => const Center(
@@ -101,28 +95,15 @@ class HomeTab extends ConsumerWidget {
   }
 }
 
-/// 분류 칩 + 팔로우한 팀·선수 칩.
+/// 팔로우한 팀·선수 칩. 누르면 그 대상만 모아 놓은 전용 화면으로 간다.
 ///
-/// 분류 칩은 뉴스 피드를 그 자리에서 걸러주고, 팀·선수 칩은 그 대상만 모아
-/// 놓은 전용 화면으로 넘어간다. 팔로우 수만큼 늘어나므로 가로로 스크롤한다.
-class _CategoryChips extends ConsumerWidget {
-  final NewsCategory? selected;
-  final ValueChanged<NewsCategory?> onSelected;
-
-  const _CategoryChips({required this.selected, required this.onSelected});
+/// 뉴스 분류는 맨 위 리그 전환 하나로 정하므로 분류 칩은 두지 않는다.
+/// 팔로우 수만큼 늘어나므로 가로로 스크롤하고, 팔로우가 없으면 줄째 숨긴다.
+class _FollowChips extends ConsumerWidget {
+  const _FollowChips();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // 리그에 맞는 분류만 보여준다. KBL을 보는 사람에게 NBA 칩은 군더더기다.
-    final league = ref.watch(selectedLeagueProvider);
-    final categories = league == League.nba
-        ? const <(String, NewsCategory?)>[('NBA', NewsCategory.nba)]
-        : const <(String, NewsCategory?)>[
-            ('전체', null),
-            ('KBL', NewsCategory.kbl),
-            ('해외파', NewsCategory.overseas),
-          ];
-
     final followedTeamIds = ref.watch(followedTeamIdsProvider);
     final followedPlayerIds = ref.watch(followedPlayerIdsProvider);
     final teams = (ref.watch(teamsProvider).valueOrNull ?? <Team>[])
@@ -131,6 +112,7 @@ class _CategoryChips extends ConsumerWidget {
     final players = (ref.watch(allPlayersProvider).valueOrNull ?? <Player>[])
         .where((p) => followedPlayerIds.contains(p.id))
         .toList();
+    if (teams.isEmpty && players.isEmpty) return const SizedBox(height: 8);
 
     return SizedBox(
       height: 52,
@@ -138,16 +120,6 @@ class _CategoryChips extends ConsumerWidget {
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
         children: [
-          for (final (label, category) in categories) ...[
-            _Chip(
-              label: label,
-              active: selected == category,
-              onTap: () => onSelected(category),
-            ),
-            const SizedBox(width: 8),
-          ],
-          if (teams.isNotEmpty || players.isNotEmpty)
-            const _ChipDivider(),
           for (final team in teams) ...[
             _Chip(
               label: team.shortName,
@@ -175,18 +147,6 @@ class _CategoryChips extends ConsumerWidget {
       ),
     );
   }
-}
-
-/// 분류 칩과 팔로우 칩을 눈으로 구분해 주는 세로선.
-class _ChipDivider extends StatelessWidget {
-  const _ChipDivider();
-
-  @override
-  Widget build(BuildContext context) => Container(
-    width: 1,
-    margin: const EdgeInsets.fromLTRB(2, 8, 10, 8),
-    color: AppColors.border,
-  );
 }
 
 class _Chip extends StatelessWidget {

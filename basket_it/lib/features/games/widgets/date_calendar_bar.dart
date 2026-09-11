@@ -9,8 +9,9 @@ const _weekdayLabels = ['월', '화', '수', '목', '금', '토', '일'];
 
 /// 좌우로 스와이프하는 날짜 캘린더 바.
 ///
-/// 과거 10년 ~ 앞으로 2주까지 이동 가능한 구조. 우측 달력 아이콘으로
-/// 더 먼 날짜(예: 10년 전)로 바로 점프할 수도 있다.
+/// 과거 10년 ~ 앞으로 1년까지 이동 가능한 구조. 시즌 전체 일정을 받아
+/// 두므로 몇 달 뒤 경기도 볼 수 있다. 우측 달력 아이콘으로 먼 날짜로
+/// 바로 점프할 수도 있다.
 class DateCalendarBar extends ConsumerStatefulWidget {
   const DateCalendarBar({super.key});
 
@@ -32,7 +33,8 @@ class _DateCalendarBarState extends ConsumerState<DateCalendarBar> {
     final now = DateTime.now();
     _today = DateTime(now.year, now.month, now.day);
     _rangeStart = _today.subtract(const Duration(days: 365 * 10));
-    _rangeEnd = _today.add(const Duration(days: 14));
+    // 정규시즌이 10월에 시작해 이듬해 6월 파이널로 끝나므로 1년이면 넉넉하다.
+    _rangeEnd = _today.add(const Duration(days: 365));
     _itemCount = _rangeEnd.difference(_rangeStart).inDays + 1;
     _todayIndex = _today.difference(_rangeStart).inDays;
 

@@ -77,10 +77,12 @@ function madeAttempted(value) {
 }
 
 /**
- * 일정을 앞뒤로 며칠씩 훑을지.
+ * 오늘 앞뒤로 늘 받아 두는 날짜 폭.
  *
- * 앞쪽은 최근 전적, 뒤쪽은 다음 경기를 위해서다. 비시즌에는 몇 주 뒤에야
- * 첫 경기가 있으므로 뒤쪽을 넉넉히 잡는다.
+ * 일정은 시즌 달력 전체를 받지만, 시즌이 끝나 ESPN 달력이 다음 시즌으로
+ * 넘어가는 사이에도 최근 전적과 다음 경기가 비지 않도록 이 구간은 항상 넣는다.
+ * 박스스코어는 최근 [PAST_DAYS]일 경기만 받는다. 시즌 1,230경기를 매번
+ * 확인하면 요청이 너무 많다.
  */
 const PAST_DAYS = 14;
 const FUTURE_DAYS = 45;
@@ -157,6 +159,33 @@ function statValue(stats, name) {
   return found?.value ?? null;
 }
 
+/** "Eastern Conference" → "east". 앱이 동부/서부 순위표를 나눌 때 쓴다. */
+function conferenceKey(name) {
+  const s = String(name ?? '').toLowerCase();
+  if (s.includes('east')) return 'east';
+  if (s.includes('west')) return 'west';
+  return '';
+}
+
+const CONFERENCE_ORDER = { east: 0, west: 1 };
+
+/**
+ * 동부 → 서부, 컨퍼런스 안에서는 시드순.
+ *
+ * NBA 순위는 컨퍼런스별로 매긴다. 30팀을 승률 하나로 섞으면 동부 3위와
+ * 서부 3위가 뒤엉켜 실제 순위와 다르게 보인다. 승률이 같을 때의 타이브레이커는
+ * ESPN이 계산한 시드(playoffSeed)를 따른다.
+ */
+function sortStandings(rows) {
+  const pct = (r) => r.wins / Math.max(1, r.wins + r.losses);
+  return [...rows].sort(
+    (a, b) =>
+      (CONFERENCE_ORDER[a.conference] ?? 2) - (CONFERENCE_ORDER[b.conference] ?? 2) ||
+      (a.seed ?? 99) - (b.seed ?? 99) ||
+      pct(b) - pct(a),
+  );
+}
+
 async function fetchStandings() {
   const body = await getJson(`${CORE}/standings`);
   const rows = [];
@@ -166,24 +195,20 @@ async function fetchStandings() {
       const losses = statValue(entry.stats, 'losses');
       if (wins == null || losses == null) continue;
       const gb = statValue(entry.stats, 'gamesBehind');
+      const seed = statValue(entry.stats, 'playoffSeed');
       rows.push({
         teamId: entry.team.id,
         pointsAgainst: statValue(entry.stats, 'avgPointsAgainst') ?? 0,
         wins: Math.round(wins),
         losses: Math.round(losses),
-        // "-"로 오는 선두는 0으로 둔다.
+        // 컨퍼런스 1위와의 게임차. "-"로 오는 선두는 0으로 둔다.
         gamesBehind: typeof gb === 'number' ? gb : 0,
-        conference: conference.name ?? '',
+        conference: conferenceKey(conference.name),
+        seed: typeof seed === 'number' && seed > 0 ? Math.round(seed) : null,
       });
     }
   }
-  // 승률 내림차순. 앱의 순위표가 이 순서를 그대로 쓴다.
-  rows.sort((a, b) => {
-    const pa = a.wins / Math.max(1, a.wins + a.losses);
-    const pb = b.wins / Math.max(1, b.wins + b.losses);
-    return pb - pa;
-  });
-  return rows;
+  return sortStandings(rows);
 }
 
 /** ESPN 경기 상태 → 앱 GameStatus. */
@@ -201,62 +226,116 @@ function yyyymmdd(d) {
   );
 }
 
+/** "2026-10-03T07:00Z" → "20261003". ESPN 달력은 미국 날짜에 시각을 붙여 준다. */
+function calendarDay(value) {
+  const m = String(value ?? '').match(/^(\d{4})-(\d{2})-(\d{2})/);
+  return m ? `${m[1]}${m[2]}${m[3]}` : null;
+}
+
+/** "20261003"에서 [days]일 옮긴 날짜. */
+function addDays(ymd, days) {
+  const d = new Date(Date.UTC(+ymd.slice(0, 4), +ymd.slice(4, 6) - 1, +ymd.slice(6, 8)));
+  d.setUTCDate(d.getUTCDate() + days);
+  return yyyymmdd(d);
+}
+
+/**
+ * 받을 날짜들을 [size]일 폭의 요청 구간("시작-끝")으로 묶는다.
+ * 경기 없는 긴 공백(올스타 휴식기, 비시즌)은 요청하지 않는다.
+ */
+function dateRanges(days, size = CHUNK_DAYS) {
+  const sorted = [...new Set(days)].sort();
+  const ranges = [];
+  let i = 0;
+  while (i < sorted.length) {
+    const start = sorted[i];
+    const end = addDays(start, size - 1);
+    while (i < sorted.length && sorted[i] <= end) i += 1;
+    ranges.push(`${start}-${end}`);
+  }
+  return ranges;
+}
+
+/** 이번 시즌 달력(프리시즌~파이널)에서 경기가 있는 날짜들. 실패하면 빈 목록. */
+async function fetchSeasonDays() {
+  try {
+    const body = await getJson(`${SITE}/scoreboard`);
+    const league = body.leagues?.[0] ?? {};
+    const days = (league.calendar ?? []).map(calendarDay).filter(Boolean);
+    console.log(`  ${league.season?.displayName ?? ''} 시즌 달력 ${days.length}일`);
+    return days;
+  } catch (error) {
+    console.warn(`  시즌 달력 실패: ${error.message} (오늘 앞뒤 일정만 받는다)`);
+    return [];
+  }
+}
+
+/** 스코어보드 경기 한 건 → 앱 경기. NBA 팀끼리가 아니면 null. */
+function toGame(event, teamIds) {
+  const competition = event.competitions?.[0];
+  if (!competition) return null;
+  const home = competition.competitors?.find((c) => c.homeAway === 'home');
+  const away = competition.competitors?.find((c) => c.homeAway === 'away');
+  if (!home || !away) return null;
+
+  // 프리시즌에는 NBA 소속이 아닌 해외 구단과의 경기가 섞여 온다.
+  // 앱이 팀 정보를 못 찾으므로 아예 담지 않는다.
+  if (!teamIds.has(home.team.id) || !teamIds.has(away.team.id)) return null;
+
+  const status = toStatus(competition.status?.type);
+  return {
+    id: event.id,
+    startTime: event.date,
+    homeTeamId: home.team.id,
+    awayTeamId: away.team.id,
+    homeScore: Number(home.score ?? 0),
+    awayScore: Number(away.score ?? 0),
+    status,
+    // "3rd Quarter 07:12" 같은 진행 상황.
+    liveClock:
+      status === 'live'
+        ? competition.status?.type?.shortDetail ?? null
+        : null,
+  };
+}
+
+/**
+ * 이번 시즌 전체 일정. 시즌 달력의 모든 경기일과 오늘 앞뒤 구간을 받는다.
+ *
+ * 한 구간 요청이 실패하면 그 구간은 지난 실행 결과로 채워, 잠깐의 오류로
+ * 일정 일부가 사라지지 않게 한다.
+ */
 async function fetchGames(teamIds) {
-  const today = new Date();
-  const games = [];
-  const seen = new Set();
+  const today = yyyymmdd(new Date());
+  const days = await fetchSeasonDays();
+  for (let offset = -PAST_DAYS; offset <= FUTURE_DAYS; offset += 1) {
+    days.push(addDays(today, offset));
+  }
+  const ranges = dateRanges(days);
+  const previous = await getPrevious('nba/games.json');
 
-  for (
-    let offset = -PAST_DAYS;
-    offset <= FUTURE_DAYS;
-    offset += CHUNK_DAYS
-  ) {
-    const from = new Date(today);
-    from.setUTCDate(from.getUTCDate() + offset);
-    const to = new Date(today);
-    to.setUTCDate(
-      to.getUTCDate() + Math.min(offset + CHUNK_DAYS - 1, FUTURE_DAYS),
-    );
-    const range = `${yyyymmdd(from)}-${yyyymmdd(to)}`;
-
+  const games = new Map();
+  let failed = 0;
+  await mapLimit(ranges, CONCURRENCY, async (range) => {
     try {
-      const body = await getJson(`${SITE}/scoreboard?limit=100&dates=${range}`);
+      // 스코어보드는 limit를 안 주면 25경기에서 자른다. 5일치는 많아야 75경기쯤이다.
+      const body = await getJson(`${SITE}/scoreboard?limit=200&dates=${range}`);
       for (const event of body.events ?? []) {
-        if (seen.has(event.id)) continue;
-        seen.add(event.id);
-        const competition = event.competitions?.[0];
-        if (!competition) continue;
-        const home = competition.competitors?.find((c) => c.homeAway === 'home');
-        const away = competition.competitors?.find((c) => c.homeAway === 'away');
-        if (!home || !away) continue;
-
-        // 프리시즌에는 NBA 소속이 아닌 해외 구단과의 경기가 섞여 온다.
-        // 앱이 팀 정보를 못 찾으므로 아예 담지 않는다.
-        if (!teamIds.has(home.team.id) || !teamIds.has(away.team.id)) continue;
-
-        const status = toStatus(competition.status?.type);
-        games.push({
-          id: event.id,
-          startTime: event.date,
-          homeTeamId: home.team.id,
-          awayTeamId: away.team.id,
-          homeScore: Number(home.score ?? 0),
-          awayScore: Number(away.score ?? 0),
-          status,
-          // "3rd Quarter 07:12" 같은 진행 상황.
-          liveClock:
-            status === 'live'
-              ? competition.status?.type?.shortDetail ?? null
-              : null,
-        });
+        const game = toGame(event, teamIds);
+        if (game) games.set(game.id, game);
       }
     } catch (error) {
-      // 한 구간이 실패해도 나머지 날짜는 살린다.
+      failed += 1;
       console.warn(`  일정 실패 ${range}: ${error.message}`);
+      const [from, to] = range.split('-');
+      for (const game of previous?.games ?? []) {
+        const day = yyyymmdd(new Date(game.startTime));
+        if (day >= from && day <= to && !games.has(game.id)) games.set(game.id, game);
+      }
     }
-  }
-  games.sort((a, b) => a.startTime.localeCompare(b.startTime));
-  return games;
+  });
+  console.log(`  요청 ${ranges.length}구간${failed ? `, 실패 ${failed}구간(지난 결과로 채움)` : ''}`);
+  return [...games.values()].sort((a, b) => a.startTime.localeCompare(b.startTime));
 }
 
 async function fetchRosters(teams) {
@@ -541,7 +620,12 @@ async function fetchDrafts(playerIds) {
  * 진행 중인 경기는 기록이 계속 바뀌어 매번 새로 받는다.
  */
 async function fetchBoxScores(games) {
-  const targets = games.filter((g) => g.status === 'finished' || g.status === 'live');
+  // 일정은 시즌 전체지만 박스스코어는 최근 경기만. 시즌 내내 1,230경기를
+  // 매번 확인하면 요청이 너무 많다.
+  const since = Date.now() - PAST_DAYS * 86400 * 1000;
+  const targets = games.filter(
+    (g) => (g.status === 'finished' || g.status === 'live') && Date.parse(g.startTime) >= since,
+  );
   let reused = 0;
 
   const results = await mapLimit(targets, CONCURRENCY, async (game) => {
@@ -783,10 +867,14 @@ if (require.main === module) {
 }
 
 module.exports = {
+  calendarDay,
+  conferenceKey,
+  dateRanges,
   fetchBoxScores,
   fetchLeaders,
   madeAttempted,
   mapLimit,
   reboundSplit,
   seasonHigh,
+  sortStandings,
 };

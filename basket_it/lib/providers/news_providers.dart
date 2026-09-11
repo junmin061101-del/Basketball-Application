@@ -26,20 +26,21 @@ final articleOpenerProvider = Provider<ArticleOpener>((ref) => openArticle);
 
 /// 분류를 나누지 않은 전체 뉴스.
 ///
-/// 홈 탭 피드([newsFeedProvider])는 선택된 분류에 따라 내용이 바뀌므로,
+/// 홈 탭 피드([newsFeedProvider])는 리그에 따라 내용이 바뀌므로,
 /// 팀·선수 화면처럼 "그 대상 기사만" 추려야 하는 곳은 이걸 쓴다.
 final allNewsProvider = FutureProvider<List<NewsArticle>>((ref) {
   return ref.watch(newsRepositoryProvider).getNews();
 });
 
-/// 홈 탭에서 선택된 뉴스 분류. null이면 전체.
+/// 홈 탭 뉴스 섹션. 맨 위 리그 전환(KBL / NBA)을 그대로 따른다.
 ///
-/// 리그를 바꾸면 그 리그 기사로 자동으로 옮겨간다. NBA를 보러 갔는데
-/// KBL 기사가 남아 있으면 안 된다.
-final newsCategoryFilterProvider = StateProvider<NewsCategory?>((ref) {
-  return ref.watch(selectedLeagueProvider) == League.nba
-      ? NewsCategory.nba
-      : null;
+/// 섹션은 두 개뿐이다. KBL 섹션에는 해외파 한국 선수 소식도 함께 들어
+/// 있어(수집기가 kbl.json에 합쳐 둔다) 분류를 따로 고르는 칩은 두지 않는다.
+final newsCategoryProvider = Provider<NewsCategory>((ref) {
+  return switch (ref.watch(selectedLeagueProvider)) {
+    League.kbl => NewsCategory.kbl,
+    League.nba => NewsCategory.nba,
+  };
 });
 
 /// 뉴스를 다시 확인하는 주기.
@@ -68,7 +69,7 @@ class NewsFeed {
   });
 }
 
-/// 선택된 분류의 뉴스 피드.
+/// 지금 리그 섹션의 뉴스 피드.
 ///
 /// 처음 한 번 불러온 뒤 [newsPollInterval]마다 다시 확인해, 새로 올라온
 /// 기사만 원문 URL 기준으로 중복을 걸러 앞에 합친다. 폴링 중에는 로딩
@@ -84,7 +85,7 @@ class NewsFeedNotifier extends AutoDisposeAsyncNotifier<NewsFeed> {
 
   @override
   Future<NewsFeed> build() async {
-    final category = ref.watch(newsCategoryFilterProvider);
+    final category = ref.watch(newsCategoryProvider);
     final repository = ref.watch(newsRepositoryProvider);
 
     _timer?.cancel();
@@ -109,7 +110,7 @@ class NewsFeedNotifier extends AutoDisposeAsyncNotifier<NewsFeed> {
     if (_polling) return; // 앞선 요청이 아직 안 끝났으면 건너뛴다
     _polling = true;
     try {
-      final category = ref.read(newsCategoryFilterProvider);
+      final category = ref.read(newsCategoryProvider);
       final fetched = await ref
           .read(newsRepositoryProvider)
           .getNews(category: category);

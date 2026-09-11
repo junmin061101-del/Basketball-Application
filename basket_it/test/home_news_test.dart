@@ -22,6 +22,8 @@ const testTeams = [
 ];
 
 /// 카테고리별로 무엇을 요청받았는지 기록하는 가짜 Repository.
+///
+/// 실제 수집기처럼 KBL 파일에는 해외파 기사가 함께 들어 있다.
 class _FakeNewsRepository implements NewsRepository {
   final List<NewsArticle> articles;
   final List<NewsCategory?> requested = [];
@@ -31,8 +33,12 @@ class _FakeNewsRepository implements NewsRepository {
   @override
   Future<List<NewsArticle>> getNews({NewsCategory? category}) async {
     requested.add(category);
-    if (category == null) return articles;
-    return articles.where((a) => a.category == category).toList();
+    return switch (category) {
+      null => articles,
+      NewsCategory.kbl =>
+        articles.where((a) => a.category != NewsCategory.nba).toList(),
+      _ => articles.where((a) => a.category == category).toList(),
+    };
   }
 }
 
@@ -154,17 +160,32 @@ void main() {
     expect(opened.single.url, 'https://jumpball.co.kr/news/1');
   });
 
-  testWidgets('필터를 바꾸면 그 분류로 다시 요청한다', (tester) async {
-    final repository = _FakeNewsRepository(feed);
+  testWidgets('뉴스는 KBL / NBA 두 섹션뿐이고 리그 전환을 따라간다', (tester) async {
+    final repository = _FakeNewsRepository([
+      ...feed,
+      article(
+        id: 'https://jumpball.co.kr/news/9',
+        title: '돈치치 40득점, 레이커스 역전승',
+        category: NewsCategory.nba,
+        ago: const Duration(minutes: 5),
+      ),
+    ]);
     await pumpHome(tester, repository);
-    expect(repository.requested, [null]);
 
-    await tester.tap(find.text('해외파').first);
+    // KBL 섹션: KBL 기사와 해외파 기사가 한 목록에 함께 나온다.
+    expect(repository.requested, [NewsCategory.kbl]);
+    expect(find.text('서울 SK, 창원 LG 꺾고 4연승'), findsOneWidget);
+    expect(find.text('이현중, G리그 데뷔전 18득점'), findsOneWidget);
+    expect(find.text('돈치치 40득점, 레이커스 역전승'), findsNothing);
+    // 전체/KBL/해외파를 고르던 분류 칩은 없다.
+    expect(find.text('전체'), findsNothing);
+
+    // 맨 위 리그 전환을 NBA로 바꾸면 NBA 섹션으로 바뀐다.
+    await tester.tap(find.text('NBA').first);
     await tester.pumpAndSettle(const Duration(milliseconds: 600));
 
-    expect(repository.requested, [null, NewsCategory.overseas]);
-    // 해외파 기사만 남는다.
-    expect(find.text('이현중, G리그 데뷔전 18득점'), findsOneWidget);
+    expect(repository.requested.last, NewsCategory.nba);
+    expect(find.text('돈치치 40득점, 레이커스 역전승'), findsOneWidget);
     expect(find.text('서울 SK, 창원 LG 꺾고 4연승'), findsNothing);
   });
 
@@ -216,7 +237,7 @@ void main() {
     }
   });
 
-  testWidgets('팔로우가 없으면 분류 칩만 나온다', (tester) async {
+  testWidgets('팔로우가 없으면 칩이 하나도 없다', (tester) async {
     await pumpHome(tester, _FakeNewsRepository(feed));
 
     for (final team in testTeams) {
@@ -226,7 +247,7 @@ void main() {
         reason: '팔로우하지 않은 ${team.shortName} 칩이 보이면 안 된다',
       );
     }
-    // 분류 칩은 그대로 있다.
-    expect(find.text('전체'), findsOneWidget);
+    // 분류 칩도 없다. ('해외파'는 해외파 기사 카드의 배지로 남아 있어 확인에 쓰지 않는다.)
+    expect(find.text('전체'), findsNothing);
   });
 }

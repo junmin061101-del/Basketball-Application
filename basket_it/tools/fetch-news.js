@@ -178,7 +178,10 @@ async function main() {
   const known = await loadPreviousThumbnails();
 
   const groups = {
-    kbl: mergeArticles(kbl.lists).slice(0, MAX_ARTICLES),
+    // 홈 화면은 KBL / NBA 두 섹션뿐이다. KBL 섹션에 해외파 한국 선수 소식도
+    // 함께 보여주므로 kbl.json에 합쳐 둔다.
+    kbl: mergeArticles([...kbl.lists, ...overseas.lists]).slice(0, MAX_ARTICLES),
+    // 해외파 탭이 있던 예전 앱 버전이 아직 이 파일을 읽는다.
     overseas: mergeArticles(overseas.lists).slice(0, MAX_ARTICLES),
     nba: mergeArticles(nba.lists).slice(0, MAX_ARTICLES),
     all: mergeArticles([...kbl.lists, ...overseas.lists, ...nba.lists]).slice(

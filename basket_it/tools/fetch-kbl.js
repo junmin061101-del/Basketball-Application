@@ -328,7 +328,7 @@ function seasonHighlights(boxScores) {
   return byPlayer;
 }
 
-/** 시즌 시작일부터 오늘+[FUTURE_DAYS]까지 일정. 한 달씩 끊어 부른다. */
+/** [fromDate]부터 [toDate]까지 일정. 한 달씩 끊어 부른다. */
 async function fetchGames(fromDate, toDate) {
   const games = [];
   const seen = new Set();
@@ -417,10 +417,8 @@ async function main() {
   const today = kstDate();
 
   console.log('KBL 시즌 확인...');
-  const seasons = startedSeasons(
-    await kblGet('/season/list', { seasonCategory: 'R', gameCode: '01', seasonGrade: 1 }),
-    today,
-  );
+  const seasonList = await kblGet('/season/list', { seasonCategory: 'R', gameCode: '01', seasonGrade: 1 });
+  const seasons = startedSeasons(seasonList, today);
   const current = seasons[0];
   if (!current) {
     console.error('시작한 정규시즌이 없습니다. 기존 데이터를 지우지 않기 위해 중단합니다.');
@@ -457,7 +455,14 @@ async function main() {
   });
 
   console.log('일정 수집...');
-  const games = await fetchGames(String(current.gamedateStart), kstDate(FUTURE_DAYS));
+  // 전체 일정: 다음 시즌 일정이 발표돼 있으면 그 시즌 마지막 날까지 받는다.
+  const lastSeasonDay = seasonList
+    .filter((s) => s.seasonCategory === 'R' && /^\d{8}$/.test(String(s.gamedateEnd ?? '')))
+    .map((s) => String(s.gamedateEnd))
+    .sort()
+    .pop();
+  const scheduleEnd = [kstDate(FUTURE_DAYS), lastSeasonDay ?? ''].sort().pop();
+  const games = await fetchGames(String(current.gamedateStart), scheduleEnd);
   console.log(`  ${games.length}경기`);
 
   console.log('박스스코어 수집...');

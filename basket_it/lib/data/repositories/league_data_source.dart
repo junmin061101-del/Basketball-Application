@@ -103,6 +103,9 @@ class LeagueDataSource {
         wins: (r['wins'] as num?)?.toInt() ?? 0,
         losses: (r['losses'] as num?)?.toInt() ?? 0,
         gamesBehind: (r['gamesBehind'] as num?)?.toDouble() ?? 0,
+        // NBA만 온다("east" / "west"). 예전 수집 결과는 "Eastern Conference".
+        conference: r['conference'] as String? ?? '',
+        seed: (r['seed'] as num?)?.toInt(),
       );
     }).toList();
   }

@@ -47,9 +47,10 @@ class TeamDetailScreen extends ConsumerWidget {
                           (s) => s.teamId == team.id,
                         );
                         if (matches.isEmpty) return const SizedBox.shrink();
-                        final rank = standings.indexOf(matches.first) + 1;
+                        // NBA는 컨퍼런스 안 순위("동부 3위")를 쓴다.
+                        final rankLabel = rankLabelOf(standings, team.id);
                         return Text(
-                          '$rank위 · ${matches.first.wins}승 ${matches.first.losses}패',
+                          '$rankLabel · ${matches.first.wins}승 ${matches.first.losses}패',
                           style: Theme.of(context).textTheme.bodyMedium,
                         );
                       },
