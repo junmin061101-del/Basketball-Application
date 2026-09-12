@@ -28,6 +28,7 @@ const {
   mergeArticles,
   extractOgImage,
 } = require('./news-source');
+const { runLivePush } = require('./live-score');
 
 admin.initializeApp();
 const db = admin.firestore();
@@ -335,6 +336,31 @@ exports.refreshBasketballNews = onSchedule(
           message: error.message,
         });
       }
+    }
+  },
+);
+
+/**
+ * 팔로우한 팀의 실시간 경기를 잠금화면(Android 상시 알림·iPhone Live Activity)으로
+ * 보낸다. 1분마다 깨어나 진행 중인 경기가 없으면 곧바로 끝나고, 있으면 30초
+ * 간격으로 두 번 확인한다. 로직은 live-score.js에 있다.
+ */
+exports.pushLiveScores = onSchedule(
+  {
+    schedule: 'every 1 minutes',
+    region: 'asia-northeast3',
+    timeZone: 'Asia/Seoul',
+    timeoutSeconds: 120,
+    memory: '256MiB',
+    // 1분마다 도는 짧은 작업이라 1세대 CPU로 비용을 낮춘다.
+    cpu: 'gcf_gen1',
+    retryCount: 0,
+  },
+  async () => {
+    const rounds = await runLivePush({ db, messaging: admin.messaging() });
+    const sent = rounds.reduce((sum, r) => sum + r.sent, 0);
+    if (sent > 0 || rounds[0].live > 0) {
+      logger.info('실시간 스코어 푸시', { rounds });
     }
   },
 );

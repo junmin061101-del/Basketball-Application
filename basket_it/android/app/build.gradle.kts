@@ -9,7 +9,8 @@ plugins {
 
 android {
     namespace = "com.basketit.basket_it"
-    compileSdk = flutter.compileSdkVersion
+    // flutter_secure_storage가 Android 37 API로 컴파일하기를 요구한다(기기 최소 버전과는 무관).
+    compileSdk = 37
     ndkVersion = flutter.ndkVersion
 
     compileOptions {

@@ -54,6 +54,8 @@ dependencies:
   # 날짜 선택기 등 기본 위젯 문구를 한국어로
   flutter_localizations:
     sdk: flutter
+  firebase_messaging: ^15.2.10
+  live_activities: ^2.5.1
 
 dev_dependencies:
   flutter_test:

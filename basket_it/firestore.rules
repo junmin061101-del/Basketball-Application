@@ -76,6 +76,36 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // 잠금화면 실시간 스코어 구독. 문서 id는 기기의 FCM 토큰이다.
+    // 토큰은 남에게 보이면 안 되므로 읽기는 막고(서버만 읽는다), 로그인한
+    // 기기가 자기 토큰 문서의 팔로우 팀·Live Activity 토큰만 쓸 수 있다.
+    // startedActivities(서버가 기록)는 앱이 바꾸지 못한다.
+    match /liveSubscribers/{token} {
+      allow read: if false;
+      allow create: if request.auth != null
+        && request.resource.data.keys().hasOnly(['platform', 'fcmToken', 'teamKeys', 'pushToStartToken', 'activityTokens', 'updatedAt'])
+        && validLiveSubscriber(token);
+      allow update: if request.auth != null
+        && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['platform', 'fcmToken', 'teamKeys', 'pushToStartToken', 'activityTokens', 'updatedAt'])
+        && validLiveSubscriber(token);
+      allow delete: if request.auth != null;
+    }
+
+    function validLiveSubscriber(token) {
+      return request.resource.data.fcmToken == token
+        && request.resource.data.platform in ['android', 'ios']
+        && request.resource.data.teamKeys is list
+        && request.resource.data.teamKeys.size() <= 60
+        && (!('activityTokens' in request.resource.data) || request.resource.data.activityTokens is map)
+        && (!('activityTokens' in request.resource.data) || request.resource.data.activityTokens.size() <= 20);
+    }
+
+    // 마지막으로 보낸 경기 상태. 서버만 쓴다.
+    match /liveGames/{gameKey} {
+      allow read, write: if false;
+    }
+
     // 커뮤니티 댓글: 로그인한 사용자는 읽기/작성, 본인 것만 삭제.
     match /communityComments/{commentId} {
       allow read: if request.auth != null;
