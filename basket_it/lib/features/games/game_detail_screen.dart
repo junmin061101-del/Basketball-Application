@@ -25,6 +25,13 @@ class GameDetailScreen extends ConsumerWidget {
     required this.awayTeam,
   });
 
+  /// 상단 제목. 지난 시즌 경기는 몇 년 경기인지 알 수 있게 연도를 붙인다.
+  static String dateTitle(DateTime date, {DateTime? now}) {
+    final today = now ?? DateTime.now();
+    final label = '${date.month}월 ${date.day}일';
+    return date.year == today.year ? label : '${date.year}년 $label';
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final boxScoreAsync = ref.watch(boxScoreProvider(game));
@@ -32,7 +39,7 @@ class GameDetailScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('${game.date.month}월 ${game.date.day}일'),
+        title: Text(dateTitle(game.date)),
       ),
       body: SafeArea(
         child: ListView(
@@ -259,7 +266,20 @@ class _GameBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (boxScore.isEmpty) return const SizedBox.shrink();
+    // 선수 기록(박스스코어)은 최근 경기만 모아 둔다. 지난 시즌 경기는 점수까지만
+    // 보여주고, 빈 화면 대신 그 사실을 알려 준다.
+    if (boxScore.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 40),
+        child: Center(
+          child: Text(
+            '선수 기록은 최근 경기만 볼 수 있어요.',
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
+        ),
+      );
+    }
 
     final homeLines =
         boxScore.where((s) => s.teamId == homeTeam.id).toList()
