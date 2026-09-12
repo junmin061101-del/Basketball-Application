@@ -15,14 +15,15 @@ final gameRepositoryProvider = Provider<GameRepository>((ref) {
 ///
 /// 날짜 바의 점 표시와 "다음 경기일로 이동"에 쓴다. 비시즌에는 몇 주씩 빈
 /// 날이 이어져, 날짜를 하나씩 넘겨서는 경기를 찾기 어렵다. 수집된 일정이
-/// 시즌 전체라 오늘 앞뒤 400일이면 넉넉하다.
+/// 지난 3시즌 경기까지 올라와 있어 과거는 3년 넘게, 앞으로는 다음 시즌
+/// 일정까지 넉넉히 본다.
 final gameDaysProvider = FutureProvider<List<DateTime>>((ref) async {
   final now = DateTime.now();
   final today = DateTime(now.year, now.month, now.day);
   final games = await ref
       .watch(gameRepositoryProvider)
       .getGamesInRange(
-        today.subtract(const Duration(days: 400)),
+        today.subtract(const Duration(days: 365 * 3 + 120)),
         today.add(const Duration(days: 400)),
       );
   return {

@@ -34,6 +34,15 @@ const FUTURE_DAYS = 45;
 const HISTORY_SEASONS = 6;
 
 /**
+ * 일정·결과를 모을 시즌 수(최근 시즌부터). 지난 3시즌 경기를 함께 올려
+ * 앱에서 몇 년 전 경기도 날짜로 찾아볼 수 있게 한다.
+ *
+ * KBL 일정은 한 달 단위로 받아 시즌 하나가 9번 요청이면 끝나, 매번 다시
+ * 받아도 부담이 적다. 대신 박스스코어는 이번 시즌 경기만 받는다.
+ */
+const GAME_HISTORY_SEASONS = 3;
+
+/**
  * KBL 팀 코드 → 앱 팀.
  *
  * id는 앱이 처음부터 써 온 값이다. 사용자가 팔로우해 둔 팀과 뉴스 수집기의
@@ -462,11 +471,17 @@ async function main() {
     .sort()
     .pop();
   const scheduleEnd = [kstDate(FUTURE_DAYS), lastSeasonDay ?? ''].sort().pop();
-  const games = await fetchGames(String(current.gamedateStart), scheduleEnd);
-  console.log(`  ${games.length}경기`);
+  // 지난 3시즌부터 받는다. 시작한 시즌 목록은 최신순이다.
+  const oldestSeason = seasons[Math.min(GAME_HISTORY_SEASONS - 1, seasons.length - 1)] ?? current;
+  const games = await fetchGames(String(oldestSeason.gamedateStart), scheduleEnd);
+  console.log(`  ${games.length}경기 (${seasonLabel(oldestSeason.seasonName)} 시즌부터)`);
 
   console.log('박스스코어 수집...');
-  const boxScores = await fetchBoxScores(games);
+  // 박스스코어는 이번 시즌 경기만. 지난 시즌까지 매번 확인하면 요청이 수천 건이 된다.
+  const currentSeasonStart = String(current.gamedateStart);
+  const boxScores = await fetchBoxScores(
+    games.filter((g) => g.startTime.slice(0, 10).replace(/-/g, '') >= currentSeasonStart),
+  );
 
   const seasonGames = games.filter((g) => g.glkey === current.glkey);
   const againstByTeam = pointsAgainstByTeam(seasonGames);

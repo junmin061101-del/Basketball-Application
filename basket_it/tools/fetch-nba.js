@@ -88,6 +88,15 @@ const PAST_DAYS = 14;
 const FUTURE_DAYS = 45;
 
 /**
+ * 지난 시즌 경기 결과를 몇 시즌까지 함께 올릴지. 최근 3시즌이면 앱에서
+ * 몇 년 전 경기도 날짜로 찾아볼 수 있다.
+ *
+ * 끝난 시즌은 결과가 바뀌지 않으므로, 한 번 다 모은 시즌은 games.json의
+ * history_seasons를 보고 지난 실행 결과를 그대로 쓴다(20분마다 다시 받지 않는다).
+ */
+const HISTORY_SEASONS = 3;
+
+/**
  * 한 번에 요청할 날짜 폭.
  *
  * 스코어보드는 날짜 범위를 받아 한 번에 최대 100경기를 준다. 시즌 중에는
@@ -299,20 +308,102 @@ function toGame(event, teamIds) {
   };
 }
 
+/** 시즌 시작 연도. NBA는 10월 개막이라 8월 이후면 그 해가 시작 연도다. */
+function seasonStartYear(date = new Date()) {
+  const year = date.getUTCFullYear();
+  return date.getUTCMonth() + 1 >= 8 ? year : year - 1;
+}
+
+/** 시작 연도 → "2023-24". */
+function seasonLabel(startYear) {
+  return `${startYear}-${String(startYear + 1).slice(2)}`;
+}
+
+/** 시작 연도 → 프리시즌부터 파이널까지 감싸는 [시작일, 종료일](YYYYMMDD). */
+function seasonWindow(startYear) {
+  return [`${startYear}0915`, `${startYear + 1}0701`];
+}
+
+/** [from]부터 [to]까지 하루씩 늘린 날짜 목록(YYYYMMDD). */
+function daysBetween(from, to) {
+  const days = [];
+  for (let day = from; day <= to; day = addDays(day, 1)) days.push(day);
+  return days;
+}
+
+/** 경기 시각(ISO)이 [from]~[to](YYYYMMDD) 안인지. */
+function inWindow(startTime, from, to) {
+  const day = String(startTime ?? '').slice(0, 10).replace(/-/g, '');
+  return day >= from && day <= to;
+}
+
+/**
+ * 지난 [HISTORY_SEASONS] 시즌의 경기 결과.
+ *
+ * 이미 다 모은 시즌([previous]의 history_seasons)은 그 결과를 그대로 쓴다.
+ * 중간에 실패한 구간이 있으면 그 시즌은 완료로 표시하지 않아 다음 실행에서 다시 받는다.
+ */
+async function fetchHistoryGames(teamIds, previous, now = new Date()) {
+  const done = new Set(previous?.history_seasons ?? []);
+  const previousGames = previous?.games ?? [];
+  const games = [];
+  const seasons = [];
+
+  for (let back = 1; back <= HISTORY_SEASONS; back += 1) {
+    const startYear = seasonStartYear(now) - back;
+    const label = seasonLabel(startYear);
+    const [from, to] = seasonWindow(startYear);
+    const reused = previousGames.filter((g) => inWindow(g.startTime, from, to));
+
+    if (done.has(label) && reused.length > 0) {
+      games.push(...reused);
+      seasons.push(label);
+      console.log(`  ${label}: 지난 결과 ${reused.length}경기 그대로`);
+      continue;
+    }
+
+    const collected = new Map();
+    let failed = 0;
+    const ranges = dateRanges(daysBetween(from, to));
+    await mapLimit(ranges, CONCURRENCY, async (range) => {
+      try {
+        const body = await getJson(`${SITE}/scoreboard?limit=200&dates=${range}`);
+        for (const event of body.events ?? []) {
+          const game = toGame(event, teamIds);
+          if (game) collected.set(game.id, game);
+        }
+      } catch (error) {
+        failed += 1;
+        console.warn(`  지난 시즌 일정 실패 ${range}: ${error.message}`);
+      }
+    });
+
+    // 실패한 구간이 있고 지난 결과가 더 많으면, 이번엔 지난 결과를 지키고 다음 실행에서 다시 받는다.
+    if (failed > 0 && reused.length >= collected.size) {
+      games.push(...reused);
+      console.log(`  ${label}: ${failed}구간 실패 → 지난 결과 ${reused.length}경기 유지`);
+      continue;
+    }
+    games.push(...collected.values());
+    if (failed === 0) seasons.push(label);
+    console.log(`  ${label}: ${collected.size}경기${failed ? ` (${failed}구간 실패)` : ''}`);
+  }
+  return { games, seasons };
+}
+
 /**
  * 이번 시즌 전체 일정. 시즌 달력의 모든 경기일과 오늘 앞뒤 구간을 받는다.
  *
  * 한 구간 요청이 실패하면 그 구간은 지난 실행 결과로 채워, 잠깐의 오류로
  * 일정 일부가 사라지지 않게 한다.
  */
-async function fetchGames(teamIds) {
+async function fetchGames(teamIds, previous) {
   const today = yyyymmdd(new Date());
   const days = await fetchSeasonDays();
   for (let offset = -PAST_DAYS; offset <= FUTURE_DAYS; offset += 1) {
     days.push(addDays(today, offset));
   }
   const ranges = dateRanges(days);
-  const previous = await getPrevious('nba/games.json');
 
   const games = new Map();
   let failed = 0;
@@ -704,8 +795,15 @@ async function main() {
   console.log(`  ${standings.length}개 항목`);
 
   console.log('일정 수집...');
-  const games = await fetchGames(new Set(teams.map((t) => t.id)));
-  console.log(`  ${games.length}경기`);
+  const teamIds = new Set(teams.map((t) => t.id));
+  const previousGamesDoc = await getPrevious('nba/games.json');
+  const currentGames = await fetchGames(teamIds, previousGamesDoc);
+  const history = await fetchHistoryGames(teamIds, previousGamesDoc);
+  // 같은 경기가 두 쪽에 다 있으면 이번 시즌 쪽(최신 상태)을 남긴다.
+  const gamesById = new Map([...history.games, ...currentGames].map((g) => [g.id, g]));
+  const games = [...gamesById.values()].sort((a, b) => a.startTime.localeCompare(b.startTime));
+  const historySeasons = history.seasons;
+  console.log(`  ${games.length}경기 (지난 시즌 ${history.games.length}경기)`);
 
   console.log('로스터 수집...');
   const players = await fetchRosters(teams);
@@ -841,6 +939,7 @@ async function main() {
     const file = path.join(outDir, `${name}.json`);
     const payload = { generated_at: generatedAt, [name]: data };
     if (name === 'leaders') payload.season = season;
+    if (name === 'games') payload.history_seasons = historySeasons;
     await fs.writeFile(file, JSON.stringify(payload));
     console.log(`${file}: ${data.length}건`);
   }
@@ -868,6 +967,12 @@ if (require.main === module) {
 
 module.exports = {
   calendarDay,
+  daysBetween,
+  fetchHistoryGames,
+  inWindow,
+  seasonLabel,
+  seasonStartYear,
+  seasonWindow,
   conferenceKey,
   dateRanges,
   fetchBoxScores,
