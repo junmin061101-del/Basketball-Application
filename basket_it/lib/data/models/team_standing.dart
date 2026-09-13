@@ -29,6 +29,25 @@ class TeamStanding {
   double get winPct => gamesPlayed == 0 ? 0 : wins / gamesPlayed;
 }
 
+/// 순위표가 어느 시즌 것인지.
+///
+/// 새 시즌 개막 전에는 수집기가 지난 시즌 최종 순위를 올리고 [isFinal]을 켠다.
+/// 화면은 "2025-26 시즌 최종"처럼 보여줘 지금 순위로 오해하지 않게 한다.
+@immutable
+class StandingsSeason {
+  /// "2025-26". 예전 수집 결과에는 없어 null일 수 있다.
+  final String? label;
+
+  /// 정규시즌이 끝난 최종 순위인지.
+  final bool isFinal;
+
+  const StandingsSeason({this.label, this.isFinal = false});
+
+  /// "2025-26 시즌 최종" / "2026-27 시즌". 시즌을 모르면 null.
+  String? get caption =>
+      label == null ? null : '$label 시즌${isFinal ? ' 최종' : ''}';
+}
+
 /// 순위표 한 묶음. NBA는 동부·서부 두 개, KBL은 하나다.
 @immutable
 class StandingsGroup {

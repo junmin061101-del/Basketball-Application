@@ -13,8 +13,14 @@ import 'package:basket_it/data/repositories/team_repository.dart';
 /// 위젯 테스트용 저장소. 네트워크 없이 넘겨준 값만 돌려준다.
 class FakeTeamRepository implements TeamRepository {
   final List<Team> teams;
+  final List<TeamStanding> standings;
+  final StandingsSeason season;
 
-  const FakeTeamRepository([this.teams = const []]);
+  const FakeTeamRepository([
+    this.teams = const [],
+    this.standings = const [],
+    this.season = const StandingsSeason(),
+  ]);
 
   @override
   Future<List<Team>> getTeams() async => teams;
@@ -28,7 +34,10 @@ class FakeTeamRepository implements TeamRepository {
   }
 
   @override
-  Future<List<TeamStanding>> getStandings() async => const [];
+  Future<List<TeamStanding>> getStandings() async => standings;
+
+  @override
+  Future<StandingsSeason> getStandingsSeason() async => season;
 
   @override
   Future<List<TeamSeasonStats>> getTeamSeasonStats() async => const [];

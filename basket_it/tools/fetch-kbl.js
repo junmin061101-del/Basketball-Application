@@ -558,6 +558,11 @@ async function main() {
   for (const [name, data] of Object.entries(files)) {
     const payload = { generated_at: generatedAt, [name]: data };
     if (name === 'leaders') payload.season = season;
+    if (name === 'standings') {
+      // 앱이 "2025-26 시즌 최종 순위"처럼 어느 시즌 순위인지 보여준다.
+      payload.season = season;
+      payload.final = /^\d{8}$/.test(String(current.gamedateEnd ?? '')) && today > String(current.gamedateEnd);
+    }
     await fs.writeFile(path.join(outDir, `${name}.json`), JSON.stringify(payload));
     console.log(`${name}.json: ${data.length}건`);
   }

@@ -96,6 +96,15 @@ class LeagueDataSource {
     return rows.whereType<Map>().map(_toTeam).toList();
   }
 
+  /// 순위표가 어느 시즌 것인지(standings.json의 season / final).
+  Future<StandingsSeason> standingsSeason() async {
+    final doc = await _loadDoc('standings');
+    return StandingsSeason(
+      label: doc['season'] as String?,
+      isFinal: doc['final'] == true,
+    );
+  }
+
   Future<List<TeamStanding>> standings() async {
     final rows = await _load('standings');
     return rows.whereType<Map>().map((r) {

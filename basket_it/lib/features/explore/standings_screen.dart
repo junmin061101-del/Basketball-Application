@@ -21,6 +21,11 @@ class StandingsScreen extends ConsumerWidget {
     final standingsAsync = ref.watch(standingsProvider);
     final teamsAsync = ref.watch(teamsProvider);
     final statsAsync = ref.watch(teamSeasonStatsProvider);
+    // 비시즌에는 지난 시즌 최종 순위가 오므로 어느 시즌인지 적어 둔다.
+    final seasonCaption = ref
+        .watch(standingsSeasonProvider)
+        .valueOrNull
+        ?.caption;
 
     return Scaffold(
       appBar: AppBar(title: const Text('팀 순위')),
@@ -41,6 +46,18 @@ class StandingsScreen extends ConsumerWidget {
                 return ListView(
                   padding: const EdgeInsets.only(bottom: 16),
                   children: [
+                    if (seasonCaption != null)
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
+                        child: Text(
+                          '$seasonCaption 순위',
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                      ),
                     for (final group in groupStandings(standings)) ...[
                       if (group.title != null)
                         Padding(
@@ -102,12 +119,7 @@ final _columns = <_Col>[
     (_, t) => t.pointsAgainst,
     width: 56,
   ),
-  _Col(
-    '리바운드',
-    (_, t) => _f1(t.rebounds),
-    (_, t) => t.rebounds,
-    width: 68,
-  ),
+  _Col('리바운드', (_, t) => _f1(t.rebounds), (_, t) => t.rebounds, width: 68),
   _Col('어시스트', (_, t) => _f1(t.assists), (_, t) => t.assists, width: 68),
   _Col('스틸', (_, t) => _f1(t.steals), (_, t) => t.steals),
   _Col('블록', (_, t) => _f1(t.blocks), (_, t) => t.blocks),
@@ -117,18 +129,8 @@ final _columns = <_Col>[
   _Col('3점%', (_, t) => _pct(t.tpPct), (_, t) => t.tpPct, width: 60),
   _Col('자유투', (_, t) => _f1(t.ftm), (_, t) => t.ftm, width: 60),
   _Col('자유투%', (_, t) => _pct(t.ftPct), (_, t) => t.ftPct, width: 68),
-  _Col(
-    '공격리바운드',
-    (_, t) => _f1(t.oreb),
-    (_, t) => t.oreb,
-    width: 90,
-  ),
-  _Col(
-    '수비리바운드',
-    (_, t) => _f1(t.dreb),
-    (_, t) => t.dreb,
-    width: 90,
-  ),
+  _Col('공격리바운드', (_, t) => _f1(t.oreb), (_, t) => t.oreb, width: 90),
+  _Col('수비리바운드', (_, t) => _f1(t.dreb), (_, t) => t.dreb, width: 90),
   _Col('턴오버', (_, t) => _f1(t.tov), (_, t) => t.tov, width: 60),
   _Col('파울', (_, t) => _f1(t.pf), (_, t) => t.pf),
 ];
@@ -220,7 +222,10 @@ class _StandingsTableState extends State<_StandingsTable> {
                       ),
                     ),
                     for (var i = 0; i < rows.length; i++)
-                      _TeamCell(rank: i + 1, team: widget.teamById[rows[i].teamId]!),
+                      _TeamCell(
+                        rank: i + 1,
+                        team: widget.teamById[rows[i].teamId]!,
+                      ),
                   ],
                 ),
               ),
@@ -398,9 +403,8 @@ class _TeamCell extends StatelessWidget {
                 team.fullName,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: Theme.of(
-                  context,
-                ).textTheme.titleMedium?.copyWith(fontSize: 13),
+                style: Theme.of(context).textTheme.titleMedium
+                    ?.copyWith(fontSize: 13),
               ),
             ),
           ),

@@ -61,6 +61,11 @@ final standingsProvider = FutureProvider<List<TeamStanding>>((ref) {
   return ref.watch(teamRepositoryProvider).getStandings();
 });
 
+/// 순위표가 어느 시즌 것인지("2025-26 시즌 최종").
+final standingsSeasonProvider = FutureProvider<StandingsSeason>((ref) {
+  return ref.watch(teamRepositoryProvider).getStandingsSeason();
+});
+
 /// 팀별 시즌 평균 기록(득점/실점/리바운드/야투% 등).
 final teamSeasonStatsProvider = FutureProvider<List<TeamSeasonStats>>((ref) {
   return ref.watch(teamRepositoryProvider).getTeamSeasonStats();

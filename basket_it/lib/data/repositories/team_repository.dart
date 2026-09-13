@@ -13,6 +13,9 @@ abstract class TeamRepository {
   /// 현재 시즌 순위표. 순위순으로 정렬돼 있다.
   Future<List<TeamStanding>> getStandings();
 
+  /// 순위표가 어느 시즌 것인지. 비시즌에는 지난 시즌 최종 순위다.
+  Future<StandingsSeason> getStandingsSeason();
+
   /// 팀별 시즌 평균 기록(득점/실점/리바운드/야투% 등).
   Future<List<TeamSeasonStats>> getTeamSeasonStats();
 }

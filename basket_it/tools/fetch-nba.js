@@ -195,8 +195,13 @@ function sortStandings(rows) {
   );
 }
 
-async function fetchStandings() {
-  const body = await getJson(`${CORE}/standings`);
+/**
+ * 순위표. [season](ESPN 시즌 연도, 2025-26 시즌이면 2026)을 주면 그 시즌을 받는다.
+ * 돌려주는 값: { rows, seasonYear, seasonLabel("2025-26") }.
+ */
+async function fetchStandings(season) {
+  const body = await getJson(`${CORE}/standings${season ? `?season=${season}` : ''}`);
+  const first = body.children?.[0]?.standings ?? {};
   const rows = [];
   for (const conference of body.children ?? []) {
     for (const entry of conference.standings?.entries ?? []) {
@@ -217,7 +222,32 @@ async function fetchStandings() {
       });
     }
   }
-  return sortStandings(rows);
+  return {
+    rows: sortStandings(rows),
+    seasonYear: typeof first.season === 'number' ? first.season : null,
+    seasonLabel: first.seasonDisplayName ?? null,
+  };
+}
+
+/** NBA 정규시즌 경기 수. 모든 팀이 다 치렀으면 최종 순위다. */
+const REGULAR_SEASON_GAMES = 82;
+
+/**
+ * 앱에 보여줄 순위표를 고른다.
+ *
+ * 새 시즌 개막 전에는 30팀이 모두 0승 0패라 "7위, 6위와 0게임차"처럼 의미
+ * 없는 순위가 된다. 그때는 지난 시즌 최종 순위를 대신 보여주고 final로 표시한다.
+ */
+async function pickStandings(fetchSeason = fetchStandings) {
+  const current = await fetchSeason();
+  const notStarted = current.rows.length > 0 && current.rows.every((r) => r.wins + r.losses === 0);
+  if (notStarted && current.seasonYear) {
+    const last = await fetchSeason(current.seasonYear - 1).catch(() => null);
+    if (last?.rows.length) return { ...last, current, final: true };
+  }
+  const final = current.rows.length > 0
+    && current.rows.every((r) => r.wins + r.losses >= REGULAR_SEASON_GAMES);
+  return { ...current, current, final };
 }
 
 /** ESPN 경기 상태 → 앱 GameStatus. */
@@ -788,11 +818,12 @@ async function main() {
   }
 
   console.log('순위 수집...');
-  const standings = await fetchStandings().catch((e) => {
+  const picked = await pickStandings().catch((e) => {
     console.warn(`  순위 실패: ${e.message}`);
-    return [];
+    return { rows: [], seasonLabel: null, final: false, current: { rows: [] } };
   });
-  console.log(`  ${standings.length}개 항목`);
+  const standings = picked.rows;
+  console.log(`  ${standings.length}개 항목 (${picked.seasonLabel ?? '?'} 시즌${picked.final ? ' 최종' : ''})`);
 
   console.log('일정 수집...');
   const teamIds = new Set(teams.map((t) => t.id));
@@ -824,6 +855,8 @@ async function main() {
   console.log('팀 시즌 평균 수집...');
   const teamStats = await fetchTeamStats(
     teams,
+    // 실점은 순위표에서 가져온다. 비시즌에는 ESPN 팀 기록도 지난 시즌 값(82경기)을
+    // 주므로, 지난 시즌 최종 순위표를 쓰면 두 값의 시즌이 맞는다.
     new Map(standings.map((s) => [s.teamId, s.pointsAgainst])),
   );
   console.log(`  ${teamStats.length}개 팀`);
@@ -940,6 +973,11 @@ async function main() {
     const payload = { generated_at: generatedAt, [name]: data };
     if (name === 'leaders') payload.season = season;
     if (name === 'games') payload.history_seasons = historySeasons;
+    if (name === 'standings') {
+      // 앱이 "2025-26 시즌 최종 순위"처럼 어느 시즌 순위인지 보여준다.
+      payload.season = picked.seasonLabel;
+      payload.final = picked.final;
+    }
     await fs.writeFile(file, JSON.stringify(payload));
     console.log(`${file}: ${data.length}건`);
   }
@@ -979,6 +1017,7 @@ module.exports = {
   fetchLeaders,
   madeAttempted,
   mapLimit,
+  pickStandings,
   reboundSplit,
   seasonHigh,
   sortStandings,

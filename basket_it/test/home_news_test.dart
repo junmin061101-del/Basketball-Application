@@ -1,6 +1,8 @@
 import 'package:basket_it/core/theme/app_theme.dart';
+import 'package:basket_it/data/models/game.dart';
 import 'package:basket_it/data/models/news_article.dart';
 import 'package:basket_it/data/models/team.dart';
+import 'package:basket_it/data/models/team_standing.dart';
 import 'package:basket_it/data/repositories/news_repository.dart';
 import 'package:basket_it/features/home/home_tab.dart';
 import 'package:basket_it/providers/game_providers.dart';
@@ -22,8 +24,6 @@ const testTeams = [
 ];
 
 /// 카테고리별로 무엇을 요청받았는지 기록하는 가짜 Repository.
-///
-/// 실제 수집기처럼 KBL 파일에는 해외파 기사가 함께 들어 있다.
 class _FakeNewsRepository implements NewsRepository {
   final List<NewsArticle> articles;
   final List<NewsCategory?> requested = [];
@@ -35,8 +35,6 @@ class _FakeNewsRepository implements NewsRepository {
     requested.add(category);
     return switch (category) {
       null => articles,
-      NewsCategory.kbl =>
-        articles.where((a) => a.category != NewsCategory.nba).toList(),
       _ => articles.where((a) => a.category == category).toList(),
     };
   }
@@ -73,18 +71,21 @@ Future<void> pumpHome(
   NewsRepository repository, {
   List<NewsArticle>? opened,
   Set<String> followedTeamIds = const {},
+  List<TeamStanding> standings = const [],
+  StandingsSeason season = const StandingsSeason(),
+  List<Game> games = const [],
 }) async {
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
         newsRepositoryProvider.overrideWithValue(repository),
         teamRepositoryProvider.overrideWithValue(
-          const FakeTeamRepository(testTeams),
+          FakeTeamRepository(testTeams, standings, season),
         ),
         playerRepositoryProvider.overrideWithValue(
           const FakePlayerRepository(),
         ),
-        gameRepositoryProvider.overrideWithValue(const FakeGameRepository()),
+        gameRepositoryProvider.overrideWithValue(FakeGameRepository(games)),
         followedTeamIdsProvider.overrideWith((ref) => followedTeamIds),
         if (opened != null)
           articleOpenerProvider.overrideWithValue((context, article) async {
@@ -114,9 +115,7 @@ void main() {
     ),
     article(
       id: 'https://rookie.co.kr/news/3',
-      title: '이현중, G리그 데뷔전 18득점',
-      category: NewsCategory.overseas,
-      teamLabel: '해외파',
+      title: '부산 KCC, 새 외국인 선수 영입',
       ago: const Duration(hours: 5),
     ),
   ];
@@ -127,7 +126,7 @@ void main() {
     // 세 기사 모두 카드로 그려진다.
     expect(find.text('서울 SK, 창원 LG 꺾고 4연승'), findsOneWidget);
     expect(find.text('안양 정관장 5연승 단독 선두'), findsOneWidget);
-    expect(find.text('이현중, G리그 데뷔전 18득점'), findsOneWidget);
+    expect(find.text('부산 KCC, 새 외국인 선수 영입'), findsOneWidget);
 
     // 맨 위 기사만 요약과 팀 배지를 함께 보여준다(헤드라인 카드).
     expect(find.text('리바운드를 장악하며 승리했다.'), findsOneWidget);
@@ -142,6 +141,9 @@ void main() {
     final opened = <NewsArticle>[];
     await pumpHome(tester, _FakeNewsRepository(feed), opened: opened);
 
+    // 뉴스는 내 팀 카드 아래에 있어 스크롤해서 누른다.
+    await tester.ensureVisible(find.text('안양 정관장 5연승 단독 선두'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('안양 정관장 5연승 단독 선두'));
     await tester.pump();
 
@@ -153,6 +155,8 @@ void main() {
     final opened = <NewsArticle>[];
     await pumpHome(tester, _FakeNewsRepository(feed), opened: opened);
 
+    await tester.ensureVisible(find.text('서울 SK, 창원 LG 꺾고 4연승'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('서울 SK, 창원 LG 꺾고 4연승'));
     await tester.pump();
 
@@ -172,19 +176,21 @@ void main() {
     ]);
     await pumpHome(tester, repository);
 
-    // KBL 섹션: KBL 기사와 해외파 기사가 한 목록에 함께 나온다.
+    // KBL 섹션: KBL 기사만, NBA 기사는 섞이지 않는다.
     expect(repository.requested, [NewsCategory.kbl]);
+    expect(find.text('KBL 뉴스'), findsOneWidget);
     expect(find.text('서울 SK, 창원 LG 꺾고 4연승'), findsOneWidget);
-    expect(find.text('이현중, G리그 데뷔전 18득점'), findsOneWidget);
     expect(find.text('돈치치 40득점, 레이커스 역전승'), findsNothing);
-    // 전체/KBL/해외파를 고르던 분류 칩은 없다.
+    // 전체/해외파 같은 분류 칩은 없다.
     expect(find.text('전체'), findsNothing);
+    expect(find.text('해외파'), findsNothing);
 
     // 맨 위 리그 전환을 NBA로 바꾸면 NBA 섹션으로 바뀐다.
     await tester.tap(find.text('NBA').first);
     await tester.pumpAndSettle(const Duration(milliseconds: 600));
 
     expect(repository.requested.last, NewsCategory.nba);
+    expect(find.text('NBA 뉴스'), findsOneWidget);
     expect(find.text('돈치치 40득점, 레이커스 역전승'), findsOneWidget);
     expect(find.text('서울 SK, 창원 LG 꺾고 4연승'), findsNothing);
   });
@@ -208,46 +214,89 @@ void main() {
     }
   });
 
-  testWidgets('팔로우한 팀은 필터 칩으로 함께 나온다', (tester) async {
+  testWidgets('팔로우한 팀이 없으면 내 팀을 고르라는 카드가 뉴스보다 먼저 나온다', (tester) async {
+    await pumpHome(tester, _FakeNewsRepository(feed));
+
+    expect(find.text('내 팀을 정해 보세요'), findsOneWidget);
+    expect(find.text('팀 고르기'), findsOneWidget);
+    final card = tester.getTopLeft(find.text('내 팀을 정해 보세요'));
+    final news = tester.getTopLeft(find.text('KBL 뉴스'));
+    expect(card.dy, lessThan(news.dy));
+  });
+
+  testWidgets('내 팀 카드: 순위·연승·앞뒤 팀 게임차·최근 5경기·최근 경기', (tester) async {
+    final now = DateTime.now();
+    Game g(String id, int daysAgo, String home, int hs, String away, int as) {
+      final start = DateTime(now.year, now.month, now.day, 19)
+          .subtract(Duration(days: daysAgo));
+      return Game(
+        id: id,
+        date: DateTime(start.year, start.month, start.day),
+        homeTeamId: home,
+        awayTeamId: away,
+        homeScore: hs,
+        awayScore: as,
+        status: GameStatus.finished,
+        startTime: start,
+      );
+    }
+
+    await pumpHome(
+      tester,
+      _FakeNewsRepository(feed),
+      followedTeamIds: {'sk'},
+      standings: const [
+        TeamStanding(teamId: 'lg', wins: 36, losses: 18, gamesBehind: 0),
+        TeamStanding(teamId: 'sk', wins: 35, losses: 19, gamesBehind: 1),
+        TeamStanding(teamId: 'kgc', wins: 33, losses: 21, gamesBehind: 3),
+        TeamStanding(teamId: 'kcc', wins: 30, losses: 24, gamesBehind: 6),
+      ],
+      season: const StandingsSeason(label: '2025-26', isFinal: true),
+      games: [
+        g('1', 5, 'sk', 70, 'lg', 80), // 패
+        g('2', 3, 'kgc', 60, 'sk', 75), // 승
+        g('3', 1, 'sk', 80, 'kcc', 70), // 승 (가장 최근)
+      ],
+    );
+
+    expect(find.text('내 팀'), findsOneWidget);
+    expect(find.text('2위'), findsOneWidget);
+    expect(find.text('2연승'), findsOneWidget);
+    expect(find.text('1위 LG와 1게임차', findRichText: true), findsOneWidget);
+    expect(find.text('3위 정관장과 2게임차', findRichText: true), findsOneWidget);
+    expect(find.text('2025-26 시즌 최종 · 35승 19패'), findsOneWidget);
+    expect(find.text('최근 5경기'), findsOneWidget);
+    expect(find.text('승'), findsNWidgets(2));
+    expect(find.text('패'), findsOneWidget);
+    // 오늘 경기가 없으니 가장 최근 경기를 크게 보여준다
+    expect(find.textContaining('최근 경기 · '), findsOneWidget);
+    expect(find.text('80 : 70'), findsOneWidget);
+    expect(find.text('경기 종료'), findsOneWidget);
+
+    // 내 팀 카드가 뉴스보다 위에 있다
+    expect(
+      tester.getTopLeft(find.text('2위')).dy,
+      lessThan(tester.getTopLeft(find.text('KBL 뉴스')).dy),
+    );
+  });
+
+  testWidgets('팔로우한 팀이 여럿이면 카드 위에서 팀을 고른다', (tester) async {
     await pumpHome(
       tester,
       _FakeNewsRepository(feed),
       followedTeamIds: {'sk', 'lg'},
     );
 
-    // 팔로우한 팀이 칩으로 덧붙는다. 칩 라벨은 shortName이라
-    // 기사 배지에 쓰이는 팀 표기('서울 SK')와 겹치지 않는다.
-    for (final id in ['sk', 'lg']) {
-      final team = testTeams.firstWhere((t) => t.id == id);
-      expect(
-        find.text(team.shortName),
-        findsOneWidget,
-        reason: '${team.shortName} 칩이 보여야 한다',
-      );
-    }
+    // 고르기 칩은 팔로우한 팀만(로고가 없는 테스트 팀은 칩·카드 로고 자리에도
+    // 이름 글자가 그려져 여러 번 잡힌다)
+    expect(find.text('SK'), findsWidgets);
+    expect(find.text('LG'), findsWidgets);
+    expect(find.text('정관장'), findsNothing);
+    expect(find.text('KCC'), findsNothing);
+    expect(find.text('창원 LG'), findsNothing);
 
-    // 팔로우하지 않은 팀은 칩으로 나오지 않는다.
-    final notFollowed = testTeams.where((t) => !['sk', 'lg'].contains(t.id));
-    for (final team in notFollowed) {
-      expect(
-        find.text(team.shortName),
-        findsNothing,
-        reason: '팔로우하지 않은 ${team.shortName} 칩이 보이면 안 된다',
-      );
-    }
-  });
-
-  testWidgets('팔로우가 없으면 칩이 하나도 없다', (tester) async {
-    await pumpHome(tester, _FakeNewsRepository(feed));
-
-    for (final team in testTeams) {
-      expect(
-        find.text(team.shortName),
-        findsNothing,
-        reason: '팔로우하지 않은 ${team.shortName} 칩이 보이면 안 된다',
-      );
-    }
-    // 분류 칩도 없다. ('해외파'는 해외파 기사 카드의 배지로 남아 있어 확인에 쓰지 않는다.)
-    expect(find.text('전체'), findsNothing);
+    await tester.tap(find.text('LG').first);
+    await tester.pumpAndSettle(const Duration(milliseconds: 300));
+    expect(find.text('창원 LG'), findsOneWidget); // 카드 제목이 바뀐다
   });
 }

@@ -10,6 +10,7 @@ const {
   daysBetween,
   fetchHistoryGames,
   inWindow,
+  pickStandings,
   seasonLabel,
   seasonStartYear,
   seasonWindow,
@@ -124,4 +125,38 @@ test('지난 시즌 일정: 다 모은 시즌은 다시 받지 않고, 실패하
   } finally {
     global.fetch = originalFetch;
   }
+});
+
+test('순위: 새 시즌 개막 전(전 팀 0경기)이면 지난 시즌 최종 순위를 쓴다', async () => {
+  const rows = (games) => [
+    { teamId: '8', wins: games ? 60 : 0, losses: games ? 22 : 0 },
+    { teamId: '2', wins: games ? 56 : 0, losses: games ? 26 : 0 },
+  ];
+  const seasons = {
+    current: { rows: rows(false), seasonYear: 2027, seasonLabel: '2026-27' },
+    2026: { rows: rows(true), seasonYear: 2026, seasonLabel: '2025-26' },
+  };
+  const asked = [];
+  const fake = async (season) => {
+    asked.push(season ?? 'current');
+    return seasons[season ?? 'current'];
+  };
+
+  const offseason = await pickStandings(fake);
+  assert.deepEqual(asked, ['current', 2026]);
+  assert.equal(offseason.seasonLabel, '2025-26');
+  assert.equal(offseason.final, true);
+  assert.equal(offseason.rows[0].wins, 60);
+  // 지금 시즌 순위표도 함께 들고 있다
+  assert.equal(offseason.current.seasonLabel, '2026-27');
+
+  // 시즌 중이면 지금 순위 그대로, 82경기를 다 치르기 전에는 최종이 아니다
+  seasons.current = { rows: [{ teamId: '8', wins: 30, losses: 10 }], seasonYear: 2027, seasonLabel: '2026-27' };
+  const inSeason = await pickStandings(fake);
+  assert.equal(inSeason.seasonLabel, '2026-27');
+  assert.equal(inSeason.final, false);
+
+  // 정규시즌이 끝났으면(전 팀 82경기) 최종
+  seasons.current = { rows: [{ teamId: '8', wins: 60, losses: 22 }], seasonYear: 2027, seasonLabel: '2026-27' };
+  assert.equal((await pickStandings(fake)).final, true);
 });

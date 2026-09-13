@@ -31,6 +31,9 @@ class CollectedTeamRepository implements TeamRepository {
   @override
   Future<List<TeamStanding>> getStandings() => _source.standings();
 
+  @override
+  Future<StandingsSeason> getStandingsSeason() => _source.standingsSeason();
+
   /// 수집기가 팀마다 모아 둔 시즌 평균. 실점은 수집기가 순위(NBA)나
   /// 경기 결과(KBL)에서 채운다.
   @override
