@@ -3,7 +3,7 @@
   "description": "Basket it 백엔드 함수 (농구 뉴스 수집)",
   "main": "index.js",
   "engines": {
-    "node": "20"
+    "node": "22"
   },
   "scripts": {
     "serve": "firebase emulators:start --only functions",
