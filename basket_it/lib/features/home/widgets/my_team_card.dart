@@ -210,23 +210,30 @@ class _Header extends StatelessWidget {
         children: [
           TeamCrest(team: team, size: 40),
           const SizedBox(width: 10),
-          Flexible(
-            child: Text(
-              team.fullName,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w800,
-                color: AppColors.textPrimary,
-              ),
+          // 이름이 길어도(애틀랜타 호크스) 배지 자리만 남기고 끝까지 쓴다.
+          Expanded(
+            child: Row(
+              children: [
+                Flexible(
+                  child: Text(
+                    team.fullName,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                ),
+                const Icon(
+                  Icons.chevron_right,
+                  size: 22,
+                  color: AppColors.textTertiary,
+                ),
+              ],
             ),
           ),
-          const Icon(
-            Icons.chevron_right,
-            size: 22,
-            color: AppColors.textTertiary,
-          ),
-          const Spacer(),
+          const SizedBox(width: 8),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
             decoration: BoxDecoration(

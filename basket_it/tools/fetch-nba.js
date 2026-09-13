@@ -309,10 +309,14 @@ async function fetchSeasonDays() {
   }
 }
 
-/** 스코어보드 경기 한 건 → 앱 경기. NBA 팀끼리가 아니면 null. */
+/** 연기·취소된 경기. ESPN은 원래 날짜에 "끝나지 않은 경기"로 남겨 둔다. */
+const CALLED_OFF = new Set(['STATUS_POSTPONED', 'STATUS_CANCELED']);
+
+/** 스코어보드 경기 한 건 → 앱 경기. NBA 팀끼리가 아니거나 연기·취소됐으면 null. */
 function toGame(event, teamIds) {
   const competition = event.competitions?.[0];
   if (!competition) return null;
+  if (CALLED_OFF.has(competition.status?.type?.name)) return null;
   const home = competition.competitors?.find((c) => c.homeAway === 'home');
   const away = competition.competitors?.find((c) => c.homeAway === 'away');
   if (!home || !away) return null;
@@ -359,6 +363,17 @@ function daysBetween(from, to) {
   const days = [];
   for (let day = from; day <= to; day = addDays(day, 1)) days.push(day);
   return days;
+}
+
+/**
+ * 시작한 지 36시간이 넘었는데 아직 "예정"인 경기를 뺀다.
+ *
+ * 연기·취소 경기다. 새로 받는 경기는 toGame이 거르지만, 지난 실행에서
+ * 그대로 가져오는 지난 시즌 결과에도 남아 있을 수 있어 한 번 더 거른다.
+ */
+function dropStaleScheduled(games, now = Date.now()) {
+  const limit = now - 36 * 3600 * 1000;
+  return games.filter((g) => g.status !== 'scheduled' || Date.parse(g.startTime) >= limit);
 }
 
 /** 경기 시각(ISO)이 [from]~[to](YYYYMMDD) 안인지. */
@@ -832,7 +847,9 @@ async function main() {
   const history = await fetchHistoryGames(teamIds, previousGamesDoc);
   // 같은 경기가 두 쪽에 다 있으면 이번 시즌 쪽(최신 상태)을 남긴다.
   const gamesById = new Map([...history.games, ...currentGames].map((g) => [g.id, g]));
-  const games = [...gamesById.values()].sort((a, b) => a.startTime.localeCompare(b.startTime));
+  const games = dropStaleScheduled([...gamesById.values()]).sort((a, b) =>
+    a.startTime.localeCompare(b.startTime),
+  );
   const historySeasons = history.seasons;
   console.log(`  ${games.length}경기 (지난 시즌 ${history.games.length}경기)`);
 
@@ -1006,6 +1023,7 @@ if (require.main === module) {
 module.exports = {
   calendarDay,
   daysBetween,
+  dropStaleScheduled,
   fetchHistoryGames,
   inWindow,
   seasonLabel,

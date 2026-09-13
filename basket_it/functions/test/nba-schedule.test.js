@@ -8,6 +8,7 @@ const {
   conferenceKey,
   dateRanges,
   daysBetween,
+  dropStaleScheduled,
   fetchHistoryGames,
   inWindow,
   pickStandings,
@@ -159,4 +160,15 @@ test('순위: 새 시즌 개막 전(전 팀 0경기)이면 지난 시즌 최종 
   // 정규시즌이 끝났으면(전 팀 82경기) 최종
   seasons.current = { rows: [{ teamId: '8', wins: 60, losses: 22 }], seasonYear: 2027, seasonLabel: '2026-27' };
   assert.equal((await pickStandings(fake)).final, true);
+});
+
+test('연기·취소로 지난 날짜에 "예정"으로 남은 경기는 뺀다', () => {
+  const now = Date.parse('2026-09-13T12:00:00Z');
+  const games = [
+    { id: 'postponed', startTime: '2025-01-11T20:00Z', status: 'scheduled' },
+    { id: 'done', startTime: '2025-01-12T20:00Z', status: 'finished' },
+    { id: 'tonight', startTime: '2026-09-13T01:00Z', status: 'scheduled' }, // 36시간 안
+    { id: 'future', startTime: '2026-10-05T23:00Z', status: 'scheduled' },
+  ];
+  assert.deepEqual(dropStaleScheduled(games, now).map((g) => g.id), ['done', 'tonight', 'future']);
 });
