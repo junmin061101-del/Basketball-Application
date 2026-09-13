@@ -19,7 +19,7 @@ import '../models/news_article.dart';
 /// 지어낸 선수와 지어낸 경기 결과가 진짜 기사처럼 보이기 때문이다.
 /// 실패하면 [NewsUnavailableException]을 던지고 화면은 오류 상태를 보여준다.
 abstract class NewsRepository {
-  /// 최신순으로 정렬된 뉴스 목록. [category]가 null이면 KBL+해외파 전체.
+  /// 최신순으로 정렬된 뉴스 목록. [category]가 null이면 KBL+NBA 전체.
   Future<List<NewsArticle>> getNews({NewsCategory? category});
 }
 

@@ -129,7 +129,7 @@ class NewsRow extends ConsumerWidget {
 }
 
 /// 썸네일 자리. 기사에 og:image가 있으면 그 이미지를, 없거나 실패하면
-/// 관련 팀 컬러(해외파는 별도 톤)를 쓴 플레이스홀더를 그린다.
+/// 관련 팀 컬러를 쓴 플레이스홀더를 그린다.
 class NewsThumbnail extends StatelessWidget {
   final NewsArticle article;
   final Team? team;
@@ -166,11 +166,7 @@ class NewsThumbnail extends StatelessWidget {
     return placeholder();
   }
 
-  Color get baseColor =>
-      team?.primaryColor ??
-      (article.category == NewsCategory.overseas
-          ? const Color(0xFF1C3F94)
-          : AppColors.primary);
+  Color get baseColor => team?.primaryColor ?? AppColors.primary;
 
   Widget placeholder({bool showIcon = true}) {
     return Container(
@@ -206,7 +202,7 @@ class NewsThumbnail extends StatelessWidget {
   }
 }
 
-/// 썸네일 좌측 상단에 얹는 팀(또는 해외파) 배지.
+/// 썸네일 좌측 상단에 얹는 팀 배지.
 class NewsTeamBadge extends StatelessWidget {
   final NewsArticle article;
   final Team? team;
@@ -244,9 +240,7 @@ class NewsMetaLine extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final accent = article.category == NewsCategory.overseas
-        ? const Color(0xFF1C3F94)
-        : AppColors.primary;
+    const accent = AppColors.primary;
     return Row(
       children: [
         Container(

@@ -33,9 +33,9 @@ void main() {
     expect(article.publishedAt.toUtc(), DateTime.utc(2026, 9, 8, 1));
   });
 
-  test('해외파 기사는 overseas 분류로 읽는다', () {
-    final article = NewsArticle.tryParse(sample(category: 'overseas'))!;
-    expect(article.category, NewsCategory.overseas);
+  test('NBA 기사는 nba로 읽고, KBL·NBA가 아닌 기사(예전 해외파 등)는 받지 않는다', () {
+    expect(NewsArticle.tryParse(sample(category: 'nba'))!.category, NewsCategory.nba);
+    expect(NewsArticle.tryParse(sample(category: 'overseas')), isNull);
   });
 
   test('필수 필드가 빠지거나 날짜가 깨지면 null', () {
@@ -57,7 +57,7 @@ void main() {
 
   test('분류의 서버 전달값', () {
     expect(NewsCategory.kbl.wireName, 'kbl');
-    expect(NewsCategory.overseas.wireName, 'overseas');
+    expect(NewsCategory.nba.wireName, 'nba');
   });
 
   test('정렬의 네이버 전달값', () {

@@ -120,7 +120,7 @@ const KBL_TEAMS = [
   { id: 'kogas', label: '대구 한국가스공사', keywords: ['한국가스공사', '대구 한국가스공사', '페가수스'] },
   { id: 'sono', label: '고양 소노', keywords: ['고양 소노', '소노 스카이거너스', '소노스카이거너스'] },
   { id: 'mobis', label: '울산 현대모비스', keywords: ['현대모비스', '울산 현대모비스', '피버스'] },
-  { id: 'samsung', label: '서울 삼성', keywords: ['서울 삼성', '삼성 썬더스', '삼성썬더스'] },
+  { id: 'samsung', label: '서울 삼성', keywords: ['서울 삼성', '삼성 썬더스', '삼성썬더스', '썬더스'] },
 ];
 
 
@@ -178,22 +178,30 @@ const NBA_QUERIES = [
 const KBL_QUERIES = ['KBL', '프로농구', ...KBL_TEAMS.map((t) => `${t.label} 농구`)];
 
 /**
- * 해외파 검색어. 선수 명단은 시즌마다 바뀌므로 Firestore
- * `config/news` 문서의 overseasQueries 로 덮어쓸 수 있게 했다.
+ * KBL 기사 신호. 제목·본문에 이게 있으면 KBL 이야기로 본다(구단 이름은
+ * KBL_TEAMS 키워드로 따로 본다).
  */
-const DEFAULT_OVERSEAS_QUERIES = [
-  '한국 선수 NBA',
-  '한국 농구 G리그',
-  '해외파 농구 한국',
-  '이현중 농구',
-  '여준석 농구',
-  '박지현 농구',
-  '농구 유럽 리그 한국 선수',
-  '한국 선수 B리그 농구',
+const KBL_SIGNALS = ['KBL', '프로농구'];
+
+/** NBA 기사 신호(구단 이름은 NBA_TEAMS 키워드로 따로 본다). */
+const NBA_SIGNALS = ['NBA', '르브론', '스테판 커리', '요키치', '돈치치', '아데토쿤보', '웸반야마'];
+
+/**
+ * KBL도 NBA도 아닌 주제. 제목에 있으면 두 리그 어디에도 넣지 않는다.
+ * 국가대표·국제대회, 여자농구, 다른 나라 리그 소식이 리그 뉴스에 섞이지 않게 한다.
+ */
+const OTHER_SIGNALS = [
+  '아시안게임', '대표팀', '월드컵', '올림픽', '한일전', '국가대표', '韓 농구', '韓농구',
+  '남자농구', '여자농구', '男 농구', '男농구', '女 농구', '女농구', '여자 농구', '여고농구',
+  'WKBL', 'WNBA', 'B리그', 'G리그', '유로리그', 'EASL', '3x3',
 ];
 
-/** 해외에서 뛰는 한국 선수. 제목에 이름만 있어도 농구 기사로 본다. */
-const OVERSEAS_PLAYERS = ['이현중', '여준석', '박지현'];
+/** 아시안게임 약칭 "AG". "[나고야AG]", "(AG)"처럼 붙여 써도 잡되 영어 단어 속 AG는 넘긴다. */
+const ASIAN_GAMES_ABBR = /(^|[^A-Za-z])AG($|[^A-Za-z])/;
+
+function mentionsOtherTopic(text) {
+  return hasSignal(text, OTHER_SIGNALS) || ASIAN_GAMES_ABBR.test(text ?? '');
+}
 
 /** 농구 기사임을 알려주는 단어들. */
 const BASKETBALL_HINTS = [
@@ -208,11 +216,7 @@ const BASKETBALL_HINTS = [
 const BASKETBALL_OUTLETS = new Set(['점프볼', '바스켓코리아', '루키', 'KBL']);
 
 /** 제목에 이게 있으면 농구 기사로 인정한다. */
-const TITLE_SIGNALS = [
-  ...BASKETBALL_HINTS,
-  ...OVERSEAS_PLAYERS,
-  ...[], // 구단 키워드는 KBL_TEAMS에서 아래 looksLikeBasketball이 직접 본다
-];
+const TITLE_SIGNALS = BASKETBALL_HINTS; // 구단 키워드는 looksLikeBasketball이 직접 본다
 
 /** HTML 태그와 엔티티를 제거한다(네이버 응답의 <b> 강조 등). */
 function stripHtml(value) {
@@ -283,6 +287,54 @@ function looksLikeBasketball(title, source) {
   );
 }
 
+/** [text]에 [signals] 중 하나라도 있는지. WNBA가 NBA로 잡히지 않게 뗀 뒤 본다. */
+function hasSignal(text, signals) {
+  if (!text) return false;
+  const cleaned = text.replace(/WNBA/g, '');
+  return signals.some((signal) => cleaned.includes(signal));
+}
+
+function mentionsKbl(text) {
+  return hasSignal(text, KBL_SIGNALS) || matchTeam(text, KBL_TEAMS) != null;
+}
+
+function mentionsNba(text) {
+  if (!text) return false;
+  // "삼성 썬더스"의 썬더(오클라호마시티)처럼 KBL 구단 이름에 NBA 구단 이름이
+  // 들어 있는 경우가 있어, KBL 구단 이름을 먼저 지우고 본다.
+  const withoutKbl = KBL_TEAMS.flatMap((t) => t.keywords)
+    .sort((a, b) => b.length - a.length) // "삼성 썬더스"를 "서울 삼성"보다 먼저 지운다
+    .reduce((acc, keyword) => acc.split(keyword).join(' '), text);
+  return hasSignal(withoutKbl, NBA_SIGNALS) || matchTeam(withoutKbl, NBA_TEAMS) != null;
+}
+
+/**
+ * 기사가 어느 리그 소식인지 가른다. 'kbl' | 'nba' | null(어느 쪽도 아님).
+ *
+ * 한 기사는 한 리그에만 들어간다. 검색어로 모으면 "NBA 농구"로 KBL 감독
+ * 인터뷰가, "프로농구"로 대표팀·해외파 기사가 딸려 오기 때문에 검색어가 아니라
+ * 기사 내용으로 다시 가른다.
+ *
+ * - 제목에 국가대표·여자농구·다른 리그 신호가 있으면 버린다.
+ * - 제목에 한 리그만 나오면 그 리그. 둘 다 나오면 버린다.
+ * - 제목에 리그 신호가 없으면 본문을 보되, 본문에 한 리그만 나올 때만 받고
+ *   본문에도 다른 주제 신호가 있으면 버린다.
+ */
+function classifyLeague(title, description) {
+  if (mentionsOtherTopic(title)) return null;
+  const kblTitle = mentionsKbl(title);
+  const nbaTitle = mentionsNba(title);
+  if (kblTitle && nbaTitle) return null;
+  if (kblTitle) return 'kbl';
+  if (nbaTitle) return 'nba';
+
+  if (mentionsOtherTopic(description)) return null;
+  const kblBody = mentionsKbl(description);
+  const nbaBody = mentionsNba(description);
+  if (kblBody === nbaBody) return null;
+  return kblBody ? 'kbl' : 'nba';
+}
+
 /**
  * 카테고리에 맞는 구단 목록에서 팀을 찾는다.
  *
@@ -291,12 +343,7 @@ function looksLikeBasketball(title, source) {
  * 때만 본문을 본다.
  */
 function matchTeamFor(category, title, description) {
-  const teams = category === 'kbl'
-      ? KBL_TEAMS
-      : category === 'nba'
-        ? NBA_TEAMS
-        : null;
-  if (!teams) return null;
+  const teams = category === 'nba' ? NBA_TEAMS : KBL_TEAMS;
   return matchTeam(title, teams) ?? matchTeam(description, teams);
 }
 
@@ -315,6 +362,8 @@ function normalizeItem(item, category) {
   const description = stripHtml(item.description);
   if (!title) return null;
   if (!looksLikeBasketball(title, source)) return null;
+  // 이 리그 기사가 아니면 버린다(다른 리그·대표팀 기사가 섞이지 않게).
+  if (classifyLeague(title, description) !== category) return null;
 
   const pubDate = new Date(item.pubDate);
   if (Number.isNaN(pubDate.getTime())) return null;
@@ -323,7 +372,7 @@ function normalizeItem(item, category) {
 
   return {
     category,
-    team: team ? team.label : category === 'overseas' ? '해외파' : null,
+    team: team ? team.label : null,
     team_id: team ? team.id : null,
     source,
     pub_date: pubDate.toISOString(),
@@ -334,20 +383,32 @@ function normalizeItem(item, category) {
   };
 }
 
-/** article_url 기준 중복 제거 후 최신순 정렬. */
+/**
+ * 중복 제거 후 최신순 정렬.
+ *
+ * 같은 원문 URL은 물론, 제목이 같은 기사(통신사 기사를 여러 매체가 그대로
+ * 싣는 경우)도 한 건만 남긴다.
+ */
 function mergeArticles(lists) {
-  const byUrl = new Map();
+  const byKey = new Map();
+  const titleKey = (title) => `title:${String(title ?? '').replace(/\s+/g, '')}`;
   for (const list of lists) {
     for (const article of list) {
       if (!article) continue;
-      const existing = byUrl.get(article.article_url);
-      // 같은 기사가 여러 검색어에서 나오면 팀이 붙은 쪽을 남긴다.
+      const existing =
+        byKey.get(`url:${article.article_url}`) ?? byKey.get(titleKey(article.title));
+      // 같은 기사가 여러 검색어·매체에서 나오면 팀이 붙은 쪽을 남긴다.
       if (!existing || (!existing.team_id && article.team_id)) {
-        byUrl.set(article.article_url, article);
+        if (existing) {
+          byKey.delete(`url:${existing.article_url}`);
+          byKey.delete(titleKey(existing.title));
+        }
+        byKey.set(`url:${article.article_url}`, article);
+        byKey.set(titleKey(article.title), article);
       }
     }
   }
-  return [...byUrl.values()].sort(
+  return [...new Set(byKey.values())].sort(
     (a, b) => new Date(b.pub_date) - new Date(a.pub_date),
   );
 }
@@ -376,7 +437,8 @@ function extractOgImage(html, baseUrl) {
 module.exports = {
   NBA_TEAMS,
   NBA_QUERIES,
-  OVERSEAS_PLAYERS,
+  OTHER_SIGNALS,
+  classifyLeague,
   BASKETBALL_OUTLETS,
   NAVER_NEWS_ENDPOINT,
   naverHeaders,
@@ -385,7 +447,6 @@ module.exports = {
   SOURCE_BY_DOMAIN,
   KBL_TEAMS,
   KBL_QUERIES,
-  DEFAULT_OVERSEAS_QUERIES,
   stripHtml,
   hostOf,
   sourceNameFor,

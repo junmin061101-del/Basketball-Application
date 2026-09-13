@@ -18,7 +18,6 @@ const path = require('path');
 const {
   KBL_QUERIES,
   NBA_QUERIES,
-  DEFAULT_OVERSEAS_QUERIES,
   naverHeaders,
   naverSearchUrl,
   naverErrorMessage,
@@ -98,7 +97,7 @@ async function collect(queries, category) {
 async function loadPreviousThumbnails() {
   const known = new Map();
   if (!PREVIOUS_BASE) return known;
-  for (const name of ['all', 'kbl', 'overseas', 'nba']) {
+  for (const name of ['all', 'kbl', 'nba']) {
     try {
       const res = await fetch(`${PREVIOUS_BASE}/${name}.json`, {
         signal: AbortSignal.timeout(10000),
@@ -160,34 +159,26 @@ async function main() {
   const kbl = await collect(KBL_QUERIES, 'kbl');
   console.log(`  검색어 ${kbl.total}개 중 ${kbl.total - kbl.failures}개 성공`);
 
-  console.log('해외파 기사 수집...');
-  const overseas = await collect(DEFAULT_OVERSEAS_QUERIES, 'overseas');
-  console.log(`  검색어 ${overseas.total}개 중 ${overseas.total - overseas.failures}개 성공`);
-
   console.log('NBA 기사 수집...');
   const nba = await collect(NBA_QUERIES, 'nba');
   console.log(`  검색어 ${nba.total}개 중 ${nba.total - nba.failures}개 성공`);
 
   // 전부 실패했다면 자격증명이나 네이버 쪽 문제다. 이때 빈 파일을 내보내면
   // 멀쩡하던 뉴스가 사라지므로, 아무것도 쓰지 않고 실패로 끝낸다.
-  if (kbl.failures === kbl.total && overseas.failures === overseas.total) {
+  if (kbl.failures === kbl.total && nba.failures === nba.total) {
     console.error('모든 검색이 실패했습니다. 기존 뉴스를 지우지 않기 위해 중단합니다.');
     process.exit(1);
   }
 
   const known = await loadPreviousThumbnails();
 
+  // 뉴스는 KBL / NBA 두 갈래뿐이다. 기사마다 내용으로 리그를 다시 갈라
+  // (normalizeItem → classifyLeague) 한 기사가 두 리그에 섞여 들어가지 않는다.
+  // 국가대표·여자농구·해외 리그 소식은 어느 쪽에도 넣지 않는다.
   const groups = {
-    // 홈 화면은 KBL / NBA 두 섹션뿐이다. KBL 섹션에 해외파 한국 선수 소식도
-    // 함께 보여주므로 kbl.json에 합쳐 둔다.
-    kbl: mergeArticles([...kbl.lists, ...overseas.lists]).slice(0, MAX_ARTICLES),
-    // 해외파 탭이 있던 예전 앱 버전이 아직 이 파일을 읽는다.
-    overseas: mergeArticles(overseas.lists).slice(0, MAX_ARTICLES),
+    kbl: mergeArticles(kbl.lists).slice(0, MAX_ARTICLES),
     nba: mergeArticles(nba.lists).slice(0, MAX_ARTICLES),
-    all: mergeArticles([...kbl.lists, ...overseas.lists, ...nba.lists]).slice(
-      0,
-      MAX_ARTICLES,
-    ),
+    all: mergeArticles([...kbl.lists, ...nba.lists]).slice(0, MAX_ARTICLES),
   };
 
   console.log('썸네일 확인...');

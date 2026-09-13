@@ -34,8 +34,8 @@ final allNewsProvider = FutureProvider<List<NewsArticle>>((ref) {
 
 /// 홈 탭 뉴스 섹션. 맨 위 리그 전환(KBL / NBA)을 그대로 따른다.
 ///
-/// 섹션은 두 개뿐이다. KBL 섹션에는 해외파 한국 선수 소식도 함께 들어
-/// 있어(수집기가 kbl.json에 합쳐 둔다) 분류를 따로 고르는 칩은 두지 않는다.
+/// 섹션은 KBL / NBA 두 개뿐이고 서로 섞지 않는다. 대표팀·해외파·다른 리그
+/// 기사는 수집기가 어느 쪽에도 넣지 않는다.
 final newsCategoryProvider = Provider<NewsCategory>((ref) {
   return switch (ref.watch(selectedLeagueProvider)) {
     League.kbl => NewsCategory.kbl,

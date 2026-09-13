@@ -1,19 +1,17 @@
 import 'package:flutter/foundation.dart';
 
-/// 뉴스 분류: KBL 소식 / 해외파 한국 선수 소식.
-enum NewsCategory { kbl, overseas, nba }
+/// 뉴스 분류: KBL 소식 / NBA 소식. 두 리그를 섞지 않는다.
+enum NewsCategory { kbl, nba }
 
 extension NewsCategoryLabel on NewsCategory {
   String get label => switch (this) {
     NewsCategory.kbl => 'KBL',
-    NewsCategory.overseas => '해외파',
     NewsCategory.nba => 'NBA',
   };
 
   /// 서버(getBasketballNews)가 쓰는 문자열 값.
   String get wireName => switch (this) {
     NewsCategory.kbl => 'kbl',
-    NewsCategory.overseas => 'overseas',
     NewsCategory.nba => 'nba',
   };
 }
@@ -42,7 +40,7 @@ class NewsArticle {
   /// 기사와 관련된 팀 id (팀 컬러·로고 연결에 쓴다).
   final String? relatedTeamId;
 
-  /// 배지에 쓸 팀 표기. KBL 기사면 구단명, 해외파 기사면 '해외파'.
+  /// 배지에 쓸 팀 표기(구단명). 팀을 못 찾은 기사는 null.
   final String? teamLabel;
 
   const NewsArticle({
@@ -68,11 +66,13 @@ class NewsArticle {
     final publishedAt = DateTime.tryParse(pubDate);
     if (publishedAt == null) return null;
 
+    // KBL / NBA가 아닌 기사(예전 수집 결과의 해외파 등)는 받지 않는다.
     final category = switch (json['category']) {
-      'overseas' => NewsCategory.overseas,
+      'kbl' => NewsCategory.kbl,
       'nba' => NewsCategory.nba,
-      _ => NewsCategory.kbl,
+      _ => null,
     };
+    if (category == null) return null;
     final description = json['description'] as String?;
 
     return NewsArticle(

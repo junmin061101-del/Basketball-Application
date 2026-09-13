@@ -3,7 +3,7 @@
 /**
  * Basket it 뉴스 백엔드.
  *
- * 네이버 뉴스 검색 API로 KBL·해외파 농구 기사를 모아 앱이 바로 그릴 수 있는
+ * 네이버 뉴스 검색 API로 KBL·NBA 농구 기사를 모아 앱이 바로 그릴 수 있는
  * 형태로 돌려준다. 응답은 Firestore에 캐시해 두어, 같은 카테고리로 자주
  * 요청이 와도 네이버 API 호출량이 늘지 않도록 한다.
  *
@@ -20,7 +20,7 @@ const admin = require('firebase-admin');
 
 const {
   KBL_QUERIES,
-  DEFAULT_OVERSEAS_QUERIES,
+  NBA_QUERIES,
   naverHeaders,
   naverSearchUrl,
   naverErrorMessage,
@@ -214,17 +214,15 @@ async function fetchNews(
 
   const config = await loadQueryConfig();
   const kblQueries = config.kblQueries ?? KBL_QUERIES;
-  const overseasQueries = config.overseasQueries ?? DEFAULT_OVERSEAS_QUERIES;
+  const nbaQueries = config.nbaQueries ?? NBA_QUERIES;
 
   const options = { sort };
   const lists = [];
   if (category === 'kbl' || category === 'all') {
     lists.push(...(await collect(kblQueries, 'kbl', credentials, options)));
   }
-  if (category === 'overseas' || category === 'all') {
-    lists.push(
-      ...(await collect(overseasQueries, 'overseas', credentials, options)),
-    );
+  if (category === 'nba' || category === 'all') {
+    lists.push(...(await collect(nbaQueries, 'nba', credentials, options)));
   }
 
   const merged = mergeArticles(lists);
@@ -267,7 +265,7 @@ function credentialsFrom() {
 /**
  * 앱에서 호출하는 엔드포인트.
  *
- * 요청: { category: 'kbl' | 'overseas' | 'all' }
+ * 요청: { category: 'kbl' | 'nba' | 'all' }
  * 응답: { category, articles: [{ category, team, source, pub_date, title,
  *         description, article_url, thumbnail_url }] }
  */
@@ -279,10 +277,10 @@ exports.getBasketballNews = onCall(
   },
   async (request) => {
     const category = request.data?.category ?? 'all';
-    if (!['kbl', 'overseas', 'all'].includes(category)) {
+    if (!['kbl', 'nba', 'all'].includes(category)) {
       throw new HttpsError(
         'invalid-argument',
-        "category는 'kbl' | 'overseas' | 'all' 중 하나여야 합니다.",
+        "category는 'kbl' | 'nba' | 'all' 중 하나여야 합니다.",
       );
     }
 
@@ -321,7 +319,7 @@ exports.refreshBasketballNews = onSchedule(
   },
   async () => {
     const credentials = credentialsFrom();
-    for (const category of ['all', 'kbl', 'overseas']) {
+    for (const category of ['all', 'kbl', 'nba']) {
       try {
         const { articles } = await fetchNews(category, credentials, {
           force: true,

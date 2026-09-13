@@ -8,6 +8,7 @@ const {
   sourceNameFor,
   matchTeam,
   looksLikeBasketball,
+  classifyLeague,
   normalizeItem,
   mergeArticles,
   extractOgImage,
@@ -78,7 +79,7 @@ test('일반 매체는 제목에 농구 신호가 있어야 통과한다', () =>
   assert.equal(looksLikeBasketball("'완전체' 농구 대표팀 완성", '스포츠서울'), true);
 });
 
-test('제목의 구단명과 해외파 선수 이름도 농구 신호로 본다', () => {
+test('제목의 구단명과 리그 이름도 농구 신호로 본다', () => {
   assert.equal(looksLikeBasketball('안양 정관장, 5연승으로 단독 선두', '스포츠조선'), true);
   assert.equal(looksLikeBasketball('이현중, G리그 데뷔전 18득점', 'SBS'), true);
   assert.equal(looksLikeBasketball('오늘 개막식 열려', 'SBS'), false);
@@ -103,13 +104,57 @@ test('본문에만 농구가 스쳐도 일반 매체 기사는 버린다', () =>
   assert.equal(politics, null);
 });
 
-test('해외파 기사는 team이 해외파로 표시된다', () => {
-  const article = normalizeItem(
-    item({ title: '이현중 G리그 농구 데뷔', originallink: 'https://rookie.co.kr/n/3' }),
-    'overseas',
-  );
-  assert.equal(article.category, 'overseas');
-  assert.equal(article.team, '해외파');
+test('기사 내용으로 KBL / NBA를 가르고, 둘 다 아닌 주제는 버린다', () => {
+  // 실제로 NBA 피드에 섞였던 KBL 감독 인터뷰
+  assert.equal(classifyLeague('BTS에 감명받은 조상현 감독 LG만의 농구', '창원 LG 조상현 감독이'), 'kbl');
+  assert.equal(classifyLeague('2027~28시즌 NBA 샐러리캡 전망 상향', ''), 'nba');
+  assert.equal(classifyLeague('프로농구 소노, 청소년 장학금 후원', ''), 'kbl');
+  // 국가대표·여자농구·해외파·다른 리그는 어느 리그에도 넣지 않는다
+  assert.equal(classifyLeague("'아시안게임' 남자농구, 일본과 격돌", 'NBA 출신 선수도'), null);
+  assert.equal(classifyLeague('"당신은 WNBA 스타" 방송인 발언', ''), null);
+  assert.equal(classifyLeague('펄펄 나는 이현중', ''), null);
+  assert.equal(classifyLeague('이현중, B리그 나가사키 데뷔', 'KBL 출신'), null);
+  // 제목에 신호가 없으면 본문을 보되, 본문에 두 리그가 다 나오면 버린다
+  assert.equal(classifyLeague('레알 마드리드, 닉 스미스 주니어 영입', 'NBA 샬럿 출신'), 'nba');
+  assert.equal(classifyLeague('깜짝 얼리 엔트리 선언', 'KBL 신인 드래프트에'), 'kbl');
+  assert.equal(classifyLeague('신인 드래프트 전망', 'KBL과 NBA 모두'), null);
+});
+
+test('아시안게임 약칭 AG는 붙여 써도 잡고, 영어 단어 속 AG는 넘긴다', () => {
+  assert.equal(classifyLeague("[나고야AG] '일본 킬러' 한국, 일본 잡고 3전승", '창원 LG 이정현'), null);
+  assert.equal(classifyLeague('[나고야 NOW] "韓 농구 역사상 가장 좋은 멤버"', '창원 LG'), null);
+  assert.equal(classifyLeague('KBL, BAGEL과 스폰서 계약', ''), 'kbl');
+  // KBL 구단의 일본 전지훈련 기사는 그대로 KBL
+  assert.equal(classifyLeague('[나고야로 간 BASKETKOREA] 한국가스공사 선수들', ''), 'kbl');
+});
+
+test('매체만 다르고 제목이 같은 기사는 한 건만 남긴다', () => {
+  const a = normalizeItem(item({ originallink: 'https://www.yna.co.kr/1' }), 'kbl');
+  const b = normalizeItem(item({ originallink: 'https://www.newsis.com/2' }), 'kbl');
+  const other = normalizeItem(item({ title: '서울 SK 다른 기사', originallink: 'https://www.newsis.com/3' }), 'kbl');
+  const merged = mergeArticles([[a, b, other]]);
+  assert.equal(merged.length, 2);
+  assert.deepEqual(merged.map((x) => x.title).sort(), ['서울 SK 다른 기사', '서울 SK, 창원 LG 꺾고 4연승']);
+});
+
+test('KBL 구단 이름 속 NBA 구단 이름에 속지 않는다', () => {
+  // 삼성 썬더스의 "썬더"는 오클라호마시티 썬더가 아니다
+  assert.equal(classifyLeague('서울 삼성 썬더스, 새 외국인 선수 영입', ''), 'kbl');
+  assert.equal(classifyLeague('서울 삼성, 썬더스 새 유니폼 공개', ''), 'kbl');
+  assert.equal(classifyLeague('오클라호마시티 썬더, 2연승', ''), 'nba');
+  // "커리어"는 스테판 커리가 아니다
+  assert.equal(classifyLeague('하워드, 조지아 리그행… 해외리그 커리어', ''), null);
+});
+
+test('검색한 리그와 기사 리그가 다르면 그 피드에서 뺀다', () => {
+  const kblInterview = item({
+    title: 'BTS에 감명받은 조상현 감독 LG만의 농구',
+    description: '창원 LG 조상현 감독이 필리핀 전지훈련에서',
+    originallink: 'https://www.isplus.com/n/7',
+    link: '',
+  });
+  assert.equal(normalizeItem(kblInterview, 'nba'), null);
+  assert.equal(normalizeItem(kblInterview, 'kbl').category, 'kbl');
 });
 
 test('원문 URL로 중복을 지우고 최신순으로 정렬한다', () => {
@@ -118,7 +163,7 @@ test('원문 URL로 중복을 지우고 최신순으로 정렬한다', () => {
     'kbl',
   );
   const newer = normalizeItem(item(), 'kbl');
-  const duplicate = normalizeItem(item({ title: '농구 같은 기사 다른 제목' }), 'kbl');
+  const duplicate = normalizeItem(item({ title: '서울 SK 같은 기사 다른 제목' }), 'kbl');
 
   const merged = mergeArticles([[older, newer], [duplicate]]);
   assert.equal(merged.length, 2);
@@ -129,7 +174,7 @@ test('원문 URL로 중복을 지우고 최신순으로 정렬한다', () => {
 test('중복이면 팀이 붙은 쪽을 남긴다', () => {
   const withTeam = normalizeItem(item(), 'kbl');
   const withoutTeam = normalizeItem(
-    item({ title: '농구 4연승 소식', description: '경기 리포트' }),
+    item({ title: '농구 4연승 소식', description: '프로농구 경기 리포트' }),
     'kbl',
   );
   assert.equal(withoutTeam.team_id, null);

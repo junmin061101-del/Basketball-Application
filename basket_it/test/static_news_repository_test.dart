@@ -75,12 +75,12 @@ void main() {
     });
 
     await repository.getNews(category: NewsCategory.kbl);
-    await repository.getNews(category: NewsCategory.overseas);
+    await repository.getNews(category: NewsCategory.nba);
     await repository.getNews();
 
     expect(requested, [
       '$base/kbl.json',
-      '$base/overseas.json',
+      '$base/nba.json',
       '$base/all.json', // 분류가 없으면 전체
     ]);
   });

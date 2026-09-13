@@ -43,11 +43,25 @@ const NAVER_ITEMS = [
     pubDate: 'Wed, 09 Sep 2026 22:30:00 +0900',
   },
   {
-    title: '이현중, G리그 데뷔전 18득점 농구 인생 새 출발',
+    title: '수원 KT, 새 시즌 앞두고 농구 전지훈련 출발',
     originallink: 'https://rookie.co.kr/news/3001',
     link: '',
-    description: '해외파 이현중이 첫 경기부터 존재감을 보였다.',
+    description: '프로농구 수원 KT가 전지훈련을 떠났다.',
     pubDate: 'Wed, 09 Sep 2026 23:00:00 +0900',
+  },
+  {
+    title: '레이커스, 필 잭슨 감독 동상 공개', // NBA 기사 → KBL 피드에는 들어가면 안 된다
+    originallink: 'https://rookie.co.kr/news/4001',
+    link: '',
+    description: 'NBA LA 레이커스가 동상을 공개한다.',
+    pubDate: 'Wed, 09 Sep 2026 23:30:00 +0900',
+  },
+  {
+    title: "'아시안게임' 남자농구, 일본과 격돌", // 대표팀 기사 → 어느 리그에도 넣지 않는다
+    originallink: 'https://rookie.co.kr/news/5001',
+    link: '',
+    description: 'KBL 스타들이 모인 대표팀',
+    pubDate: 'Wed, 09 Sep 2026 23:40:00 +0900',
   },
 ];
 
@@ -136,6 +150,11 @@ const call = (data) =>
   assert.ok(!byUrl['https://osen.co.kr/article/2001'], '농구 무관 기사가 통과됨');
   console.log('[OK] 화이트리스트 밖 매체·농구 무관 기사 제거');
 
+  // 다른 리그·대표팀 기사 제거
+  assert.ok(!byUrl['https://rookie.co.kr/news/4001'], 'NBA 기사가 KBL 피드에 섞임');
+  assert.ok(!byUrl['https://rookie.co.kr/news/5001'], '대표팀 기사가 KBL 피드에 섞임');
+  console.log('[OK] KBL 피드에 NBA·대표팀 기사가 섞이지 않는다');
+
   // og:image → thumbnail_url (상대경로는 절대경로로)
   assert.equal(sk.thumbnail_url, 'https://jumpball.co.kr/photo/1001.jpg');
   assert.equal(
@@ -167,15 +186,16 @@ const call = (data) =>
   assert.ok(pageFetches - pagesBefore < 3, '이미지 캐시가 동작하지 않음');
   console.log('[OK] 기사별 og:image 캐시 적중 (추가 페이지 fetch', pageFetches - pagesBefore, '건)');
 
-  // --- 4. overseas ---
-  const ov = await call({ category: 'overseas', sort: 'sim' });
-  assert.equal(ov.sort, 'sim');
+  // --- 4. nba ---
+  const nba = await call({ category: 'nba', sort: 'sim' });
+  assert.equal(nba.sort, 'sim');
   assert.equal(seenParams[seenParams.length - 1].sort, 'sim');
-  assert.ok(ov.articles.every((a) => a.category === 'overseas' && a.team === '해외파'));
-  console.log('[OK] overseas 카테고리 + sort=sim 반영, team="해외파"');
+  assert.deepEqual(nba.articles.map((a) => a.article_url), ['https://rookie.co.kr/news/4001']);
+  assert.equal(nba.articles[0].team, 'LA 레이커스');
+  console.log('[OK] nba 카테고리 + sort=sim 반영, NBA 기사만 남는다');
 
   // --- 5. 잘못된 인자 ---
-  for (const bad of [{ category: 'nba' }, { category: 'kbl', sort: 'oldest' }]) {
+  for (const bad of [{ category: 'overseas' }, { category: 'kbl', sort: 'oldest' }]) {
     await assert.rejects(() => call(bad), /invalid-argument|중 하나/);
   }
   console.log('[OK] 잘못된 category/sort는 invalid-argument로 거부');
