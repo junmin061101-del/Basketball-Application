@@ -143,19 +143,36 @@ final recentFormProvider = FutureProvider.family<RecentForm, String>((
   return RecentForm.from(games, teamId);
 });
 
-/// 한 선수의 최근 경기 기록(최신순). 소속팀의 끝난 경기에서 뽑는다.
+/// 선수 상세의 "최근 경기 기록": 소속팀의 끝난 경기에서 그 선수가 뛴 경기만,
+/// 최신순으로 [_recentPlayerGames]경기.
+///
+/// 비시즌에도 지난 시즌 마지막 경기들이 보이도록 1년 넘게 거슬러 본다(지난
+/// 시즌 박스스코어도 보관돼 있다). 결장한 경기는 건너뛰되, 박스스코어를 너무
+/// 많이 받지 않도록 [_recentPlayerLookups]경기까지만 확인한다.
 final playerRecentStatsProvider =
     FutureProvider.family<List<({Game game, PlayerGameStats stats})>, Player>((
       ref,
       player,
     ) async {
-      final games = await ref.watch(
-        recentResultsProvider((teamId: player.teamId, limit: 5)).future,
-      );
+      final now = DateTime.now();
       final repository = ref.watch(gameRepositoryProvider);
+      final games = await repository.getGamesInRange(
+        now.subtract(const Duration(days: 400)),
+        now,
+      );
+      final finished =
+          games
+              .where(
+                (g) =>
+                    g.status == GameStatus.finished &&
+                    g.involvesTeam(player.teamId),
+              )
+              .toList()
+            ..sort((a, b) => b.startTime.compareTo(a.startTime));
 
       final rows = <({Game game, PlayerGameStats stats})>[];
-      for (final game in games) {
+      for (final game in finished.take(_recentPlayerLookups)) {
+        if (rows.length >= _recentPlayerGames) break;
         final boxScore = await repository.getBoxScore(game);
         for (final line in boxScore) {
           if (line.playerId == player.id) {
@@ -166,6 +183,9 @@ final playerRecentStatsProvider =
       }
       return rows;
     });
+
+const _recentPlayerGames = 5;
+const _recentPlayerLookups = 12;
 
 /// 한 팀에 관한 기사만 추린다.
 final teamNewsProvider = FutureProvider.family<List<NewsArticle>, String>((
@@ -185,12 +205,21 @@ final playerNewsProvider = FutureProvider.family<List<NewsArticle>, Player>((
   ref,
   player,
 ) async {
-  final feed = await ref.watch(allNewsProvider.future);
-  return feed
-      .where(
-        (a) =>
-            a.title.contains(player.name) ||
-            (a.summary?.contains(player.name) ?? false),
-      )
-      .toList();
+  // 전체 묶음은 두 리그를 합쳐 40건에서 잘리므로, 지금 리그 뉴스도 함께 본다.
+  final repository = ref.watch(newsRepositoryProvider);
+  final lists = await Future.wait([
+    ref.watch(allNewsProvider.future),
+    repository
+        .getNews(category: ref.watch(newsCategoryProvider))
+        .catchError((_) => <NewsArticle>[]),
+  ]);
+  final byId = <String, NewsArticle>{};
+  for (final article in lists.expand((l) => l)) {
+    if (article.title.contains(player.name) ||
+        (article.summary?.contains(player.name) ?? false)) {
+      byId.putIfAbsent(article.id, () => article);
+    }
+  }
+  return byId.values.toList()
+    ..sort((a, b) => b.publishedAt.compareTo(a.publishedAt));
 });

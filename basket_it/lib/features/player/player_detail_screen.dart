@@ -12,11 +12,13 @@ import '../../providers/follow_actions.dart';
 import '../../providers/onboarding_providers.dart';
 import '../../providers/repository_providers.dart';
 import '../../shared/widgets/team_logo_placeholder.dart';
+import 'widgets/player_feed_sections.dart';
 
 /// 선수 상세 화면.
 ///
-/// 게임 탭/탐색 탭 어디서 진입하든 이 화면 하나를 공유한다. 신상 정보(키,
-/// 몸무게, 생년월일, 출신 대학, 드래프트)와 시즌별 전체 스탯 표를 보여준다.
+/// 홈의 팔로우 선수·게임 탭·탐색 탭 어디서 진입하든 이 화면 하나를 공유한다.
+/// 한 화면에서 신상 정보(키, 몸무게, 생년월일, 출신 대학, 드래프트), 이 시즌
+/// 평균, 최근 경기 기록, 시즌별 전체 스탯 표, 그 선수 뉴스를 모두 보여준다.
 class PlayerDetailScreen extends ConsumerWidget {
   final Player player;
   final PlayerGameStats? gameStats;
@@ -56,8 +58,9 @@ class PlayerDetailScreen extends ConsumerWidget {
                   loading: () => const _LoadingBlock(),
                   error: (err, _) => Text('불러오지 못했어요: $err'),
                   // 신상을 하나도 모르면(KBL) '-'만 늘어놓지 않고 칸을 숨긴다.
-                  data: (bio) =>
-                      bio.isEmpty ? const SizedBox.shrink() : _BioGrid(bio: bio),
+                  data: (bio) => bio.isEmpty
+                      ? const SizedBox.shrink()
+                      : _BioGrid(bio: bio),
                 ),
                 const SizedBox(height: 16),
                 SizedBox(
@@ -88,7 +91,7 @@ class PlayerDetailScreen extends ConsumerWidget {
                 if (gameStats != null) ...[
                   const SizedBox(height: 28),
                   Text(
-                    '오늘 경기 기록',
+                    '이 경기 기록',
                     style: Theme.of(context).textTheme.titleLarge,
                   ),
                   const SizedBox(height: 12),
@@ -106,6 +109,10 @@ class PlayerDetailScreen extends ConsumerWidget {
                       : _SeasonQuickCard(latest: history.first),
                 ),
                 const SizedBox(height: 28),
+                Text('최근 경기 기록', style: Theme.of(context).textTheme.titleLarge),
+                const SizedBox(height: 8),
+                PlayerRecentGamesSection(player: player),
+                const SizedBox(height: 28),
                 Text('시즌별 기록', style: Theme.of(context).textTheme.titleLarge),
                 const SizedBox(height: 6),
                 Text(
@@ -119,18 +126,25 @@ class PlayerDetailScreen extends ConsumerWidget {
                   data: (history) => history.isEmpty
                       ? const _NoRecords()
                       : _SeasonStatsTable(
-                    history: history,
-                    // 시즌마다 그때 뛴 팀을 찾아 적는다. 현재 팀 하나를 모든
-                    // 줄에 찍으면 르브론의 클리블랜드·마이애미 시절이 전부
-                    // 지금 팀으로 나온다.
-                    teamById: {
-                      for (final t
-                          in ref.watch(teamsProvider).valueOrNull ??
-                              const <Team>[])
-                        t.id: t,
-                    },
-                  ),
+                          history: history,
+                          // 시즌마다 그때 뛴 팀을 찾아 적는다. 현재 팀 하나를 모든
+                          // 줄에 찍으면 르브론의 클리블랜드·마이애미 시절이 전부
+                          // 지금 팀으로 나온다.
+                          teamById: {
+                            for (final t
+                                in ref.watch(teamsProvider).valueOrNull ??
+                                    const <Team>[])
+                              t.id: t,
+                          },
+                        ),
                 ),
+                const SizedBox(height: 28),
+                Text(
+                  '${player.name} 뉴스',
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+                const SizedBox(height: 12),
+                PlayerNewsSection(player: player),
               ],
             ),
           ),
@@ -296,10 +310,7 @@ class _BioGrid extends StatelessWidget {
     final now = DateTime.now();
     final rows = [
       (('키', bio.heightLabel), (bio.countryTitle, bio.countryLabel)),
-      (
-        ('생년월일', bio.birthWithAgeLabel(now)),
-        ('드래프트', bio.draftLabel),
-      ),
+      (('생년월일', bio.birthWithAgeLabel(now)), ('드래프트', bio.draftLabel)),
       (('몸무게', bio.weightLabel), ('출신 대학', bio.collegeLabel)),
     ];
 
@@ -375,10 +386,7 @@ class _NoRecords extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 12),
-      child: Text(
-        '아직 기록이 없어요',
-        style: Theme.of(context).textTheme.bodyMedium,
-      ),
+      child: Text('아직 기록이 없어요', style: Theme.of(context).textTheme.bodyMedium),
     );
   }
 }

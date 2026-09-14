@@ -10,7 +10,7 @@ import '../../providers/news_providers.dart';
 import '../../providers/onboarding_providers.dart';
 import '../../providers/repository_providers.dart';
 import '../common/league_switch.dart';
-import '../follow/player_hub_screen.dart';
+import '../player/player_detail_screen.dart';
 import 'widgets/my_team_card.dart';
 import 'widgets/news_cards.dart';
 
@@ -134,7 +134,7 @@ class _NewsSection extends ConsumerWidget {
   }
 }
 
-/// 팔로우한 선수 칩. 누르면 그 선수만 모아 놓은 전용 화면으로 간다.
+/// 팔로우한 선수 칩. 누르면 스탯·최근 경기·뉴스가 한 화면에 모인 선수 상세로 간다.
 ///
 /// 팀은 아래 내 팀 카드가 맡는다. 팔로우 수만큼 늘어나므로 가로로 스크롤하고,
 /// 팔로우한 선수가 없으면 줄째 숨긴다.
@@ -161,7 +161,7 @@ class _FollowChips extends ConsumerWidget {
               active: false,
               onTap: () => Navigator.of(context).push(
                 MaterialPageRoute(
-                  builder: (_) => PlayerHubScreen(player: player),
+                  builder: (_) => PlayerDetailScreen(player: player),
                 ),
               ),
             ),
