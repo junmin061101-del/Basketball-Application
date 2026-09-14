@@ -362,6 +362,14 @@ async function fetchGames(fromDate, toDate) {
   return games.sort((a, b) => a.startTime.localeCompare(b.startTime));
 }
 
+/** 경기 하나의 박스스코어. 기록이 없거나 실패하면 예외를 던진다. */
+async function fetchBoxScore(gameId) {
+  const rows = await kblGet(`/match/${gameId}/player-stat`);
+  const lines = (Array.isArray(rows) ? rows : []).map(toBoxLine).filter(Boolean);
+  if (lines.length === 0) throw new Error('기록 없음');
+  return { gameId, lines };
+}
+
 /** 끝났거나 진행 중인 경기의 박스스코어. 끝난 경기는 지난 결과를 다시 쓴다. */
 async function fetchBoxScores(games) {
   const targets = games.filter((g) => g.status === 'finished' || g.status === 'live');
@@ -376,10 +384,7 @@ async function fetchBoxScores(games) {
       }
     }
     try {
-      const rows = await kblGet(`/match/${game.id}/player-stat`);
-      const lines = (Array.isArray(rows) ? rows : []).map(toBoxLine).filter(Boolean);
-      if (lines.length === 0) throw new Error('기록 없음');
-      return { gameId: game.id, lines };
+      return await fetchBoxScore(game.id);
     } catch (error) {
       failed += 1;
       return null;
@@ -587,7 +592,9 @@ if (require.main === module) {
 }
 
 module.exports = {
+  CONCURRENCY,
   TEAMS,
+  fetchBoxScore,
   doubleDigitCount,
   englishName,
   kstDate,

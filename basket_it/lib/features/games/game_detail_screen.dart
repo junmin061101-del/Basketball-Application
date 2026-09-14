@@ -12,7 +12,7 @@ import '../../shared/widgets/team_logo_placeholder.dart';
 import '../explore/team_detail_screen.dart';
 import '../player/player_detail_screen.dart';
 
-/// 경기 상세 화면: 스코어보드 + 오늘의 활약 + 양 팀 기록 비교 + 박스스코어.
+/// 경기 상세 화면: 스코어보드 + 이 경기 최고 활약 + 양 팀 기록 비교 + 박스스코어.
 class GameDetailScreen extends ConsumerWidget {
   final Game game;
   final Team homeTeam;
@@ -266,14 +266,14 @@ class _GameBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // 선수 기록(박스스코어)은 최근 경기만 모아 둔다. 지난 시즌 경기는 점수까지만
-    // 보여주고, 빈 화면 대신 그 사실을 알려 준다.
+    // 지난 3시즌 경기까지 박스스코어를 보관해 두지만, 아직 받지 못한 경기는
+    // 빈 화면 대신 그 사실을 알려 준다.
     if (boxScore.isEmpty) {
       return Padding(
         padding: const EdgeInsets.symmetric(vertical: 40),
         child: Center(
           child: Text(
-            '선수 기록은 최근 경기만 볼 수 있어요.',
+            '이 경기의 선수 기록이 아직 없어요.',
             textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.bodyMedium,
           ),
@@ -298,7 +298,7 @@ class _GameBody extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         if (topPlayer != null) ...[
-          const _SectionTitle('오늘의 활약'),
+          const _SectionTitle('최고 활약'),
           const SizedBox(height: 12),
           _TopPerformerCard(
             player: topPlayer,
@@ -822,7 +822,8 @@ class _BoxScoreNameCell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final name = player?.name ?? '알 수 없음';
+    // 지난 시즌 경기에는 지금 명단에 없는 선수도 나온다. 박스스코어에 적힌 이름을 쓴다.
+    final name = player?.name ?? stats.name ?? '알 수 없음';
     return InkWell(
       onTap: player == null
           ? null

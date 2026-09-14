@@ -755,6 +755,43 @@ async function fetchDrafts(playerIds) {
  * 끝난 경기 기록은 바뀌지 않으므로 이미 올려둔 건 그대로 다시 쓴다.
  * 진행 중인 경기는 기록이 계속 바뀌어 매번 새로 받는다.
  */
+/** 경기 하나의 박스스코어(ESPN summary). 실패하면 예외를 던진다. */
+async function fetchBoxScore(gameId) {
+  const body = await getJson(`${SITE}/summary?event=${gameId}`);
+  const lines = [];
+  for (const team of body.boxscore?.players ?? []) {
+    const block = team.statistics?.[0];
+    const keys = block?.keys ?? [];
+    for (const row of block?.athletes ?? []) {
+      // 출전하지 않은 선수는 기록 칸이 비어 온다.
+      if (row.didNotPlay || !row.stats?.length) continue;
+      const at = (key) => row.stats[keys.indexOf(key)];
+      const [fgm, fga] = madeAttempted(at('fieldGoalsMade-fieldGoalsAttempted'));
+      const [tpm, tpa] = madeAttempted(at('threePointFieldGoalsMade-threePointFieldGoalsAttempted'));
+      const [ftm, fta] = madeAttempted(at('freeThrowsMade-freeThrowsAttempted'));
+      lines.push({
+        playerId: row.athlete?.id ?? '',
+        name: row.athlete?.displayName ?? '',
+        headshot: row.athlete?.headshot?.href ?? null,
+        teamId: team.team?.id ?? '',
+        minutes: Number(at('minutes')) || 0,
+        points: Number(at('points')) || 0,
+        fgm, fga, tpm, tpa, ftm, fta,
+        oreb: Number(at('offensiveRebounds')) || 0,
+        dreb: Number(at('defensiveRebounds')) || 0,
+        ast: Number(at('assists')) || 0,
+        tov: Number(at('turnovers')) || 0,
+        stl: Number(at('steals')) || 0,
+        blk: Number(at('blocks')) || 0,
+        pf: Number(at('fouls')) || 0,
+        // "+2", "-7"
+        plusMinus: Number(at('plusMinus')) || 0,
+      });
+    }
+  }
+  return { gameId, lines };
+}
+
 async function fetchBoxScores(games) {
   // 일정은 시즌 전체지만 박스스코어는 최근 경기만. 시즌 내내 1,230경기를
   // 매번 확인하면 요청이 너무 많다.
@@ -773,39 +810,7 @@ async function fetchBoxScores(games) {
       }
     }
     try {
-      const body = await getJson(`${SITE}/summary?event=${game.id}`);
-      const lines = [];
-      for (const team of body.boxscore?.players ?? []) {
-        const block = team.statistics?.[0];
-        const keys = block?.keys ?? [];
-        for (const row of block?.athletes ?? []) {
-          // 출전하지 않은 선수는 기록 칸이 비어 온다.
-          if (row.didNotPlay || !row.stats?.length) continue;
-          const at = (key) => row.stats[keys.indexOf(key)];
-          const [fgm, fga] = madeAttempted(at('fieldGoalsMade-fieldGoalsAttempted'));
-          const [tpm, tpa] = madeAttempted(at('threePointFieldGoalsMade-threePointFieldGoalsAttempted'));
-          const [ftm, fta] = madeAttempted(at('freeThrowsMade-freeThrowsAttempted'));
-          lines.push({
-            playerId: row.athlete?.id ?? '',
-            name: row.athlete?.displayName ?? '',
-            headshot: row.athlete?.headshot?.href ?? null,
-            teamId: team.team?.id ?? '',
-            minutes: Number(at('minutes')) || 0,
-            points: Number(at('points')) || 0,
-            fgm, fga, tpm, tpa, ftm, fta,
-            oreb: Number(at('offensiveRebounds')) || 0,
-            dreb: Number(at('defensiveRebounds')) || 0,
-            ast: Number(at('assists')) || 0,
-            tov: Number(at('turnovers')) || 0,
-            stl: Number(at('steals')) || 0,
-            blk: Number(at('blocks')) || 0,
-            pf: Number(at('fouls')) || 0,
-            // "+2", "-7"
-            plusMinus: Number(at('plusMinus')) || 0,
-          });
-        }
-      }
-      return { gameId: game.id, lines };
+      return await fetchBoxScore(game.id);
     } catch (error) {
       console.warn(`  박스스코어 실패 ${game.id}: ${error.message}`);
       return null;
@@ -1021,6 +1026,7 @@ if (require.main === module) {
 }
 
 module.exports = {
+  CONCURRENCY,
   calendarDay,
   daysBetween,
   dropStaleScheduled,
@@ -1031,6 +1037,7 @@ module.exports = {
   seasonWindow,
   conferenceKey,
   dateRanges,
+  fetchBoxScore,
   fetchBoxScores,
   fetchLeaders,
   madeAttempted,

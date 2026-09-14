@@ -27,6 +27,11 @@ class PlayerGameStats {
   final int pf; // 개인 파울
   final int plusMinus;
 
+  /// 박스스코어에 적힌 선수 이름·사진. 지난 시즌 경기에는 지금 명단에 없는
+  /// 선수(은퇴·이적)도 나오므로, 명단에서 못 찾으면 이 값으로 보여준다.
+  final String? name;
+  final String? photoUrl;
+
   const PlayerGameStats({
     required this.playerId,
     required this.gameId,
@@ -47,6 +52,8 @@ class PlayerGameStats {
     required this.blk,
     required this.pf,
     required this.plusMinus,
+    this.name,
+    this.photoUrl,
   });
 
   int get reb => oreb + dreb;

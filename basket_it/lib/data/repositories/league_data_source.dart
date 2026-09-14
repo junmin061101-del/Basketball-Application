@@ -335,6 +335,8 @@ class LeagueDataSource {
         blk: i(r, 'blk'),
         pf: i(r, 'pf'),
         plusMinus: i(r, 'plusMinus'),
+        name: r['name'] as String?,
+        photoUrl: r['headshot'] as String?,
       );
     }).toList();
   }

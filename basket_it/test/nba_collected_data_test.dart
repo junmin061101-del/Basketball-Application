@@ -187,6 +187,8 @@ final files = <String, Object>{
     'lines': [
       {
         'playerId': 'p1',
+        'name': '르브론 제임스',
+        'headshot': 'https://a.espncdn.com/p1.png',
         'teamId': '13',
         'minutes': 25,
         'points': 8,
@@ -293,6 +295,9 @@ void main() {
       );
       expect(line.reb, 6);
       expect(line.plusMinus, 2);
+      // 지난 시즌 경기의 명단에 없는 선수도 이름을 보여줄 수 있게 읽어 둔다
+      expect(line.name, '르브론 제임스');
+      expect(line.photoUrl, 'https://a.espncdn.com/p1.png');
     });
 
     test('예정 경기는 요청하지 않고 빈 목록', () async {
