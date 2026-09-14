@@ -122,7 +122,7 @@ class _RecentHeader extends StatelessWidget {
         children: [
           const Expanded(flex: 4, child: Text('상대', style: style)),
           const Expanded(
-            child: Text('분', textAlign: TextAlign.end, style: style),
+            child: Text('시간', textAlign: TextAlign.end, style: style),
           ),
           const Expanded(
             child: Text('득점', textAlign: TextAlign.end, style: style),
@@ -198,7 +198,7 @@ class _RecentRow extends StatelessWidget {
           ),
           Expanded(
             child: Text(
-              '${stats.minutes}',
+              stats.playTimeLabel,
               textAlign: TextAlign.end,
               style: value,
             ),

@@ -187,6 +187,7 @@ final files = <String, Object>{
     'lines': [
       {
         'playerId': 'p1',
+        'starter': true,
         'name': '르브론 제임스',
         'headshot': 'https://a.espncdn.com/p1.png',
         'teamId': '13',
@@ -297,6 +298,9 @@ void main() {
       expect(line.plusMinus, 2);
       // 지난 시즌 경기의 명단에 없는 선수도 이름을 보여줄 수 있게 읽어 둔다
       expect(line.name, '르브론 제임스');
+      expect(line.starter, isTrue);
+      expect(line.seconds, isNull); // NBA는 분 단위만 온다
+      expect(line.playTimeLabel, '25분');
       expect(line.photoUrl, 'https://a.espncdn.com/p1.png');
     });
 

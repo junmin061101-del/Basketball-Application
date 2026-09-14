@@ -334,7 +334,9 @@ class LeagueDataSource {
         stl: i(r, 'stl'),
         blk: i(r, 'blk'),
         pf: i(r, 'pf'),
-        plusMinus: i(r, 'plusMinus'),
+        plusMinus: (r['plusMinus'] as num?)?.toInt(),
+        seconds: (r['seconds'] as num?)?.toInt(),
+        starter: r['starter'] as bool?,
         name: r['name'] as String?,
         photoUrl: r['headshot'] as String?,
       );

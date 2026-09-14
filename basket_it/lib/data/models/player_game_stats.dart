@@ -25,7 +25,15 @@ class PlayerGameStats {
   final int stl;
   final int blk;
   final int pf; // 개인 파울
-  final int plusMinus;
+
+  /// 득실마진. 원본이 모르면(KBL 999) null이고 화면에는 "-"로 보인다.
+  final int? plusMinus;
+
+  /// 출전 시간(초). KBL은 초까지 오고, NBA(ESPN)는 분 단위만 와서 null이다.
+  final int? seconds;
+
+  /// 선발 출전인지. 선발 표시가 없는 예전 기록이면 null.
+  final bool? starter;
 
   /// 박스스코어에 적힌 선수 이름·사진. 지난 시즌 경기에는 지금 명단에 없는
   /// 선수(은퇴·이적)도 나오므로, 명단에서 못 찾으면 이 값으로 보여준다.
@@ -52,11 +60,22 @@ class PlayerGameStats {
     required this.blk,
     required this.pf,
     required this.plusMinus,
+    this.seconds,
+    this.starter,
     this.name,
     this.photoUrl,
   });
 
   int get reb => oreb + dreb;
+
+  /// 출전 시간 표기. 초를 알면 "31:04", 분만 알면(NBA) "22분".
+  /// 초를 모르는데 ":00"을 붙이면 실제와 다른 시간이 되므로 붙이지 않는다.
+  String get playTimeLabel {
+    final s = seconds;
+    if (s == null) return '$minutes분';
+    return '${s ~/ 60}:${(s % 60).toString().padLeft(2, '0')}';
+  }
+
   double get fgPct => fga == 0 ? 0 : fgm / fga;
   double get tpPct => tpa == 0 ? 0 : tpm / tpa;
   double get ftPct => fta == 0 ? 0 : ftm / fta;

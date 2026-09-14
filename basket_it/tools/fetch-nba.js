@@ -774,6 +774,8 @@ async function fetchBoxScore(gameId) {
         name: row.athlete?.displayName ?? '',
         headshot: row.athlete?.headshot?.href ?? null,
         teamId: team.team?.id ?? '',
+        starter: row.starter === true,
+        // ESPN은 분 단위 정수만 준다(초는 없다).
         minutes: Number(at('minutes')) || 0,
         points: Number(at('points')) || 0,
         fgm, fga, tpm, tpa, ftm, fta,

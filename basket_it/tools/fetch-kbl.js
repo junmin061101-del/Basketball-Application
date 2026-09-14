@@ -223,7 +223,11 @@ function toBoxLine(row) {
     name: p.pname ?? '',
     headshot: p.img ?? null,
     teamId: teamOf(p.tcode)?.id ?? '',
+    // 선발 5명은 startFlag가 '1'로 온다.
+    starter: String(row.startFlag) === '1',
     minutes: Math.round(seconds / 60),
+    // 출전 시간(초). 앱이 "31:04"처럼 보여준다.
+    seconds,
     points: n(r.score),
     // fg/fgA는 2점슛만, fgt/fgtA가 3점을 포함한 전체 야투다.
     fgm: n(r.fgt),
@@ -239,7 +243,8 @@ function toBoxLine(row) {
     stl: n(r.stl),
     blk: n(r.bs),
     pf: n(r.foul),
-    plusMinus: n(r.marginCn),
+    // 득실마진을 모르면 KBL은 999를 준다. 그대로 두면 "+999"로 보여 비워 둔다.
+    plusMinus: Number(r.marginCn) === 999 ? null : n(r.marginCn),
   };
 }
 

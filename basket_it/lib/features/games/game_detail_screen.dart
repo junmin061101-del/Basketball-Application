@@ -38,9 +38,7 @@ class GameDetailScreen extends ConsumerWidget {
     final playersAsync = ref.watch(allPlayersProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(dateTitle(game.date)),
-      ),
+      appBar: AppBar(title: Text(dateTitle(game.date))),
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
@@ -207,9 +205,7 @@ class _TeamScoreColumn extends StatelessWidget {
             borderRadius: BorderRadius.circular(8),
             onTap: () {
               Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => TeamDetailScreen(team: team),
-                ),
+                MaterialPageRoute(builder: (_) => TeamDetailScreen(team: team)),
               );
             },
             child: Text(
@@ -242,9 +238,7 @@ class _SectionLoading extends StatelessWidget {
   Widget build(BuildContext context) {
     return const Padding(
       padding: EdgeInsets.symmetric(vertical: 40),
-      child: Center(
-        child: CircularProgressIndicator(color: AppColors.primary),
-      ),
+      child: Center(child: CircularProgressIndicator(color: AppColors.primary)),
     );
   }
 }
@@ -281,16 +275,15 @@ class _GameBody extends StatelessWidget {
       );
     }
 
-    final homeLines =
-        boxScore.where((s) => s.teamId == homeTeam.id).toList()
-          ..sort((a, b) => b.points.compareTo(a.points));
-    final awayLines =
-        boxScore.where((s) => s.teamId == awayTeam.id).toList()
-          ..sort((a, b) => b.points.compareTo(a.points));
+    final homeLines = boxScore.where((s) => s.teamId == homeTeam.id).toList()
+      ..sort((a, b) => b.points.compareTo(a.points));
+    final awayLines = boxScore.where((s) => s.teamId == awayTeam.id).toList()
+      ..sort((a, b) => b.points.compareTo(a.points));
 
-    final topLine = [...homeLines, ...awayLines].reduce(
-      (a, b) => a.points >= b.points ? a : b,
-    );
+    final topLine = [
+      ...homeLines,
+      ...awayLines,
+    ].reduce((a, b) => a.points >= b.points ? a : b);
     final topPlayer = playerById[topLine.playerId];
     final topTeam = topLine.teamId == homeTeam.id ? homeTeam : awayTeam;
 
@@ -300,11 +293,7 @@ class _GameBody extends StatelessWidget {
         if (topPlayer != null) ...[
           const _SectionTitle('최고 활약'),
           const SizedBox(height: 12),
-          _TopPerformerCard(
-            player: topPlayer,
-            team: topTeam,
-            stats: topLine,
-          ),
+          _TopPerformerCard(player: topPlayer, team: topTeam, stats: topLine),
           const SizedBox(height: 28),
         ],
         const _SectionTitle('팀 기록 비교'),
@@ -318,17 +307,13 @@ class _GameBody extends StatelessWidget {
           awayScore: game.awayScore,
         ),
         const SizedBox(height: 28),
-        _SectionTitle(homeTeam.fullName),
-        const SizedBox(height: 8),
-        _BoxScoreTable(
-          lines: homeLines,
-          playerById: playerById,
-        ),
-        const SizedBox(height: 24),
-        _SectionTitle(awayTeam.fullName),
-        const SizedBox(height: 8),
-        _BoxScoreTable(
-          lines: awayLines,
+        const _SectionTitle('선수 기록'),
+        const SizedBox(height: 10),
+        _BoxScoreSection(
+          homeTeam: homeTeam,
+          awayTeam: awayTeam,
+          homeLines: homeLines,
+          awayLines: awayLines,
           playerById: playerById,
         ),
       ],
@@ -532,10 +517,7 @@ class _TeamComparison extends StatelessWidget {
                   color: AppColors.textPrimary,
                 ),
               ),
-              Text(
-                '득점',
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
+              Text('득점', style: Theme.of(context).textTheme.bodySmall),
               Text(
                 '$awayScore',
                 style: const TextStyle(
@@ -651,45 +633,174 @@ String _pct(double ratio) => (ratio * 100).toStringAsFixed(1);
 
 /// 머리글은 네이버 스포츠 박스스코어처럼 한국어로 적는다.
 final _boxScoreColumns = <_StatCol>[
-  _StatCol('출전', (s) => '${s.minutes}'),
+  // "31:04"(KBL) / "22분"(NBA는 분 단위만 온다)
+  _StatCol('시간', (s) => s.playTimeLabel, width: 62),
   _StatCol('득점', (s) => '${s.points}', emphasize: true),
-  _StatCol('리바운드', (s) => '${s.reb}', width: 74),
-  _StatCol('어시스트', (s) => '${s.ast}', width: 74),
+  _StatCol('리바운드', (s) => '${s.reb}', width: 70),
+  _StatCol('어시스트', (s) => '${s.ast}', width: 70),
   _StatCol('스틸', (s) => '${s.stl}'),
   _StatCol('블록', (s) => '${s.blk}'),
-  _StatCol('야투 성공', (s) => '${s.fgm}', width: 80),
-  _StatCol('야투 시도', (s) => '${s.fga}', width: 80),
-  _StatCol('야투율', (s) => _pct(s.fgPct), width: 66),
-  _StatCol('3점 성공', (s) => '${s.tpm}', width: 76),
-  _StatCol('3점 시도', (s) => '${s.tpa}', width: 76),
-  _StatCol('3점슛률', (s) => _pct(s.tpPct), width: 72),
-  _StatCol('자유투 성공', (s) => '${s.ftm}', width: 90),
-  _StatCol('자유투 시도', (s) => '${s.fta}', width: 90),
-  _StatCol('자유투율', (s) => _pct(s.ftPct), width: 74),
-  _StatCol('공격 리바', (s) => '${s.oreb}', width: 80),
-  _StatCol('수비 리바', (s) => '${s.dreb}', width: 80),
-  _StatCol('턴오버', (s) => '${s.tov}', width: 66),
+  _StatCol('야투', (s) => '${s.fgm}-${s.fga}', width: 64),
+  _StatCol('야투율', (s) => _pct(s.fgPct), width: 62),
+  _StatCol('3점', (s) => '${s.tpm}-${s.tpa}', width: 58),
+  _StatCol('3점슛률', (s) => _pct(s.tpPct), width: 68),
+  _StatCol('자유투', (s) => '${s.ftm}-${s.fta}', width: 64),
+  _StatCol('자유투율', (s) => _pct(s.ftPct), width: 70),
+  _StatCol('공격 리바', (s) => '${s.oreb}', width: 76),
+  _StatCol('수비 리바', (s) => '${s.dreb}', width: 76),
+  _StatCol('턴오버', (s) => '${s.tov}', width: 62),
   _StatCol('파울', (s) => '${s.pf}'),
-  _StatCol(
-    '득실마진',
-    (s) => s.plusMinus > 0 ? '+${s.plusMinus}' : '${s.plusMinus}',
-    width: 74,
-  ),
+  _StatCol('득실마진', (s) {
+    final pm = s.plusMinus;
+    if (pm == null) return '-';
+    return pm > 0 ? '+$pm' : '$pm';
+  }, width: 70),
 ];
+
+/// 박스스코어 한 묶음. [title]이 null이면 선발/후보를 모르는 예전 기록이다.
+@immutable
+class BoxScoreGroup {
+  final String? title;
+  final List<PlayerGameStats> lines;
+
+  const BoxScoreGroup(this.title, this.lines);
+}
+
+/// 한 팀 박스스코어를 "선발" / "후보"로 나눈다. 묶음 안은 출전 시간이 긴 순.
+///
+/// 선발 표시가 없는 기록(예전에 받은 경기)은 나누지 않고 한 묶음으로 둔다.
+List<BoxScoreGroup> groupBoxScore(List<PlayerGameStats> lines) {
+  int playTime(PlayerGameStats s) => s.seconds ?? s.minutes * 60;
+  final sorted = [...lines]
+    ..sort((a, b) {
+      final byTime = playTime(b).compareTo(playTime(a));
+      return byTime != 0 ? byTime : b.points.compareTo(a.points);
+    });
+  if (sorted.every((s) => s.starter == null)) {
+    return [BoxScoreGroup(null, sorted)];
+  }
+  final starters = sorted.where((s) => s.starter == true).toList();
+  final bench = sorted.where((s) => s.starter != true).toList();
+  return [
+    if (starters.isNotEmpty) BoxScoreGroup('선발', starters),
+    if (bench.isNotEmpty) BoxScoreGroup('후보', bench),
+  ];
+}
+
+/// 두 팀 중 하나를 버튼으로 골라 그 팀 박스스코어만 보여준다.
+class _BoxScoreSection extends StatefulWidget {
+  final Team homeTeam;
+  final Team awayTeam;
+  final List<PlayerGameStats> homeLines;
+  final List<PlayerGameStats> awayLines;
+  final Map<String, Player> playerById;
+
+  const _BoxScoreSection({
+    required this.homeTeam,
+    required this.awayTeam,
+    required this.homeLines,
+    required this.awayLines,
+    required this.playerById,
+  });
+
+  @override
+  State<_BoxScoreSection> createState() => _BoxScoreSectionState();
+}
+
+class _BoxScoreSectionState extends State<_BoxScoreSection> {
+  bool _showHome = true;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(4),
+          decoration: BoxDecoration(
+            color: AppColors.surfaceElevated,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Row(
+            children: [
+              for (final (team, isHome) in [
+                (widget.homeTeam, true),
+                (widget.awayTeam, false),
+              ])
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () => setState(() => _showHome = isHome),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 150),
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: _showHome == isHome
+                            ? AppColors.background
+                            : Colors.transparent,
+                        borderRadius: BorderRadius.circular(9),
+                        boxShadow: _showHome == isHome
+                            ? [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.08),
+                                  blurRadius: 6,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ]
+                            : null,
+                      ),
+                      child: Text(
+                        team.shortName,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: _showHome == isHome
+                              ? FontWeight.w800
+                              : FontWeight.w600,
+                          color: _showHome == isHome
+                              ? AppColors.textPrimary
+                              : AppColors.textSecondary,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+        _BoxScoreTable(
+          key: ValueKey(_showHome),
+          lines: _showHome ? widget.homeLines : widget.awayLines,
+          playerById: widget.playerById,
+        ),
+      ],
+    );
+  }
+}
 
 const _boxScoreNameColWidth = 96.0;
 const _boxScoreRowHeight = 46.0;
 const _boxScoreHeaderHeight = 34.0;
 
 /// 선수 이름 칸은 고정하고 나머지 스탯은 가로로 스크롤하는 박스스코어 표.
+/// 선발·후보 묶음마다 머리줄(묶음 이름 + 항목 이름)을 둔다.
 class _BoxScoreTable extends StatelessWidget {
   final List<PlayerGameStats> lines;
   final Map<String, Player> playerById;
 
-  const _BoxScoreTable({required this.lines, required this.playerById});
+  const _BoxScoreTable({
+    super.key,
+    required this.lines,
+    required this.playerById,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final groups = groupBoxScore(lines);
+    final headerStyle = Theme.of(context).textTheme.bodySmall
+        ?.copyWith(fontWeight: FontWeight.w800);
+
     return ClipRRect(
       borderRadius: BorderRadius.circular(16),
       child: Container(
@@ -701,7 +812,7 @@ class _BoxScoreTable extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 왼쪽 고정 칸: 선수 이름
+            // 왼쪽 고정 칸: 묶음 이름 + 선수 이름
             Container(
               width: _boxScoreNameColWidth,
               decoration: const BoxDecoration(
@@ -709,51 +820,50 @@ class _BoxScoreTable extends StatelessWidget {
               ),
               child: Column(
                 children: [
-                  Container(
-                    height: _boxScoreHeaderHeight,
-                    alignment: Alignment.centerLeft,
-                    padding: const EdgeInsets.only(left: 12),
-                    child: Text(
-                      '선수',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        fontWeight: FontWeight.w700,
+                  for (final (index, group) in groups.indexed) ...[
+                    _GroupHeaderCell(
+                      top: index > 0,
+                      alignment: Alignment.centerLeft,
+                      padding: const EdgeInsets.only(left: 12),
+                      child: Text(group.title ?? '선수', style: headerStyle),
+                    ),
+                    for (final line in group.lines)
+                      _BoxScoreNameCell(
+                        player: playerById[line.playerId],
+                        stats: line,
                       ),
-                    ),
-                  ),
-                  for (final line in lines)
-                    _BoxScoreNameCell(
-                      player: playerById[line.playerId],
-                      stats: line,
-                    ),
+                  ],
                 ],
               ),
             ),
-            // 오른쪽 스크롤 영역: MIN/PTS/REB/... 전체 스탯
+            // 오른쪽 스크롤 영역: 시간/득점/리바운드/... 전체 스탯
             Expanded(
               child: SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    SizedBox(
-                      height: _boxScoreHeaderHeight,
-                      child: Row(
-                        children: [
-                          for (final col in _boxScoreColumns)
-                            _HeaderStatCell(col: col),
-                        ],
-                      ),
-                    ),
-                    for (final line in lines)
-                      SizedBox(
-                        height: _boxScoreRowHeight,
+                    for (final (index, group) in groups.indexed) ...[
+                      _GroupHeaderCell(
+                        top: index > 0,
                         child: Row(
                           children: [
                             for (final col in _boxScoreColumns)
-                              _ValueStatCell(col: col, stats: line),
+                              _HeaderStatCell(col: col),
                           ],
                         ),
                       ),
+                      for (final line in group.lines)
+                        SizedBox(
+                          height: _boxScoreRowHeight,
+                          child: Row(
+                            children: [
+                              for (final col in _boxScoreColumns)
+                                _ValueStatCell(col: col, stats: line),
+                            ],
+                          ),
+                        ),
+                    ],
                   ],
                 ),
               ),
@@ -761,6 +871,37 @@ class _BoxScoreTable extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// 묶음 머리줄. 두 번째 묶음부터는 위에 굵은 구분선을 긋는다.
+class _GroupHeaderCell extends StatelessWidget {
+  final bool top;
+  final Widget child;
+  final AlignmentGeometry alignment;
+  final EdgeInsetsGeometry padding;
+
+  const _GroupHeaderCell({
+    required this.top,
+    required this.child,
+    this.alignment = Alignment.centerLeft,
+    this.padding = EdgeInsets.zero,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: _boxScoreHeaderHeight,
+      alignment: alignment,
+      padding: padding,
+      decoration: BoxDecoration(
+        color: AppColors.surfaceElevated,
+        border: top
+            ? const Border(top: BorderSide(color: AppColors.border, width: 2))
+            : null,
+      ),
+      child: child,
     );
   }
 }
@@ -774,13 +915,11 @@ class _HeaderStatCell extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: col.width,
-      alignment: Alignment.centerRight,
-      padding: const EdgeInsets.only(right: 10),
+      alignment: Alignment.center,
       child: Text(
         col.label,
-        style: Theme.of(
-          context,
-        ).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w700),
+        style: Theme.of(context).textTheme.bodySmall
+            ?.copyWith(fontWeight: FontWeight.w700),
       ),
     );
   }
@@ -796,8 +935,7 @@ class _ValueStatCell extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: col.width,
-      alignment: Alignment.centerRight,
-      padding: const EdgeInsets.only(right: 10),
+      alignment: Alignment.center,
       decoration: const BoxDecoration(
         border: Border(top: BorderSide(color: AppColors.border)),
       ),

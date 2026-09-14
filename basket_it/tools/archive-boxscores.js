@@ -34,6 +34,23 @@ async function readJson(file) {
   }
 }
 
+/**
+ * 보관된 파일이 지금 형식인지. 선발 여부(starter)가 없는 예전 파일은 다시 받아
+ * 앱이 선발/후보를 나눠 보여줄 수 있게 한다.
+ */
+function isCurrentFormat(box) {
+  return Array.isArray(box?.lines) && box.lines.length > 0 && 'starter' in box.lines[0];
+}
+
+/** [dir]에서 지금 형식인 박스스코어 id만. */
+async function listCurrentIds(dir) {
+  const ids = new Set();
+  for (const id of await listIds(dir)) {
+    if (isCurrentFormat(await readJson(path.join(dir, `${id}.json`)))) ids.add(id);
+  }
+  return ids;
+}
+
 async function listIds(dir) {
   try {
     const files = await fs.readdir(dir);
@@ -89,8 +106,8 @@ async function archiveLeague({
   await fs.mkdir(archiveDir, { recursive: true });
   await fs.mkdir(distDir, { recursive: true });
 
-  const archived = await listIds(archiveDir);
-  const fresh = await listIds(distDir);
+  const archived = await listCurrentIds(archiveDir);
+  const fresh = await listCurrentIds(distDir);
   const write = (dir, box) =>
     fs.writeFile(
       path.join(dir, `${box.gameId}.json`),
@@ -106,7 +123,7 @@ async function archiveLeague({
   for (const id of fresh) {
     if (!finished.has(id) || archived.has(id)) continue;
     const box = await readJson(path.join(distDir, `${id}.json`));
-    if (!box?.lines?.length) continue;
+    if (!isCurrentFormat(box)) continue;
     await write(archiveDir, { gameId: id, lines: box.lines });
     archived.add(id);
     copiedIn += 1;
@@ -193,4 +210,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { archiveLeague, planArchive };
+module.exports = { archiveLeague, isCurrentFormat, planArchive };
