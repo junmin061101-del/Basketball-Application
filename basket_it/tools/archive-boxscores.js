@@ -35,11 +35,12 @@ async function readJson(file) {
 }
 
 /**
- * 보관된 파일이 지금 형식인지. 선발 여부(starter)가 없는 예전 파일은 다시 받아
- * 앱이 선발/후보를 나눠 보여줄 수 있게 한다.
+ * 보관된 파일이 지금 형식인지. 선발 여부(starter)·출전 시간 초(seconds, 모르면
+ * null) 칸이 없는 예전 파일은 다시 받아 앱이 선발/후보와 "34:23"을 보여주게 한다.
  */
 function isCurrentFormat(box) {
-  return Array.isArray(box?.lines) && box.lines.length > 0 && 'starter' in box.lines[0];
+  const first = Array.isArray(box?.lines) ? box.lines[0] : null;
+  return first != null && 'starter' in first && 'seconds' in first;
 }
 
 /** [dir]에서 지금 형식인 박스스코어 id만. */

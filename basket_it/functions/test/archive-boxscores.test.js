@@ -29,7 +29,7 @@ async function setup() {
   await fs.mkdir(path.join(dist, 'nba', 'boxscores'), { recursive: true });
   const put = (dir, id, lines) =>
     fs.writeFile(path.join(dir, 'nba', 'boxscores', `${id}.json`), JSON.stringify({ gameId: id, lines }));
-  const line = (name) => [{ playerId: '1', name, points: 10, starter: true }];
+  const line = (name) => [{ playerId: '1', name, points: 10, starter: true, seconds: null }];
   return { root, archive, dist, put, line };
 }
 
@@ -58,7 +58,7 @@ test('수집기 결과는 보관하고, 없는 경기는 받고, 보관소 파�
     limit: 10,
     fetchBoxScore: async (id) => {
       asked.push(id);
-      return { gameId: id, lines: [{ playerId: '9', name: 'LeBron James', points: 30, starter: true }] };
+      return { gameId: id, lines: [{ playerId: '9', name: 'LeBron James', points: 30, starter: true, seconds: 2040 }] };
     },
     rename: (l) => (l.playerId === '9' ? '르브론 제임스' : l.name),
     now: () => 'T',
@@ -98,14 +98,14 @@ test('연달아 실패하면 그 실행은 멈추고, 받은 만큼만 보관한
   assert.equal(summary.missing, 40);
 });
 
-test('선발 표시가 없는 예전 형식 파일은 다시 받는다', async () => {
+test('선발·출전 시간(초) 칸이 없는 예전 형식 파일은 다시 받는다', async () => {
   const { archive, dist, put } = await setup();
   await fs.writeFile(
     path.join(dist, 'nba', 'games.json'),
     JSON.stringify({ games: [game('old-format', '2024-01-01T00:00Z'), game('current', '2024-01-02T00:00Z')] }),
   );
   await put(archive, 'old-format', [{ playerId: '1', name: 'A', points: 1 }]); // starter 없음
-  await put(archive, 'current', [{ playerId: '1', name: 'A', points: 1, starter: false }]);
+  await put(archive, 'current', [{ playerId: '1', name: 'A', points: 1, starter: false, seconds: null }]);
   const asked = [];
   await archiveLeague({
     league: 'nba',
@@ -114,7 +114,7 @@ test('선발 표시가 없는 예전 형식 파일은 다시 받는다', async (
     limit: 10,
     fetchBoxScore: async (id) => {
       asked.push(id);
-      return { gameId: id, lines: [{ playerId: '1', name: 'A', points: 1, starter: true }] };
+      return { gameId: id, lines: [{ playerId: '1', name: 'A', points: 1, starter: true, seconds: 600 }] };
     },
   });
   assert.deepEqual(asked, ['old-format']);

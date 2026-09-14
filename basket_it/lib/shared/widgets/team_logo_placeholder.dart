@@ -35,34 +35,40 @@ class TeamLogoPlaceholder extends StatelessWidget {
         letterSpacing: -0.5,
       ),
     );
+    // 로고가 있으면 동그라미 배경 없이 로고만 그린다. 로고가 없거나 못 불러올
+    // 때만 팀 컬러 동그라미 안에 팀 이름 글자를 둔다.
+    final fallback = Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: team.primaryColor.withValues(alpha: 0.18),
+      ),
+      alignment: Alignment.center,
+      child: label,
+    );
+    final logo = logoAsset != null
+        ? Image.asset(
+            logoAsset,
+            width: size,
+            height: size,
+            fit: BoxFit.contain,
+            errorBuilder: (context, error, stackTrace) => fallback,
+          )
+        : logoUrl != null
+        ? Image.network(
+            logoUrl,
+            width: size,
+            height: size,
+            fit: BoxFit.contain,
+            webHtmlElementStrategy: WebHtmlElementStrategy.fallback,
+            errorBuilder: (context, error, stackTrace) => fallback,
+          )
+        : fallback;
     return Stack(
       clipBehavior: Clip.none,
       children: [
-        Container(
-          width: size,
-          height: size,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: team.primaryColor.withValues(alpha: 0.18),
-            border: Border.all(
-              color: selected ? team.primaryColor : Colors.transparent,
-              width: 2,
-            ),
-          ),
-          alignment: Alignment.center,
-          child: logoAsset != null
-              ? Image.asset(logoAsset, width: size * 0.65)
-              : logoUrl != null
-              ? Image.network(
-                  logoUrl,
-                  width: size * 0.65,
-                  height: size * 0.65,
-                  fit: BoxFit.contain,
-                  webHtmlElementStrategy: WebHtmlElementStrategy.fallback,
-                  errorBuilder: (context, error, stackTrace) => label,
-                )
-              : label,
-        ),
+        SizedBox(width: size, height: size, child: Center(child: logo)),
         if (selected)
           Positioned(
             right: -2,

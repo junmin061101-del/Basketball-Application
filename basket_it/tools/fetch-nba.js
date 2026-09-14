@@ -755,9 +755,113 @@ async function fetchDrafts(playerIds) {
  * 끝난 경기 기록은 바뀌지 않으므로 이미 올려둔 건 그대로 다시 쓴다.
  * 진행 중인 경기는 기록이 계속 바뀌어 매번 새로 받는다.
  */
+/** 쿼터 길이(초). 1~4쿼터 12분, 연장 5분. */
+const periodSeconds = (period) => (period <= 4 ? 720 : 300);
+
+/** 경기 시계 표기("7:26", "45.2") → 남은 초. */
+function clockSeconds(value) {
+  const text = String(value ?? '0');
+  if (!text.includes(':')) return Number(text) || 0;
+  const [m, sec] = text.split(':');
+  return (Number(m) || 0) * 60 + (Number(sec) || 0);
+}
+
+/**
+ * ESPN 문자중계로 선수별 출전 시간(초)을 다시 계산한다.
+ *
+ * ESPN 박스스코어는 출전 시간을 분 단위 정수로만 준다. 문자중계의 교체 기록
+ * ("A enters the game for B")과 경기 시계로 코트에 있던 구간을 이어 붙인다.
+ * 쿼터 시작 라인업은 기록되지 않으므로, 그 쿼터에서 교체로 들어오기 전에
+ * 먼저 기록에 나온 선수를 처음부터 뛴 선수로 보고, 5명이 안 되면 지난 쿼터
+ * 끝 라인업에서 채운다.
+ *
+ * 틀린 시간을 보여주지 않도록 두 가지를 모두 맞출 때만 초를 준다.
+ *  - 그 팀 선수들의 합이 정확히 5명 × 경기 시간
+ *  - 그 선수의 계산값을 반올림한 분이 ESPN 분 기록과 같음
+ * 그 외 선수는 결과에 넣지 않는다(앱은 "32분"으로 보여준다).
+ *
+ * @returns Map<선수 id, 초>
+ */
+function reconstructSeconds(summary) {
+  const plays = summary?.plays ?? [];
+  const teamOf = new Map();
+  const starters = new Set();
+  const espnMinutes = new Map();
+  for (const team of summary?.boxscore?.players ?? []) {
+    for (const row of team.statistics?.[0]?.athletes ?? []) {
+      const id = row.athlete?.id;
+      if (!id) continue;
+      teamOf.set(id, team.team?.id);
+      if (row.starter) starters.add(id);
+      if (!row.didNotPlay && row.stats?.length) espnMinutes.set(id, Number(row.stats[0]) || 0);
+    }
+  }
+  const periods = [...new Set(plays.map((p) => p.period?.number))]
+    .filter((n) => Number.isInteger(n) && n > 0)
+    .sort((a, b) => a - b);
+  if (periods.length === 0 || starters.size === 0) return new Map();
+
+  const total = new Map();
+  const add = (id, sec) => total.set(id, (total.get(id) ?? 0) + sec);
+  let previousEnd = new Set(starters);
+  for (const period of periods) {
+    const length = periodSeconds(period);
+    const inPeriod = plays.filter((p) => p.period?.number === period);
+
+    // 이 쿼터에서 각 선수가 처음 나온 모습: 교체로 들어옴 / 그 밖의 기록
+    const firstSeen = new Map();
+    for (const play of inPeriod) {
+      const isSub = play.type?.text === 'Substitution';
+      (play.participants ?? []).forEach((participant, index) => {
+        const id = participant.athlete?.id;
+        if (!id || firstSeen.has(id) || !teamOf.has(id)) return;
+        firstSeen.set(id, isSub && index === 0 ? 'in' : 'other');
+      });
+    }
+    const onCourt = new Set(period === 1 ? starters : []);
+    for (const [id, how] of firstSeen) if (how === 'other') onCourt.add(id);
+    for (const team of new Set(teamOf.values())) {
+      const count = () => [...onCourt].filter((id) => teamOf.get(id) === team).length;
+      for (const id of previousEnd) {
+        if (count() >= 5) break;
+        if (teamOf.get(id) === team && !onCourt.has(id) && !firstSeen.has(id)) onCourt.add(id);
+      }
+    }
+
+    const since = new Map([...onCourt].map((id) => [id, 0]));
+    for (const play of inPeriod) {
+      if (play.type?.text !== 'Substitution') continue;
+      const at = length - clockSeconds(play.clock?.displayValue);
+      const [playerIn, playerOut] = (play.participants ?? []).map((x) => x.athlete?.id);
+      if (playerOut && since.has(playerOut)) {
+        add(playerOut, at - since.get(playerOut));
+        since.delete(playerOut);
+      }
+      if (playerIn && !since.has(playerIn)) since.set(playerIn, at);
+    }
+    for (const [id, start] of since) add(id, length - start);
+    previousEnd = new Set(since.keys());
+  }
+
+  const gameSeconds = periods.reduce((sum, p) => sum + periodSeconds(p), 0);
+  const teamSum = new Map();
+  for (const [id, sec] of total) {
+    const team = teamOf.get(id);
+    teamSum.set(team, (teamSum.get(team) ?? 0) + sec);
+  }
+  const verified = new Map();
+  for (const [id, minutes] of espnMinutes) {
+    const sec = Math.round(total.get(id) ?? 0);
+    const teamOk = Math.abs((teamSum.get(teamOf.get(id)) ?? 0) - gameSeconds * 5) < 1;
+    if (teamOk && Math.round(sec / 60) === minutes) verified.set(id, sec);
+  }
+  return verified;
+}
+
 /** 경기 하나의 박스스코어(ESPN summary). 실패하면 예외를 던진다. */
 async function fetchBoxScore(gameId) {
   const body = await getJson(`${SITE}/summary?event=${gameId}`);
+  const seconds = reconstructSeconds(body);
   const lines = [];
   for (const team of body.boxscore?.players ?? []) {
     const block = team.statistics?.[0];
@@ -775,8 +879,9 @@ async function fetchBoxScore(gameId) {
         headshot: row.athlete?.headshot?.href ?? null,
         teamId: team.team?.id ?? '',
         starter: row.starter === true,
-        // ESPN은 분 단위 정수만 준다(초는 없다).
+        // ESPN은 분 단위 정수만 준다. 초는 문자중계로 계산해 검증된 것만 넣는다.
         minutes: Number(at('minutes')) || 0,
+        seconds: seconds.get(row.athlete?.id) ?? null,
         points: Number(at('points')) || 0,
         fgm, fga, tpm, tpa, ftm, fta,
         oreb: Number(at('offensiveRebounds')) || 0,
@@ -1046,6 +1151,7 @@ module.exports = {
   mapLimit,
   pickStandings,
   reboundSplit,
+  reconstructSeconds,
   seasonHigh,
   sortStandings,
 };
