@@ -148,7 +148,7 @@ final recentFormProvider = FutureProvider.family<RecentForm, String>((
 ///
 /// 비시즌에도 지난 시즌 마지막 경기들이 보이도록 1년 넘게 거슬러 본다(지난
 /// 시즌 박스스코어도 보관돼 있다). 결장한 경기는 건너뛰되, 박스스코어를 너무
-/// 많이 받지 않도록 [_recentPlayerLookups]경기까지만 확인한다.
+/// 많이 받지 않도록 팀의 최근 [_recentPlayerLookups]경기까지만 확인한다.
 final playerRecentStatsProvider =
     FutureProvider.family<List<({Game game, PlayerGameStats stats})>, Player>((
       ref,
@@ -170,22 +170,29 @@ final playerRecentStatsProvider =
               .toList()
             ..sort((a, b) => b.startTime.compareTo(a.startTime));
 
+      // 부상으로 오래 빠진 선수는 마지막 출전이 스무 경기도 더 전일 수 있다.
+      // 박스스코어를 여러 경기씩 동시에 받아 기다리는 시간을 줄인다.
       final rows = <({Game game, PlayerGameStats stats})>[];
-      for (final game in finished.take(_recentPlayerLookups)) {
-        if (rows.length >= _recentPlayerGames) break;
-        final boxScore = await repository.getBoxScore(game);
-        for (final line in boxScore) {
-          if (line.playerId == player.id) {
-            rows.add((game: game, stats: line));
-            break;
+      final candidates = finished.take(_recentPlayerLookups).toList();
+      for (var i = 0; i < candidates.length; i += _recentPlayerBatch) {
+        final batch = candidates.skip(i).take(_recentPlayerBatch).toList();
+        final boxScores = await Future.wait(batch.map(repository.getBoxScore));
+        for (var j = 0; j < batch.length; j++) {
+          for (final line in boxScores[j]) {
+            if (line.playerId == player.id) {
+              rows.add((game: batch[j], stats: line));
+              break;
+            }
           }
+          if (rows.length >= _recentPlayerGames) return rows;
         }
       }
       return rows;
     });
 
 const _recentPlayerGames = 5;
-const _recentPlayerLookups = 12;
+const _recentPlayerLookups = 40;
+const _recentPlayerBatch = 8;
 
 /// 한 팀에 관한 기사만 추린다.
 final teamNewsProvider = FutureProvider.family<List<NewsArticle>, String>((
