@@ -413,6 +413,18 @@ function mergeArticles(lists) {
   );
 }
 
+/**
+ * http 주소의 https 짝. 이미 https거나 주소가 아니면 null.
+ *
+ * 기사 주소가 http면 https로 서비스되는 앱(웹)에서 브라우저가 혼합 콘텐츠로
+ * 막고, 안드로이드 웹뷰도 기본 설정에서 평문 http를 막는다. 수집할 때
+ * https로 열리는지 확인해 바꿔 둔다.
+ */
+function httpsVariant(url) {
+  if (!/^http:\/\//i.test(String(url ?? ''))) return null;
+  return url.replace(/^http:/i, 'https:');
+}
+
 /** HTML에서 og:image(없으면 twitter:image)를 뽑는다. */
 function extractOgImage(html, baseUrl) {
   if (!html) return null;
@@ -455,4 +467,5 @@ module.exports = {
   normalizeItem,
   mergeArticles,
   extractOgImage,
+  httpsVariant,
 };

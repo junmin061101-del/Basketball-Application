@@ -12,6 +12,7 @@ const {
   normalizeItem,
   mergeArticles,
   extractOgImage,
+  httpsVariant,
 } = require('../news-source');
 
 const item = (over = {}) => ({
@@ -226,4 +227,13 @@ test('제목에 구단이 없으면 본문에서 찾는다', () => {
 test('NBA 구단명이 제목에 있으면 일반 매체 기사도 농구로 본다', () => {
   assert.equal(looksLikeBasketball('레이커스, 필 잭슨 감독 동상 공개', '동아일보'), true);
   assert.equal(looksLikeBasketball('오늘의 증시 마감', '동아일보'), false);
+});
+
+test('http 기사 주소의 https 짝을 만든다', () => {
+  assert.equal(
+    httpsVariant('http://www.rookie.co.kr/news/articleView.html?idxno=1'),
+    'https://www.rookie.co.kr/news/articleView.html?idxno=1',
+  );
+  assert.equal(httpsVariant('https://jumpball.co.kr/n/1'), null);
+  assert.equal(httpsVariant(undefined), null);
 });

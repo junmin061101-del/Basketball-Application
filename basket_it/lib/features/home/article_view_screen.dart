@@ -5,9 +5,6 @@ import 'package:webview_flutter/webview_flutter.dart';
 
 import '../../core/theme/app_colors.dart';
 import '../../data/models/news_article.dart';
-import 'article_frame_stub.dart'
-    if (dart.library.js_interop) 'article_frame_web.dart';
-
 /// 앱 안에서 띄울 때만 쓰는 모바일 호스트 대응표.
 ///
 /// 일부 매체는 PC 페이지에 viewport 메타가 없어 좁은 화면에서 잘려 보인다.
@@ -30,11 +27,11 @@ String viewerUrl(String url) {
   return uri.replace(host: mobileHost).toString();
 }
 
-/// 뉴스 카드를 누르면 열리는 원문 뷰어.
+/// 뉴스 카드를 누르면 열리는 원문 뷰어(모바일 전용).
 ///
 /// 앱을 벗어나지 않도록 원문을 전체 화면으로 띄우고, 닫기와 브라우저로 열기만
-/// 남긴 단순한 상단바를 둔다. 모바일은 webview_flutter를, 웹은 iframe을 쓴다
-/// (webview_flutter가 웹을 지원하지 않는다).
+/// 남긴 단순한 상단바를 둔다. 웹에서는 이 화면을 쓰지 않고 새 탭으로 연다
+/// ([openArticle] 참고).
 class ArticleViewScreen extends StatefulWidget {
   final NewsArticle article;
 
@@ -59,11 +56,6 @@ class _ArticleViewScreenState extends State<ArticleViewScreen> {
   @override
   void initState() {
     super.initState();
-    if (kIsWeb) {
-      // iframe은 교차 출처라 로딩 진행률을 알 수 없다. 바로 보여준다.
-      _progress = 100;
-      return;
-    }
     _controller = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
       ..setBackgroundColor(AppColors.background)
@@ -131,7 +123,6 @@ class _ArticleViewScreenState extends State<ArticleViewScreen> {
 
   Widget _body() {
     if (_failed) return _LoadFailed(onOpenInBrowser: _openInBrowser);
-    if (kIsWeb) return buildArticleFrame(_inAppUrl);
     return WebViewWidget(controller: _controller!);
   }
 }
@@ -174,17 +165,38 @@ class _LoadFailed extends StatelessWidget {
   }
 }
 
-/// 기사를 앱 안에서 연다. 모바일은 웹뷰, 웹은 iframe으로 같은 화면을 쓴다.
+/// 기사 원문을 연다. 모바일은 앱 안 웹뷰, 웹은 새 탭.
+///
+/// 웹에서 iframe으로 띄우던 때는 기사가 거의 열리지 않았다. 언론사가 프레임
+/// 접근을 막아 "403 접근이 차단되었습니다"가 뜨거나(SPOTV뉴스 등), 기사 주소가
+/// http면 브라우저가 혼합 콘텐츠로 막아 빈 화면이 됐다(루키 등). 웹에서는
+/// 언론사 페이지를 새 탭에 그대로 띄우는 편이 확실하다.
 Future<void> openArticle(BuildContext context, NewsArticle article) async {
   final url = article.url;
   if (url == null || url.isEmpty) {
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(const SnackBar(content: Text('원문 주소가 없는 기사예요.')));
+    _tell(context, '원문 주소가 없는 기사예요.');
+    return;
+  }
+
+  if (kIsWeb) {
+    // 탭을 누른 흐름에서 바로 열어야 팝업 차단에 걸리지 않는다.
+    final opened = await launchUrl(
+      Uri.parse(url),
+      webOnlyWindowName: '_blank',
+    ).catchError((_) => false);
+    if (!opened && context.mounted) {
+      _tell(context, '기사를 열지 못했어요. 브라우저의 팝업 차단을 확인해주세요.');
+    }
     return;
   }
 
   await Navigator.of(context).push(
     MaterialPageRoute(builder: (_) => ArticleViewScreen(article: article)),
   );
+}
+
+void _tell(BuildContext context, String message) {
+  ScaffoldMessenger.of(context)
+    ..hideCurrentSnackBar()
+    ..showSnackBar(SnackBar(content: Text(message)));
 }

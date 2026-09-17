@@ -24,6 +24,7 @@ const {
   normalizeItem,
   mergeArticles,
   extractOgImage,
+  httpsVariant,
 } = require('../functions/news-source');
 
 /** 한 파일에 담는 최대 기사 수. */
@@ -118,30 +119,48 @@ async function loadPreviousThumbnails() {
   return known;
 }
 
-/** 기사 본문에서 og:image를 읽어 채운다. 한 건 실패는 무시한다. */
+/**
+ * 기사 본문에서 og:image를 읽어 채우고, http 주소는 https로 바꿔 둔다.
+ *
+ * https로 서비스되는 앱에서 http 기사는 브라우저·웹뷰가 막아 열리지 않는다.
+ * 어차피 본문을 한 번 받아오므로, https로 먼저 받아 보고 되면 그 주소를 쓴다.
+ * 한 건 실패는 무시한다(썸네일 없이도 카드는 그려진다).
+ */
 async function attachThumbnails(articles, known) {
+  const headers = {
+    // UA가 없으면 og 태그를 안 주는 언론사가 있다.
+    'User-Agent':
+      'Mozilla/5.0 (compatible; BasketItBot/1.0; +https://basket-it-kbl.web.app)',
+  };
   await Promise.all(
     articles.map(async (article) => {
-      if (known.has(article.article_url)) {
+      const secure = httpsVariant(article.article_url);
+      // https 주소는 지난 실행에서 확인한 썸네일을 그대로 쓴다.
+      // http 주소는 캐시가 있어도 https로 열리는지 확인해 주소를 바꾼다.
+      if (secure && known.has(secure)) {
+        article.article_url = secure;
+        article.thumbnail_url = known.get(secure);
+        return;
+      }
+      if (!secure && known.has(article.article_url)) {
         article.thumbnail_url = known.get(article.article_url);
         return;
       }
-      try {
-        const res = await fetch(article.article_url, {
-          headers: {
-            // UA가 없으면 og 태그를 안 주는 언론사가 있다.
-            'User-Agent':
-              'Mozilla/5.0 (compatible; BasketItBot/1.0; +https://basket-it-kbl.web.app)',
-          },
-          signal: AbortSignal.timeout(8000),
-        });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const html = (await res.text()).slice(0, 200000);
-        article.thumbnail_url = extractOgImage(html, article.article_url);
-      } catch (_) {
-        article.thumbnail_url = null; // 썸네일 없이도 카드는 그려진다
+      for (const url of [secure, article.article_url].filter(Boolean)) {
+        try {
+          const res = await fetch(url, { headers, signal: AbortSignal.timeout(8000) });
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          const html = (await res.text()).slice(0, 200000);
+          article.article_url = url;
+          article.thumbnail_url = extractOgImage(html, url);
+          known.set(url, article.thumbnail_url);
+          return;
+        } catch (_) {
+          // https가 안 되면 원래 http 주소로 다시 시도한다
+        }
       }
-      known.set(article.article_url, article.thumbnail_url);
+      article.thumbnail_url = null;
+      known.set(article.article_url, null);
     }),
   );
   return articles;
