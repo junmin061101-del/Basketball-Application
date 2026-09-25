@@ -5,6 +5,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../data/models/game.dart';
 import '../../../data/models/team.dart';
 import '../../../providers/onboarding_providers.dart';
+import '../../../shared/widgets/team_logo_placeholder.dart';
 
 /// 경기 카드: 크림색 판에 양 팀 이름·전적과 가운데 점수.
 ///
@@ -113,7 +114,7 @@ class _Side extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
+    final texts = Column(
       crossAxisAlignment: alignEnd
           ? CrossAxisAlignment.end
           : CrossAxisAlignment.start,
@@ -121,6 +122,7 @@ class _Side extends StatelessWidget {
         Text(
           team.shortName,
           overflow: TextOverflow.ellipsis,
+          textAlign: alignEnd ? TextAlign.end : TextAlign.start,
           style: const TextStyle(
             fontSize: 15,
             fontWeight: FontWeight.w800,
@@ -135,6 +137,15 @@ class _Side extends StatelessWidget {
           ),
         ],
       ],
+    );
+    final logo = TeamLogoPlaceholder(team: team, size: 34);
+    return Row(
+      mainAxisAlignment: alignEnd
+          ? MainAxisAlignment.end
+          : MainAxisAlignment.start,
+      children: alignEnd
+          ? [Flexible(child: texts), const SizedBox(width: 10), logo]
+          : [logo, const SizedBox(width: 10), Flexible(child: texts)],
     );
   }
 }

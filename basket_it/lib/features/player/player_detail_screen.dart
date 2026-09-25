@@ -631,10 +631,10 @@ class _SeasonStatsTable extends StatelessWidget {
                           for (final col in _seasonColumns)
                             Container(
                               width: col.width,
-                              alignment: Alignment.centerRight,
-                              padding: const EdgeInsets.only(right: 10),
+                              alignment: Alignment.center,
                               child: Text(
                                 col.label,
+                                textAlign: TextAlign.center,
                                 style: Theme.of(context).textTheme.bodySmall
                                     ?.copyWith(fontWeight: FontWeight.w700),
                               ),
@@ -650,8 +650,7 @@ class _SeasonStatsTable extends StatelessWidget {
                             for (final col in _seasonColumns)
                               Container(
                                 width: col.width,
-                                alignment: Alignment.centerRight,
-                                padding: const EdgeInsets.only(right: 10),
+                                alignment: Alignment.center,
                                 decoration: const BoxDecoration(
                                   border: Border(
                                     top: BorderSide(color: AppColors.border),
@@ -659,6 +658,7 @@ class _SeasonStatsTable extends StatelessWidget {
                                 ),
                                 child: Text(
                                   col.value(s, _teamLabelOf(s)),
+                                  textAlign: TextAlign.center,
                                   style: col.emphasize
                                       ? const TextStyle(
                                           fontWeight: FontWeight.w800,
