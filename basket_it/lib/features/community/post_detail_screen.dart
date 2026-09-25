@@ -89,7 +89,32 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('게시글'),
+        centerTitle: true,
+        leadingWidth: 60,
+        leading: Padding(
+          padding: const EdgeInsets.only(left: 16),
+          child: GestureDetector(
+            onTap: () => Navigator.of(context).pop(),
+            child: Container(
+              width: 36,
+              height: 36,
+              alignment: Alignment.center,
+              decoration: const BoxDecoration(
+                color: AppColors.textPrimary,
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.arrow_back,
+                size: 19,
+                color: Colors.white,
+              ),
+            ),
+          ),
+        ),
+        title: const Text(
+          '게시글',
+          style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
+        ),
         actions: [
           if (me != null && postAsync.valueOrNull != null)
             if (postAsync.valueOrNull!.uid == me.uid)
@@ -146,8 +171,12 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
                   children: [
                     Text(
                       post.title,
-                      style: Theme.of(context).textTheme.headlineMedium
-                          ?.copyWith(fontSize: 21),
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w900,
+                        height: 1.3,
+                        color: AppColors.textPrimary,
+                      ),
                     ),
                     const SizedBox(height: 8),
                     Text(
@@ -166,7 +195,9 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
                       ),
                     const SizedBox(height: 20),
                     _LikeButton(post: post, myUid: me?.uid),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 22),
+                    const Divider(height: 1, color: AppColors.border),
+                    const SizedBox(height: 18),
                     Text(
                       '댓글 ${post.commentCount}',
                       style: Theme.of(context).textTheme.titleLarge,
@@ -300,14 +331,12 @@ class _CommentTile extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: isMine
-            ? AppColors.primary.withValues(alpha: 0.07)
-            : AppColors.surface,
+        color: const Color(0xFFFFF8F2),
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
           color: isMine
               ? AppColors.primary.withValues(alpha: 0.35)
-              : AppColors.border,
+              : Colors.transparent,
         ),
       ),
       child: Column(
@@ -315,9 +344,14 @@ class _CommentTile extends StatelessWidget {
         children: [
           Row(
             children: [
-              CircleAvatar(
-                radius: 12,
-                backgroundColor: AppColors.surfaceElevated,
+              Container(
+                width: 26,
+                height: 26,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceElevated,
+                  borderRadius: BorderRadius.circular(8),
+                ),
                 child: Text(
                   maskDisplayName(comment.displayName).substring(0, 1),
                   style: const TextStyle(
@@ -399,7 +433,7 @@ class _CommentInput extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.fromLTRB(16, 10, 12, 10),
         decoration: const BoxDecoration(
-          color: AppColors.surface,
+          color: AppColors.background,
           border: Border(top: BorderSide(color: AppColors.border)),
         ),
         child: Row(
@@ -417,6 +451,25 @@ class _CommentInput extends StatelessWidget {
                   counterText: '',
                   isDense: true,
                   fillColor: AppColors.background,
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 18,
+                    vertical: 14,
+                  ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(24),
+                    borderSide: const BorderSide(color: AppColors.border),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(24),
+                    borderSide: const BorderSide(color: AppColors.border),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(24),
+                    borderSide: const BorderSide(
+                      color: AppColors.primary,
+                      width: 1.4,
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -426,6 +479,9 @@ class _CommentInput extends StatelessWidget {
               style: IconButton.styleFrom(
                 backgroundColor: AppColors.primary,
                 foregroundColor: Colors.white,
+                disabledBackgroundColor: AppColors.surfaceElevated,
+                minimumSize: const Size(46, 46),
+                shape: const CircleBorder(),
               ),
               icon: const Icon(Icons.send_rounded, size: 20),
             ),

@@ -177,7 +177,17 @@ class _Scores extends StatelessWidget {
       child: Row(
         children: [
           Text('$home', style: style.copyWith(color: colorFor(home, away))),
-          const SizedBox(width: 10),
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 6),
+            child: Text(
+              ':',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w800,
+                color: AppColors.textTertiary,
+              ),
+            ),
+          ),
           Text('$away', style: style.copyWith(color: colorFor(away, home))),
         ],
       ),

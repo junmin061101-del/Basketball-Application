@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/theme/app_colors.dart';
+import '../common/page_header.dart';
 import '../../core/utils/name_mask.dart';
 import '../../data/models/community_post.dart';
 import '../../data/models/moderation.dart';
@@ -25,27 +26,6 @@ class CommunityTab extends ConsumerWidget {
     final blocked = ref.watch(blockedUsersProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        titleSpacing: 20,
-        title: const Text(
-          '커뮤니티',
-          style: TextStyle(fontSize: 26, fontWeight: FontWeight.w900),
-        ),
-        actions: [
-          IconButton(
-            tooltip: '차단한 사용자',
-            onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const BlockedUsersScreen()),
-            ),
-            icon: const Icon(
-              Icons.block,
-              size: 20,
-              color: AppColors.textSecondary,
-            ),
-          ),
-          const SizedBox(width: 4),
-        ],
-      ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: me == null
             ? null
@@ -59,6 +39,20 @@ class CommunityTab extends ConsumerWidget {
       ),
       body: Column(
         children: [
+          PageHeader(
+            title: 'Community',
+            trailing: IconButton(
+              tooltip: '차단한 사용자',
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const BlockedUsersScreen()),
+              ),
+              icon: const Icon(
+                Icons.block,
+                size: 20,
+                color: AppColors.textSecondary,
+              ),
+            ),
+          ),
           _CategoryChips(
             selected: filter,
             onSelected: (c) =>
@@ -81,7 +75,7 @@ class CommunityTab extends ConsumerWidget {
                 return ListView.separated(
                   padding: const EdgeInsets.fromLTRB(20, 4, 20, 90),
                   itemCount: posts.length,
-                  separatorBuilder: (_, _) => const Divider(height: 24),
+                  separatorBuilder: (_, _) => const SizedBox.shrink(),
                   itemBuilder: (context, i) =>
                       _PostRow(post: posts[i], myUid: me?.uid),
                 );
@@ -141,7 +135,7 @@ class _Chip extends StatelessWidget {
         duration: const Duration(milliseconds: 150),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
-          color: active ? AppColors.textPrimary : AppColors.surface,
+          color: active ? AppColors.textPrimary : AppColors.background,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
             color: active ? AppColors.textPrimary : AppColors.border,
@@ -185,63 +179,73 @@ class _PostRow extends ConsumerWidget {
               targetUid: post.uid,
               targetLabel: '이 게시글',
             ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 10),
+        padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+        decoration: BoxDecoration(
+          color: AppColors.background,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: AppColors.border),
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                _CategoryBadge(category: post.category),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    '${maskDisplayName(post.displayName)} · ${formatTimeAgo(post.createdAt)}',
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.bodySmall,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
             Text(
               post.title,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style: Theme.of(context).textTheme.titleMedium
-                  ?.copyWith(fontSize: 16, height: 1.3),
+              style: const TextStyle(
+                fontSize: 15.5,
+                fontWeight: FontWeight.w800,
+                height: 1.35,
+                color: AppColors.textPrimary,
+              ),
             ),
             if (post.body.trim().isNotEmpty) ...[
-              const SizedBox(height: 4),
+              const SizedBox(height: 5),
               Text(
                 post.body,
-                maxLines: 2,
+                maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: Theme.of(context).textTheme.bodyMedium,
+                style: const TextStyle(
+                  fontSize: 13,
+                  color: AppColors.textSecondary,
+                ),
               ),
             ],
-            const SizedBox(height: 10),
+            const SizedBox(height: 12),
             Row(
               children: [
+                _CategoryBadge(category: post.category),
+                const SizedBox(width: 10),
                 Icon(
                   post.likedByMe(myUid)
                       ? Icons.favorite
                       : Icons.favorite_border,
-                  size: 15,
+                  size: 14,
                   color: post.likedByMe(myUid)
                       ? AppColors.primary
                       : AppColors.textTertiary,
                 ),
-                const SizedBox(width: 4),
+                const SizedBox(width: 3),
                 Text('${post.likeCount}', style: _metaStyle),
-                const SizedBox(width: 14),
+                const SizedBox(width: 10),
                 const Icon(
                   Icons.mode_comment_outlined,
-                  size: 14,
+                  size: 13,
                   color: AppColors.textTertiary,
                 ),
-                const SizedBox(width: 4),
+                const SizedBox(width: 3),
                 Text('${post.commentCount}', style: _metaStyle),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    '${formatTimeAgo(post.createdAt)} | '
+                    '${maskDisplayName(post.displayName)}',
+                    overflow: TextOverflow.ellipsis,
+                    style: _metaStyle,
+                  ),
+                ),
               ],
             ),
           ],
@@ -262,27 +266,32 @@ class _CategoryBadge extends StatelessWidget {
 
   const _CategoryBadge({required this.category});
 
-  Color get _color => switch (category) {
-    PostCategory.free => AppColors.primary,
-    PostCategory.team => const Color(0xFF1F7A4D),
-    PostCategory.prediction => const Color(0xFF2A3F8F),
-    PostCategory.question => const Color(0xFF8E1B3A),
+  /// 배경과 글자색. 시안에서 뽑은 값이다.
+  (Color, Color) get _colors => switch (category) {
+    PostCategory.free => (const Color(0xFFF1F5F9), const Color(0xFF475569)),
+    PostCategory.team => (const Color(0xFFFFE8D4), const Color(0xFFC2410C)),
+    PostCategory.prediction => (
+      const Color(0xFFD2DCF7),
+      const Color(0xFF1D4ED8),
+    ),
+    PostCategory.question => (const Color(0xFFFCF6E9), const Color(0xFFB45309)),
   };
 
   @override
   Widget build(BuildContext context) {
+    final (background, foreground) = _colors;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: _color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(5),
+        color: background,
+        borderRadius: BorderRadius.circular(6),
       ),
       child: Text(
         category.label,
         style: TextStyle(
-          fontSize: 10,
+          fontSize: 10.5,
           fontWeight: FontWeight.w800,
-          color: _color,
+          color: foreground,
         ),
       ),
     );

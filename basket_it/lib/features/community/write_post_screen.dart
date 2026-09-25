@@ -65,7 +65,32 @@ class _WritePostScreenState extends ConsumerState<WritePostScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('글쓰기'),
+        centerTitle: true,
+        leadingWidth: 60,
+        leading: Padding(
+          padding: const EdgeInsets.only(left: 16),
+          child: GestureDetector(
+            onTap: () => Navigator.of(context).pop(),
+            child: Container(
+              width: 36,
+              height: 36,
+              alignment: Alignment.center,
+              decoration: const BoxDecoration(
+                color: AppColors.textPrimary,
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.arrow_back,
+                size: 19,
+                color: Colors.white,
+              ),
+            ),
+          ),
+        ),
+        title: const Text(
+          '글쓰기',
+          style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
+        ),
         actions: [
           TextButton(
             onPressed: _canSubmit ? _submit : null,
@@ -96,8 +121,6 @@ class _WritePostScreenState extends ConsumerState<WritePostScreen> {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
           children: [
-            Text('말머리', style: Theme.of(context).textTheme.bodySmall),
-            const SizedBox(height: 8),
             Wrap(
               spacing: 8,
               children: [
@@ -143,8 +166,8 @@ class _WritePostScreenState extends ConsumerState<WritePostScreen> {
             TextField(
               controller: _bodyController,
               maxLength: 2000,
-              maxLines: 12,
-              minLines: 8,
+              maxLines: 14,
+              minLines: 10,
               style: const TextStyle(color: AppColors.textPrimary, height: 1.5),
               decoration: const InputDecoration(
                 hintText: '내용을 자유롭게 적어주세요',

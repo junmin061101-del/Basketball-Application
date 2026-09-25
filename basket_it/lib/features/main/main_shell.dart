@@ -69,6 +69,9 @@ class _MainShellState extends ConsumerState<MainShell> {
             elevation: 0,
             selectedFontSize: 10,
             unselectedFontSize: 10,
+            // 아이콘은 앱의 다른 화면에서도 쓰는 것만 고른다. Flutter 웹은 쓰는
+            // 아이콘만 추려 글꼴을 만드는데, 브라우저가 예전 글꼴을 캐시하고
+            // 있으면 새 아이콘이 빈칸으로 보이기 때문이다.
             items: const [
               BottomNavigationBarItem(
                 icon: Icon(Icons.home_outlined),
@@ -76,22 +79,22 @@ class _MainShellState extends ConsumerState<MainShell> {
                 label: '홈',
               ),
               BottomNavigationBarItem(
-                icon: Icon(Icons.calendar_today_outlined),
-                activeIcon: Icon(Icons.calendar_today),
+                icon: Icon(Icons.calendar_month_outlined),
+                activeIcon: Icon(Icons.calendar_month_outlined),
                 label: '경기',
               ),
               BottomNavigationBarItem(
-                icon: Icon(Icons.insights_outlined),
-                activeIcon: Icon(Icons.insights),
+                icon: Icon(Icons.leaderboard_rounded),
+                activeIcon: Icon(Icons.leaderboard_rounded),
                 label: '예측',
               ),
               BottomNavigationBarItem(
-                icon: Icon(Icons.article_outlined),
-                activeIcon: Icon(Icons.article),
+                icon: Icon(Icons.forum_outlined),
+                activeIcon: Icon(Icons.forum),
                 label: '커뮤니티',
               ),
               BottomNavigationBarItem(
-                icon: Icon(Icons.search_outlined),
+                icon: Icon(Icons.search),
                 activeIcon: Icon(Icons.search),
                 label: '탐색',
               ),

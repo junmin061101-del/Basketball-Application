@@ -70,11 +70,20 @@
         ]
       },
       {
-        "source": "**/*.@(png|jpg|jpeg|svg|webp|woff2|ttf|otf|wasm|symbols)",
+        "source": "**/*.@(png|jpg|jpeg|svg|webp|wasm)",
         "headers": [
           {
             "key": "Cache-Control",
             "value": "public, max-age=604800"
+          }
+        ]
+      },
+      {
+        "source": "**/*.@(otf|ttf|woff|woff2|symbols)",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "no-cache, must-revalidate"
           }
         ]
       }
