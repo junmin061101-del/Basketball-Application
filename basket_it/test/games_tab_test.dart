@@ -71,9 +71,10 @@ void main() {
     await tester.tap(next);
     await tester.pumpAndSettle();
 
-    expect(find.text('디트로이트 피스톤스'), findsOneWidget);
-    expect(find.text('보스턴 셀틱스'), findsOneWidget);
-    // 예정 경기는 팁오프 시각을 함께 보여준다.
-    expect(find.text('경기 예정 · 오전 8:30'), findsOneWidget);
+    // 카드는 디자인대로 짧은 팀 이름을 쓴다.
+    expect(find.text('디트로이트'), findsOneWidget);
+    expect(find.text('보스턴'), findsOneWidget);
+    // 예정 경기는 점수 자리에 팁오프 시각이 들어간다.
+    expect(find.text('오전 8:30'), findsOneWidget);
   });
 }

@@ -10,6 +10,7 @@ import '../../providers/news_providers.dart';
 import '../../providers/onboarding_providers.dart';
 import '../../providers/repository_providers.dart';
 import '../common/league_switch.dart';
+import '../common/page_header.dart';
 import '../player/player_detail_screen.dart';
 import 'widgets/my_team_card.dart';
 import 'widgets/news_cards.dart';
@@ -28,10 +29,9 @@ class HomeTab extends ConsumerWidget {
     final league = ref.watch(selectedLeagueProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('홈')),
       body: Column(
         children: [
-          const LeagueSwitch(),
+          const PageHeader(title: 'Home', trailing: LeagueSwitch()),
           const _FollowChips(),
           Expanded(
             child: RefreshIndicator(
@@ -65,13 +65,23 @@ class _SectionTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Text(
-      text,
-      style: const TextStyle(
-        fontSize: 20,
-        fontWeight: FontWeight.w800,
-        color: AppColors.textPrimary,
-      ),
+    return Row(
+      children: [
+        Text(
+          text,
+          style: const TextStyle(
+            fontSize: 19,
+            fontWeight: FontWeight.w900,
+            color: AppColors.textPrimary,
+          ),
+        ),
+        const Spacer(),
+        const Icon(
+          Icons.chevron_right,
+          size: 20,
+          color: AppColors.textTertiary,
+        ),
+      ],
     );
   }
 }

@@ -22,7 +22,9 @@ class AuthGate extends ConsumerWidget {
     final authState = ref.watch(authStateProvider);
 
     // 저장된 자격증명 확인이 끝날 때까지 잠깐 로딩.
-    if (savedAsync.isLoading || authState.isLoading) return const _GateLoading();
+    if (savedAsync.isLoading || authState.isLoading) {
+      return const _GateLoading();
+    }
 
     final hasSavedCredential = savedAsync.valueOrNull != null;
     final hasSession = authState.valueOrNull != null;

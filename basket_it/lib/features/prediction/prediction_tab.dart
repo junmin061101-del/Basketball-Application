@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../common/page_header.dart';
+
 import '../../core/theme/app_colors.dart';
 import '../../data/models/game.dart';
 import '../../data/models/team.dart';
@@ -18,16 +20,22 @@ class PredictionTab extends StatelessWidget {
     return DefaultTabController(
       length: 2,
       child: Scaffold(
-        appBar: AppBar(
-          title: const Text('승부예측'),
-          bottom: const TabBar(
-            tabs: [
-              Tab(text: '예측하기'),
-              Tab(text: '랭킹'),
-            ],
-          ),
+        body: Column(
+          children: [
+            const PageHeader(title: '예측'),
+            const TabBar(
+              tabs: [
+                Tab(text: '예측하기'),
+                Tab(text: '랭킹'),
+              ],
+            ),
+            const Expanded(
+              child: TabBarView(
+                children: [_PredictionList(), LeaderboardView()],
+              ),
+            ),
+          ],
         ),
-        body: const TabBarView(children: [_PredictionList(), LeaderboardView()]),
       ),
     );
   }

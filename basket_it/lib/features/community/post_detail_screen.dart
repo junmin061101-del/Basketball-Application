@@ -123,7 +123,8 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
         ),
         error: (err, _) => Center(child: Text('불러오지 못했어요: $err')),
         data: (post) {
-          if (post != null && ref.watch(blockedUsersProvider).contains(post.uid)) {
+          if (post != null &&
+              ref.watch(blockedUsersProvider).contains(post.uid)) {
             return _BlockedNotice(
               onUnblock: () =>
                   ref.read(blockedUsersProvider.notifier).unblock(post.uid),
@@ -145,9 +146,8 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
                   children: [
                     Text(
                       post.title,
-                      style: Theme.of(
-                        context,
-                      ).textTheme.headlineMedium?.copyWith(fontSize: 21),
+                      style: Theme.of(context).textTheme.headlineMedium
+                          ?.copyWith(fontSize: 21),
                     ),
                     const SizedBox(height: 8),
                     Text(
@@ -370,10 +370,8 @@ class _CommentTile extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             comment.text,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: AppColors.textPrimary,
-              height: 1.4,
-            ),
+            style: Theme.of(context).textTheme.bodyMedium
+                ?.copyWith(color: AppColors.textPrimary, height: 1.4),
           ),
         ],
       ),

@@ -267,10 +267,8 @@ class _CommentTile extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             comment.text,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: AppColors.textPrimary,
-              height: 1.4,
-            ),
+            style: Theme.of(context).textTheme.bodyMedium
+                ?.copyWith(color: AppColors.textPrimary, height: 1.4),
           ),
         ],
       ),

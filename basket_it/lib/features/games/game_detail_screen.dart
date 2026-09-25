@@ -38,7 +38,24 @@ class GameDetailScreen extends ConsumerWidget {
     final playersAsync = ref.watch(allPlayersProvider);
 
     return Scaffold(
-      appBar: AppBar(title: Text(dateTitle(game.date))),
+      appBar: AppBar(
+        centerTitle: true,
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(
+              Icons.calendar_today_outlined,
+              size: 15,
+              color: AppColors.textPrimary,
+            ),
+            const SizedBox(width: 6),
+            Text(
+              dateTitle(game.date),
+              style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
+            ),
+          ],
+        ),
+      ),
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
@@ -96,87 +113,91 @@ class _Scoreboard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final showScore = game.status != GameStatus.scheduled;
-    return Column(
-      children: [
-        if (game.status == GameStatus.live)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 10),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Container(
-                  width: 7,
-                  height: 7,
-                  decoration: const BoxDecoration(
-                    color: AppColors.live,
-                    shape: BoxShape.circle,
-                  ),
+    return Container(
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 22),
+      decoration: BoxDecoration(
+        color: AppColors.background,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Column(
+        children: [
+          _StatusLine(game: game),
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              Expanded(
+                child: _TeamScoreColumn(
+                  team: homeTeam,
+                  score: game.homeScore,
+                  showScore: showScore,
                 ),
-                const SizedBox(width: 6),
-                Text(
-                  'LIVE · ${game.liveClock ?? ''}',
-                  style: const TextStyle(
-                    color: AppColors.live,
+              ),
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 8),
+                child: Text(
+                  'VS',
+                  style: TextStyle(
+                    color: AppColors.textTertiary,
                     fontWeight: FontWeight.w800,
                     fontSize: 13,
                   ),
                 ),
-              ],
-            ),
-          )
-        else if (game.status == GameStatus.finished)
-          const Padding(
-            padding: EdgeInsets.only(bottom: 10),
-            child: Text(
-              '경기 종료',
-              style: TextStyle(
-                color: AppColors.textTertiary,
-                fontWeight: FontWeight.w700,
-                fontSize: 13,
               ),
-            ),
-          )
-        else
-          const Padding(
-            padding: EdgeInsets.only(bottom: 10),
-            child: Text(
-              '경기 예정',
-              style: TextStyle(
-                color: AppColors.textTertiary,
-                fontWeight: FontWeight.w700,
-                fontSize: 13,
-              ),
-            ),
-          ),
-        Row(
-          children: [
-            Expanded(
-              child: _TeamScoreColumn(
-                team: homeTeam,
-                score: game.homeScore,
-                showScore: showScore,
-              ),
-            ),
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 12),
-              child: Text(
-                'VS',
-                style: TextStyle(
-                  color: AppColors.textTertiary,
-                  fontWeight: FontWeight.w800,
+              Expanded(
+                child: _TeamScoreColumn(
+                  team: awayTeam,
+                  score: game.awayScore,
+                  showScore: showScore,
                 ),
               ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// 스코어보드 맨 위의 상태 한 줄(LIVE · 3쿼터 / 경기 종료 / 경기 예정).
+class _StatusLine extends StatelessWidget {
+  final Game game;
+
+  const _StatusLine({required this.game});
+
+  @override
+  Widget build(BuildContext context) {
+    if (game.status == GameStatus.live) {
+      return Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            width: 7,
+            height: 7,
+            decoration: const BoxDecoration(
+              color: AppColors.live,
+              shape: BoxShape.circle,
             ),
-            Expanded(
-              child: _TeamScoreColumn(
-                team: awayTeam,
-                score: game.awayScore,
-                showScore: showScore,
-              ),
+          ),
+          const SizedBox(width: 6),
+          Text(
+            'LIVE${game.liveClock == null ? '' : ' · ${game.liveClock}'}',
+            style: const TextStyle(
+              color: AppColors.live,
+              fontWeight: FontWeight.w800,
+              fontSize: 13,
             ),
-          ],
-        ),
-      ],
+          ),
+        ],
+      );
+    }
+    return Text(
+      game.status == GameStatus.finished ? '경기 종료' : '경기 예정',
+      style: const TextStyle(
+        color: AppColors.textTertiary,
+        fontWeight: FontWeight.w700,
+        fontSize: 13,
+      ),
     );
   }
 }
@@ -291,7 +312,7 @@ class _GameBody extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         if (topPlayer != null) ...[
-          const _SectionTitle('최고 활약'),
+          const _SectionTitle('Best Player'),
           const SizedBox(height: 12),
           _TopPerformerCard(player: topPlayer, team: topTeam, stats: topLine),
           const SizedBox(height: 28),
@@ -357,38 +378,37 @@ class _TopPerformerCard extends StatelessWidget {
         );
       },
       child: Container(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.fromLTRB(20, 18, 16, 18),
         decoration: BoxDecoration(
+          color: AppColors.dark,
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: team.primaryColor.withValues(alpha: 0.5)),
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              team.primaryColor.withValues(alpha: 0.22),
-              AppColors.surface,
-            ],
-          ),
         ),
         child: Row(
           children: [
-            TeamLogoPlaceholder(team: team, size: 52),
-            const SizedBox(width: 16),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     player.name,
-                    style: Theme.of(context).textTheme.headlineMedium
-                        ?.copyWith(fontSize: 24),
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w900,
+                      color: Colors.white,
+                      height: 1.1,
+                    ),
                   ),
-                  const SizedBox(height: 2),
+                  const SizedBox(height: 4),
                   Text(
                     '${team.fullName} · ${player.positionText}',
-                    style: Theme.of(context).textTheme.bodyMedium,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.white.withValues(alpha: 0.6),
+                    ),
                   ),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 12),
                   Row(
                     children: [
                       _MiniStat(label: '리바운드', value: '${stats.reb}'),
@@ -404,13 +424,36 @@ class _TopPerformerCard extends StatelessWidget {
                 ],
               ),
             ),
-            Text(
-              '${stats.points}',
-              style: const TextStyle(
-                fontSize: 48,
-                fontWeight: FontWeight.w900,
-                color: AppColors.textPrimary,
-                height: 1,
+            const SizedBox(width: 12),
+            Container(
+              width: 66,
+              height: 66,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: AppColors.sky.withValues(alpha: 0.16),
+                borderRadius: BorderRadius.circular(18),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    '${stats.points}',
+                    style: const TextStyle(
+                      fontSize: 26,
+                      fontWeight: FontWeight.w900,
+                      color: AppColors.sky,
+                      height: 1.1,
+                    ),
+                  ),
+                  Text(
+                    'PTS',
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.sky.withValues(alpha: 0.8),
+                    ),
+                  ),
+                ],
               ),
             ),
           ],
@@ -430,14 +473,17 @@ class _MiniStat extends StatelessWidget {
   Widget build(BuildContext context) {
     return RichText(
       text: TextSpan(
-        style: const TextStyle(fontSize: 12, color: AppColors.textTertiary),
+        style: TextStyle(
+          fontSize: 11,
+          color: Colors.white.withValues(alpha: 0.55),
+        ),
         children: [
           TextSpan(
             text: '$value ',
             style: const TextStyle(
-              color: AppColors.textPrimary,
+              color: Colors.white,
               fontWeight: FontWeight.w800,
-              fontSize: 13,
+              fontSize: 12,
             ),
           ),
           TextSpan(text: label),
@@ -470,6 +516,7 @@ class _TeamComparison extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final rows = <_CompareRowData>[
+      _CompareRowData('득점', homeScore, awayScore),
       _CompareRowData(
         '리바운드',
         _sum(homeLines, (s) => s.reb),
@@ -498,47 +545,22 @@ class _TeamComparison extends StatelessWidget {
     ];
 
     return Container(
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.fromLTRB(18, 18, 18, 20),
       decoration: BoxDecoration(
         color: AppColors.surface,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(18),
         border: Border.all(color: AppColors.border),
       ),
       child: Column(
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                '$homeScore',
-                style: const TextStyle(
-                  fontWeight: FontWeight.w900,
-                  fontSize: 18,
-                  color: AppColors.textPrimary,
-                ),
-              ),
-              Text('득점', style: Theme.of(context).textTheme.bodySmall),
-              Text(
-                '$awayScore',
-                style: const TextStyle(
-                  fontWeight: FontWeight.w900,
-                  fontSize: 18,
-                  color: AppColors.textPrimary,
-                ),
-              ),
-            ],
-          ),
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 12),
-            child: Divider(),
-          ),
-          for (final row in rows) ...[
+          for (final (index, row) in rows.indexed) ...[
+            if (index > 0) const SizedBox(height: 16),
+            // 왼쪽(홈)은 검정, 오른쪽(원정)은 파랑으로 디자인을 따른다.
             _CompareRow(
               data: row,
-              homeColor: homeTeam.primaryColor,
-              awayColor: awayTeam.primaryColor,
+              homeColor: AppColors.textPrimary,
+              awayColor: AppColors.accent,
             ),
-            const SizedBox(height: 14),
           ],
         ],
       ),
@@ -569,41 +591,40 @@ class _CompareRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final total = data.homeValue + data.awayValue;
     final homeFraction = total == 0 ? 0.5 : data.homeValue / total;
+    const valueStyle = TextStyle(
+      fontSize: 15,
+      fontWeight: FontWeight.w800,
+      color: AppColors.textPrimary,
+    );
 
     return Column(
       children: [
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
+            Text('${data.homeValue}', style: valueStyle),
             Text(
-              '${data.homeValue}',
+              data.label,
               style: const TextStyle(
-                fontWeight: FontWeight.w800,
-                color: AppColors.textPrimary,
+                fontSize: 13,
+                color: AppColors.textSecondary,
               ),
             ),
-            Text(data.label, style: Theme.of(context).textTheme.bodySmall),
-            Text(
-              '${data.awayValue}',
-              style: const TextStyle(
-                fontWeight: FontWeight.w800,
-                color: AppColors.textPrimary,
-              ),
-            ),
+            Text('${data.awayValue}', style: valueStyle),
           ],
         ),
-        const SizedBox(height: 6),
+        const SizedBox(height: 8),
         ClipRRect(
-          borderRadius: BorderRadius.circular(4),
+          borderRadius: BorderRadius.circular(3),
           child: Row(
             children: [
               Expanded(
                 flex: (homeFraction * 1000).round().clamp(1, 999),
-                child: Container(height: 6, color: homeColor),
+                child: Container(height: 5, color: homeColor),
               ),
               Expanded(
                 flex: ((1 - homeFraction) * 1000).round().clamp(1, 999),
-                child: Container(height: 6, color: awayColor),
+                child: Container(height: 5, color: awayColor),
               ),
             ],
           ),
@@ -613,48 +634,27 @@ class _CompareRow extends StatelessWidget {
   }
 }
 
-/// 박스스코어 표에 표시할 스탯 컬럼 정의.
-/// 이름 칸은 왼쪽에 고정되고, 이 컬럼들은 가로 스크롤 영역에 나란히 표시된다.
+/// 박스스코어 표의 스탯 칸 하나.
+///
+/// 디자인처럼 화면 너비에 5칸(선수·시간·득점·리바운드·어시스트)을 맞춘다.
+/// 더 자세한 기록(야투·3점·턴오버 등)은 선수 상세에서 본다.
 class _StatCol {
   final String label;
-  final double width;
+  final int flex;
   final String Function(PlayerGameStats) value;
-  final bool emphasize;
 
-  const _StatCol(
-    this.label,
-    this.value, {
-    this.width = 56,
-    this.emphasize = false,
-  });
+  /// 팀 안에서 가장 높은 값을 파랗게 칠할 때 쓰는 비교값. null이면 강조하지 않는다.
+  final int? Function(PlayerGameStats)? leaderValue;
+
+  const _StatCol(this.label, this.value, {this.flex = 2, this.leaderValue});
 }
 
-String _pct(double ratio) => (ratio * 100).toStringAsFixed(1);
-
-/// 머리글은 네이버 스포츠 박스스코어처럼 한국어로 적는다.
 final _boxScoreColumns = <_StatCol>[
   // "31:04"(KBL) / "22분"(NBA는 분 단위만 온다)
-  _StatCol('시간', (s) => s.playTimeLabel, width: 62),
-  _StatCol('득점', (s) => '${s.points}', emphasize: true),
-  _StatCol('리바운드', (s) => '${s.reb}', width: 70),
-  _StatCol('어시스트', (s) => '${s.ast}', width: 70),
-  _StatCol('스틸', (s) => '${s.stl}'),
-  _StatCol('블록', (s) => '${s.blk}'),
-  _StatCol('야투', (s) => '${s.fgm}-${s.fga}', width: 64),
-  _StatCol('야투율', (s) => _pct(s.fgPct), width: 62),
-  _StatCol('3점', (s) => '${s.tpm}-${s.tpa}', width: 58),
-  _StatCol('3점슛률', (s) => _pct(s.tpPct), width: 68),
-  _StatCol('자유투', (s) => '${s.ftm}-${s.fta}', width: 64),
-  _StatCol('자유투율', (s) => _pct(s.ftPct), width: 70),
-  _StatCol('공격 리바', (s) => '${s.oreb}', width: 76),
-  _StatCol('수비 리바', (s) => '${s.dreb}', width: 76),
-  _StatCol('턴오버', (s) => '${s.tov}', width: 62),
-  _StatCol('파울', (s) => '${s.pf}'),
-  _StatCol('득실마진', (s) {
-    final pm = s.plusMinus;
-    if (pm == null) return '-';
-    return pm > 0 ? '+$pm' : '$pm';
-  }, width: 70),
+  _StatCol('시간', (s) => s.playTimeLabel, flex: 3),
+  _StatCol('득점', (s) => '${s.points}', leaderValue: (s) => s.points),
+  _StatCol('리바운드', (s) => '${s.reb}', flex: 3, leaderValue: (s) => s.reb),
+  _StatCol('어시스트', (s) => '${s.ast}', flex: 3, leaderValue: (s) => s.ast),
 ];
 
 /// 박스스코어 한 묶음. [title]이 null이면 선발/후보를 모르는 예전 기록이다.
@@ -715,58 +715,22 @@ class _BoxScoreSectionState extends State<_BoxScoreSection> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Container(
-          padding: const EdgeInsets.all(4),
-          decoration: BoxDecoration(
-            color: AppColors.surfaceElevated,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Row(
-            children: [
-              for (final (team, isHome) in [
-                (widget.homeTeam, true),
-                (widget.awayTeam, false),
-              ])
-                Expanded(
-                  child: GestureDetector(
-                    onTap: () => setState(() => _showHome = isHome),
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 150),
-                      padding: const EdgeInsets.symmetric(vertical: 10),
-                      alignment: Alignment.center,
-                      decoration: BoxDecoration(
-                        color: _showHome == isHome
-                            ? AppColors.background
-                            : Colors.transparent,
-                        borderRadius: BorderRadius.circular(9),
-                        boxShadow: _showHome == isHome
-                            ? [
-                                BoxShadow(
-                                  color: Colors.black.withValues(alpha: 0.08),
-                                  blurRadius: 6,
-                                  offset: const Offset(0, 2),
-                                ),
-                              ]
-                            : null,
-                      ),
-                      child: Text(
-                        team.shortName,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: _showHome == isHome
-                              ? FontWeight.w800
-                              : FontWeight.w600,
-                          color: _showHome == isHome
-                              ? AppColors.textPrimary
-                              : AppColors.textSecondary,
-                        ),
-                      ),
-                    ),
-                  ),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: [
+            for (final (team, isHome) in [
+              (widget.homeTeam, true),
+              (widget.awayTeam, false),
+            ])
+              Padding(
+                padding: const EdgeInsets.only(left: 6),
+                child: _TeamChip(
+                  team: team,
+                  active: _showHome == isHome,
+                  onTap: () => setState(() => _showHome = isHome),
                 ),
-            ],
-          ),
+              ),
+          ],
         ),
         const SizedBox(height: 12),
         _BoxScoreTable(
@@ -779,12 +743,51 @@ class _BoxScoreSectionState extends State<_BoxScoreSection> {
   }
 }
 
-const _boxScoreNameColWidth = 96.0;
-const _boxScoreRowHeight = 46.0;
+class _TeamChip extends StatelessWidget {
+  final Team team;
+  final bool active;
+  final VoidCallback onTap;
+
+  const _TeamChip({
+    required this.team,
+    required this.active,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+        decoration: BoxDecoration(
+          color: active ? AppColors.background : AppColors.surfaceElevated,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: active ? AppColors.textPrimary : Colors.transparent,
+          ),
+        ),
+        child: Text(
+          team.shortName,
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w800,
+            color: active ? AppColors.textPrimary : AppColors.textSecondary,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+const _boxScoreRowHeight = 44.0;
 const _boxScoreHeaderHeight = 34.0;
 
-/// 선수 이름 칸은 고정하고 나머지 스탯은 가로로 스크롤하는 박스스코어 표.
-/// 선발·후보 묶음마다 머리줄(묶음 이름 + 항목 이름)을 둔다.
+/// 선발·후보 묶음마다 머리줄을 둔 박스스코어 표.
+///
+/// 팀 안에서 득점·리바운드·어시스트가 가장 많은 선수는 그 칸을 파랗게 칠하고,
+/// 이름 앞에 파란 막대를 둔다.
 class _BoxScoreTable extends StatelessWidget {
   final List<PlayerGameStats> lines;
   final Map<String, Player> playerById;
@@ -795,79 +798,43 @@ class _BoxScoreTable extends StatelessWidget {
     required this.playerById,
   });
 
+  int _max(int? Function(PlayerGameStats) of) =>
+      lines.map((l) => of(l) ?? 0).fold(0, (a, b) => a > b ? a : b);
+
   @override
   Widget build(BuildContext context) {
     final groups = groupBoxScore(lines);
-    final headerStyle = Theme.of(context).textTheme.bodySmall
-        ?.copyWith(fontWeight: FontWeight.w800);
+    final leaders = {
+      for (final col in _boxScoreColumns)
+        if (col.leaderValue != null) col.label: _max(col.leaderValue!),
+    };
+    bool leads(PlayerGameStats line) => _boxScoreColumns.any(
+      (col) =>
+          col.leaderValue != null &&
+          (leaders[col.label] ?? 0) > 0 &&
+          col.leaderValue!(line) == leaders[col.label],
+    );
 
     return ClipRRect(
       borderRadius: BorderRadius.circular(16),
       child: Container(
         decoration: BoxDecoration(
-          color: AppColors.surface,
-          border: Border.all(color: AppColors.border),
           borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.border),
         ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        child: Column(
           children: [
-            // 왼쪽 고정 칸: 묶음 이름 + 선수 이름
-            Container(
-              width: _boxScoreNameColWidth,
-              decoration: const BoxDecoration(
-                border: Border(right: BorderSide(color: AppColors.border)),
-              ),
-              child: Column(
-                children: [
-                  for (final (index, group) in groups.indexed) ...[
-                    _GroupHeaderCell(
-                      top: index > 0,
-                      alignment: Alignment.centerLeft,
-                      padding: const EdgeInsets.only(left: 12),
-                      child: Text(group.title ?? '선수', style: headerStyle),
-                    ),
-                    for (final line in group.lines)
-                      _BoxScoreNameCell(
-                        player: playerById[line.playerId],
-                        stats: line,
-                      ),
-                  ],
-                ],
-              ),
-            ),
-            // 오른쪽 스크롤 영역: 시간/득점/리바운드/... 전체 스탯
-            Expanded(
-              child: SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    for (final (index, group) in groups.indexed) ...[
-                      _GroupHeaderCell(
-                        top: index > 0,
-                        child: Row(
-                          children: [
-                            for (final col in _boxScoreColumns)
-                              _HeaderStatCell(col: col),
-                          ],
-                        ),
-                      ),
-                      for (final line in group.lines)
-                        SizedBox(
-                          height: _boxScoreRowHeight,
-                          child: Row(
-                            children: [
-                              for (final col in _boxScoreColumns)
-                                _ValueStatCell(col: col, stats: line),
-                            ],
-                          ),
-                        ),
-                    ],
-                  ],
+            _HeaderRow(title: '선수'),
+            for (final group in groups) ...[
+              if (group.title != null) _GroupBand(title: group.title!),
+              for (final line in group.lines)
+                _BoxScoreRow(
+                  stats: line,
+                  player: playerById[line.playerId],
+                  leaders: leaders,
+                  highlightName: leads(line),
                 ),
-              ),
-            ),
+            ],
           ],
         ),
       ),
@@ -875,78 +842,116 @@ class _BoxScoreTable extends StatelessWidget {
   }
 }
 
-/// 묶음 머리줄. 두 번째 묶음부터는 위에 굵은 구분선을 긋는다.
-class _GroupHeaderCell extends StatelessWidget {
-  final bool top;
-  final Widget child;
-  final AlignmentGeometry alignment;
-  final EdgeInsetsGeometry padding;
+class _HeaderRow extends StatelessWidget {
+  final String title;
 
-  const _GroupHeaderCell({
-    required this.top,
-    required this.child,
-    this.alignment = Alignment.centerLeft,
-    this.padding = EdgeInsets.zero,
+  const _HeaderRow({required this.title});
+
+  @override
+  Widget build(BuildContext context) {
+    const style = TextStyle(
+      fontSize: 11,
+      fontWeight: FontWeight.w700,
+      color: AppColors.textTertiary,
+    );
+    return Container(
+      height: _boxScoreHeaderHeight,
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      alignment: Alignment.center,
+      child: Row(
+        children: [
+          Expanded(flex: 5, child: Text(title, style: style)),
+          for (final col in _boxScoreColumns)
+            Expanded(
+              flex: col.flex,
+              child: Text(col.label, textAlign: TextAlign.center, style: style),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _GroupBand extends StatelessWidget {
+  final String title;
+
+  const _GroupBand({required this.title});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 30,
+      width: double.infinity,
+      color: AppColors.surfaceElevated,
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      alignment: Alignment.centerLeft,
+      child: Text(
+        title,
+        style: const TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w800,
+          color: AppColors.textSecondary,
+        ),
+      ),
+    );
+  }
+}
+
+class _BoxScoreRow extends StatelessWidget {
+  final PlayerGameStats stats;
+  final Player? player;
+  final Map<String, int> leaders;
+  final bool highlightName;
+
+  const _BoxScoreRow({
+    required this.stats,
+    required this.player,
+    required this.leaders,
+    required this.highlightName,
   });
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: _boxScoreHeaderHeight,
-      alignment: alignment,
-      padding: padding,
-      decoration: BoxDecoration(
-        color: AppColors.surfaceElevated,
-        border: top
-            ? const Border(top: BorderSide(color: AppColors.border, width: 2))
-            : null,
-      ),
-      child: child,
-    );
-  }
-}
-
-class _HeaderStatCell extends StatelessWidget {
-  final _StatCol col;
-
-  const _HeaderStatCell({required this.col});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: col.width,
-      alignment: Alignment.center,
-      child: Text(
-        col.label,
-        style: Theme.of(context).textTheme.bodySmall
-            ?.copyWith(fontWeight: FontWeight.w700),
-      ),
-    );
-  }
-}
-
-class _ValueStatCell extends StatelessWidget {
-  final _StatCol col;
-  final PlayerGameStats stats;
-
-  const _ValueStatCell({required this.col, required this.stats});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: col.width,
-      alignment: Alignment.center,
+      height: _boxScoreRowHeight,
+      padding: const EdgeInsets.symmetric(horizontal: 12),
       decoration: const BoxDecoration(
         border: Border(top: BorderSide(color: AppColors.border)),
       ),
-      child: Text(
-        col.value(stats),
-        style: col.emphasize
-            ? const TextStyle(
-                fontWeight: FontWeight.w800,
-                color: AppColors.textPrimary,
-              )
-            : Theme.of(context).textTheme.bodyMedium,
+      child: Row(
+        children: [
+          Expanded(
+            flex: 5,
+            child: _BoxScoreNameCell(
+              player: player,
+              stats: stats,
+              leader: highlightName,
+            ),
+          ),
+          for (final col in _boxScoreColumns)
+            Expanded(
+              flex: col.flex,
+              child: Builder(
+                builder: (context) {
+                  final isLeader =
+                      col.leaderValue != null &&
+                      (leaders[col.label] ?? 0) > 0 &&
+                      col.leaderValue!(stats) == leaders[col.label];
+                  return Text(
+                    col.value(stats),
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: isLeader ? FontWeight.w900 : FontWeight.w600,
+                      color: isLeader
+                          ? AppColors.accent
+                          : AppColors.textPrimary,
+                    ),
+                  );
+                },
+              ),
+            ),
+        ],
       ),
     );
   }
@@ -955,36 +960,53 @@ class _ValueStatCell extends StatelessWidget {
 class _BoxScoreNameCell extends StatelessWidget {
   final Player? player;
   final PlayerGameStats stats;
+  final bool leader;
 
-  const _BoxScoreNameCell({required this.player, required this.stats});
+  const _BoxScoreNameCell({
+    required this.player,
+    required this.stats,
+    required this.leader,
+  });
 
   @override
   Widget build(BuildContext context) {
     // 지난 시즌 경기에는 지금 명단에 없는 선수도 나온다. 박스스코어에 적힌 이름을 쓴다.
     final name = player?.name ?? stats.name ?? '알 수 없음';
+    final target = player;
     return InkWell(
-      onTap: player == null
+      onTap: target == null
           ? null
           : () {
               Navigator.of(context).push(
                 MaterialPageRoute(
                   builder: (_) =>
-                      PlayerDetailScreen(player: player!, gameStats: stats),
+                      PlayerDetailScreen(player: target, gameStats: stats),
                 ),
               );
             },
-      child: Container(
-        height: _boxScoreRowHeight,
-        alignment: Alignment.centerLeft,
-        padding: const EdgeInsets.only(left: 12, right: 6),
-        decoration: const BoxDecoration(
-          border: Border(top: BorderSide(color: AppColors.border)),
-        ),
-        child: Text(
-          name,
-          overflow: TextOverflow.ellipsis,
-          style: Theme.of(context).textTheme.titleMedium,
-        ),
+      child: Row(
+        children: [
+          Container(
+            width: 3,
+            height: 18,
+            margin: const EdgeInsets.only(right: 8),
+            decoration: BoxDecoration(
+              color: leader ? AppColors.accent : Colors.transparent,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              name,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                fontSize: 13.5,
+                fontWeight: FontWeight.w700,
+                color: AppColors.textPrimary,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

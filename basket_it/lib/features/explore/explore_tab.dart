@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../common/league_switch.dart';
+import '../common/page_header.dart';
 
 import '../../core/theme/app_colors.dart';
 import 'standings_screen.dart';
@@ -15,11 +16,9 @@ class ExploreTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('탐색')),
       body: Column(
         children: [
-          const LeagueSwitch(),
-          const SizedBox(height: 8),
+          const PageHeader(title: '탐색', trailing: LeagueSwitch()),
           Expanded(
             child: Padding(
               padding: const EdgeInsets.all(20),

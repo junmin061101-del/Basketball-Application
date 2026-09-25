@@ -5,14 +5,20 @@ import '../../../core/theme/app_colors.dart';
 import '../../../data/models/game.dart';
 import '../../../data/models/team.dart';
 import '../../../providers/onboarding_providers.dart';
-import '../../../shared/widgets/team_logo_placeholder.dart';
-import '../../explore/team_detail_screen.dart';
 
-/// 경기 카드: 팀 로고 + 팀명 + 스코어, 라이브 표시.
+/// 경기 카드: 크림색 판에 양 팀 이름·전적과 가운데 점수.
+///
+/// 디자인대로 로고 없이 이름과 숫자만 둔다. 끝난 경기는 이긴 쪽 점수만 진하게
+/// 보이고, 예정 경기는 점수 자리에 팁오프 시각이 들어간다.
 class GameCard extends ConsumerWidget {
   final Game game;
   final Team homeTeam;
   final Team awayTeam;
+
+  /// "5승 2패". 순위표가 아직 없으면 null.
+  final String? homeRecord;
+  final String? awayRecord;
+
   final VoidCallback onTap;
 
   const GameCard({
@@ -21,6 +27,8 @@ class GameCard extends ConsumerWidget {
     required this.homeTeam,
     required this.awayTeam,
     required this.onTap,
+    this.homeRecord,
+    this.awayRecord,
   });
 
   @override
@@ -28,37 +36,62 @@ class GameCard extends ConsumerWidget {
     final followedIds = ref.watch(followedTeamIdsProvider);
     final isFollowedGame =
         followedIds.contains(homeTeam.id) || followedIds.contains(awayTeam.id);
+    final finished = game.status == GameStatus.finished;
+    final started = game.status != GameStatus.scheduled;
 
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: BorderRadius.circular(18),
       child: Container(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
         decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.circular(16),
+          color: AppColors.surfaceCream,
+          borderRadius: BorderRadius.circular(18),
           border: Border.all(
-            color: isFollowedGame ? AppColors.primary : AppColors.border,
-            width: isFollowedGame ? 1.4 : 1,
+            color: isFollowedGame ? AppColors.primary : Colors.transparent,
+            width: 1.4,
           ),
         ),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            _StatusRow(game: game),
-            const SizedBox(height: 12),
-            _TeamRow(
-              team: homeTeam,
-              score: game.homeScore,
-              showScore: game.status != GameStatus.scheduled,
-              followed: followedIds.contains(homeTeam.id),
-            ),
-            const SizedBox(height: 10),
-            _TeamRow(
-              team: awayTeam,
-              score: game.awayScore,
-              showScore: game.status != GameStatus.scheduled,
-              followed: followedIds.contains(awayTeam.id),
+            if (game.status == GameStatus.live) ...[
+              _LiveLabel(clock: game.liveClock),
+              const SizedBox(height: 8),
+            ],
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Expanded(
+                  child: _Side(
+                    team: homeTeam,
+                    record: homeRecord,
+                    alignEnd: false,
+                  ),
+                ),
+                if (started)
+                  _Scores(
+                    home: game.homeScore,
+                    away: game.awayScore,
+                    dimLoser: finished,
+                  )
+                else
+                  Text(
+                    tipOffLabel(game.startTime),
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                Expanded(
+                  child: _Side(
+                    team: awayTeam,
+                    record: awayRecord,
+                    alignEnd: true,
+                  ),
+                ),
+              ],
             ),
           ],
         ),
@@ -67,131 +100,115 @@ class GameCard extends ConsumerWidget {
   }
 }
 
-class _StatusRow extends StatelessWidget {
-  final Game game;
-
-  const _StatusRow({required this.game});
-
-  @override
-  Widget build(BuildContext context) {
-    switch (game.status) {
-      case GameStatus.live:
-        return Row(
-          children: [
-            Container(
-              width: 6,
-              height: 6,
-              decoration: const BoxDecoration(
-                color: AppColors.live,
-                shape: BoxShape.circle,
-              ),
-            ),
-            const SizedBox(width: 6),
-            Text(
-              'LIVE · ${game.liveClock ?? ''}',
-              style: const TextStyle(
-                color: AppColors.live,
-                fontSize: 12,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-          ],
-        );
-      case GameStatus.finished:
-        return const Text(
-          '경기 종료',
-          style: TextStyle(
-            color: AppColors.textTertiary,
-            fontSize: 12,
-            fontWeight: FontWeight.w700,
-          ),
-        );
-      case GameStatus.scheduled:
-        // NBA는 한국 시간으로 새벽·오전에 열려 시각이 없으면 헷갈린다.
-        return Text(
-          '경기 예정 · ${_tipOffLabel(game.startTime)}',
-          style: const TextStyle(
-            color: AppColors.textTertiary,
-            fontSize: 12,
-            fontWeight: FontWeight.w700,
-          ),
-        );
-    }
-  }
-}
-
-/// 기기 시간 기준 "오전 8:30".
-String _tipOffLabel(DateTime time) {
-  final hour = time.hour % 12 == 0 ? 12 : time.hour % 12;
-  final minute = time.minute.toString().padLeft(2, '0');
-  return '${time.hour < 12 ? '오전' : '오후'} $hour:$minute';
-}
-
-class _TeamRow extends StatelessWidget {
+class _Side extends StatelessWidget {
   final Team team;
-  final int score;
-  final bool showScore;
-  final bool followed;
+  final String? record;
+  final bool alignEnd;
 
-  const _TeamRow({
+  const _Side({
     required this.team,
-    required this.score,
-    required this.showScore,
-    required this.followed,
+    required this.record,
+    required this.alignEnd,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Row(
+    return Column(
+      crossAxisAlignment: alignEnd
+          ? CrossAxisAlignment.end
+          : CrossAxisAlignment.start,
       children: [
-        Expanded(
-          child: Row(
-            children: [
-              TeamLogoPlaceholder(team: team, size: 32),
-              const SizedBox(width: 10),
-              // 팀 이름을 탭했을 때만 팀 상세로 이동한다(카드의 나머지 부분은
-              // 경기 상세로 가는 탭 영역과 겹치지 않도록 이름 텍스트만 반응).
-              Flexible(
-                child: InkWell(
-                  onTap: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => TeamDetailScreen(team: team),
-                      ),
-                    );
-                  },
-                  child: Text(
-                    team.fullName,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                ),
-              ),
-              if (followed) ...[
-                const SizedBox(width: 6),
-                Container(
-                  width: 5,
-                  height: 5,
-                  decoration: const BoxDecoration(
-                    color: AppColors.primary,
-                    shape: BoxShape.circle,
-                  ),
-                ),
-              ],
-            ],
+        Text(
+          team.shortName,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.w800,
+            color: AppColors.textPrimary,
           ),
         ),
-        if (showScore)
+        if (record != null) ...[
+          const SizedBox(height: 3),
           Text(
-            '$score',
-            style: const TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.w900,
-              color: AppColors.textPrimary,
-              fontFeatures: [FontFeature.tabularFigures()],
-            ),
+            record!,
+            style: const TextStyle(fontSize: 12, color: AppColors.textTertiary),
           ),
+        ],
       ],
     );
   }
+}
+
+class _Scores extends StatelessWidget {
+  final int home;
+  final int away;
+  final bool dimLoser;
+
+  const _Scores({
+    required this.home,
+    required this.away,
+    required this.dimLoser,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    Color colorFor(int mine, int other) => dimLoser && mine < other
+        ? AppColors.textTertiary
+        : AppColors.textPrimary;
+
+    const style = TextStyle(
+      fontSize: 24,
+      fontWeight: FontWeight.w900,
+      fontFeatures: [FontFeature.tabularFigures()],
+    );
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      child: Row(
+        children: [
+          Text('$home', style: style.copyWith(color: colorFor(home, away))),
+          const SizedBox(width: 10),
+          Text('$away', style: style.copyWith(color: colorFor(away, home))),
+        ],
+      ),
+    );
+  }
+}
+
+class _LiveLabel extends StatelessWidget {
+  final String? clock;
+
+  const _LiveLabel({required this.clock});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Container(
+          width: 6,
+          height: 6,
+          decoration: const BoxDecoration(
+            color: AppColors.live,
+            shape: BoxShape.circle,
+          ),
+        ),
+        const SizedBox(width: 6),
+        Text(
+          'LIVE${clock == null || clock!.isEmpty ? '' : ' · $clock'}',
+          style: const TextStyle(
+            color: AppColors.live,
+            fontSize: 12,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// 기기 시간 기준 "오전 8:30".
+String tipOffLabel(DateTime time) {
+  final hour = time.hour % 12 == 0 ? 12 : time.hour % 12;
+  final minute = time.minute.toString().padLeft(2, '0');
+  return '${time.hour < 12 ? '오전' : '오후'} $hour:$minute';
 }

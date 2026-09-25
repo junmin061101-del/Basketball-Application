@@ -56,7 +56,9 @@ class PredictionGameCard extends ConsumerWidget {
         children: [
           Row(
             children: [
-              Expanded(child: _StatusLine(game: game, now: now, open: open)),
+              Expanded(
+                child: _StatusLine(game: game, now: now, open: open),
+              ),
               Text(
                 _timeLabel(game.startTime),
                 style: const TextStyle(
@@ -185,7 +187,11 @@ class _StatusLine extends StatelessWidget {
   final DateTime now;
   final bool open;
 
-  const _StatusLine({required this.game, required this.now, required this.open});
+  const _StatusLine({
+    required this.game,
+    required this.now,
+    required this.open,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -194,7 +200,10 @@ class _StatusLine extends StatelessWidget {
       GameStatus.finished => ('경기 종료 · 결과 확정', AppColors.textTertiary),
       GameStatus.scheduled =>
         open
-            ? ('마감까지 ${_remaining(game.predictionDeadline, now)}', AppColors.positive)
+            ? (
+                '마감까지 ${_remaining(game.predictionDeadline, now)}',
+                AppColors.positive,
+              )
             : ('예측 마감', AppColors.textTertiary),
     };
     return Row(
@@ -257,7 +266,9 @@ class _SideButton extends StatelessWidget {
         duration: const Duration(milliseconds: 150),
         padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
         decoration: BoxDecoration(
-          color: selected ? accent.withValues(alpha: 0.14) : AppColors.background,
+          color: selected
+              ? accent.withValues(alpha: 0.14)
+              : AppColors.background,
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
             color: selected ? accent : AppColors.border,
@@ -394,9 +405,8 @@ class _ResultLine extends StatelessWidget {
     if (winner == null) {
       return Text(
         '내 예측: $pickLabel 승',
-        style: Theme.of(
-          context,
-        ).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
+        style: Theme.of(context).textTheme.bodySmall
+            ?.copyWith(color: AppColors.textSecondary),
       );
     }
     final hit = winner == myVote!.pick;

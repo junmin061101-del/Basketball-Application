@@ -39,13 +39,12 @@ class TeamListScreen extends ConsumerWidget {
               SliverPadding(
                 padding: const EdgeInsets.all(20),
                 sliver: SliverGrid(
-                  gridDelegate:
-                      const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 2,
-                        mainAxisSpacing: 12,
-                        crossAxisSpacing: 12,
-                        childAspectRatio: 2.3,
-                      ),
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    mainAxisSpacing: 12,
+                    crossAxisSpacing: 12,
+                    childAspectRatio: 2.3,
+                  ),
                   delegate: SliverChildBuilderDelegate((context, index) {
                     final team = teams[index];
                     return _TeamTile(
@@ -80,9 +79,8 @@ class _FollowingStrip extends ConsumerWidget {
             padding: const EdgeInsets.symmetric(horizontal: 20),
             child: Text(
               '팔로잉 · 탭하면 언팔로우',
-              style: Theme.of(
-                context,
-              ).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w700),
+              style: Theme.of(context).textTheme.bodySmall
+                  ?.copyWith(fontWeight: FontWeight.w700),
             ),
           ),
           const SizedBox(height: 10),

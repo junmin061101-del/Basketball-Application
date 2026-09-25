@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'app_colors.dart';
 
-/// NBA 공식 앱을 참고한 라이트 테마.
-/// 밝은 배경 + 굵은 숫자 타이포그래피 + 카드 중심 레이아웃을 기본으로 한다.
+/// Baskit UI 디자인(Figma)에 맞춘 라이트 테마.
+///
+/// 흰 바탕 + 굵은 숫자 + 카드 중심이고, 주요 버튼은 주황이다. 글자 크기와
+/// 굵기도 시안을 따른다.
 class AppTheme {
   AppTheme._();
 
@@ -40,7 +42,7 @@ class AppTheme {
           )
           .copyWith(
             headlineLarge: const TextStyle(
-              fontSize: 34,
+              fontSize: 30,
               fontWeight: FontWeight.w900,
               color: AppColors.textPrimary,
               letterSpacing: -0.5,
@@ -52,7 +54,7 @@ class AppTheme {
               letterSpacing: -0.5,
             ),
             titleLarge: const TextStyle(
-              fontSize: 18,
+              fontSize: 17,
               fontWeight: FontWeight.w800,
               color: AppColors.textPrimary,
             ),
@@ -67,13 +69,13 @@ class AppTheme {
               color: AppColors.textSecondary,
             ),
             bodySmall: const TextStyle(
-              fontSize: 12,
+              fontSize: 12.5,
               fontWeight: FontWeight.w500,
               color: AppColors.textTertiary,
             ),
           ),
       cardTheme: CardThemeData(
-        color: AppColors.surface,
+        color: AppColors.background,
         elevation: 0,
         margin: EdgeInsets.zero,
         shape: RoundedRectangleBorder(
@@ -87,9 +89,10 @@ class AppTheme {
         space: 1,
       ),
       bottomNavigationBarTheme: const BottomNavigationBarThemeData(
-        backgroundColor: AppColors.surface,
-        selectedItemColor: AppColors.primary,
+        backgroundColor: AppColors.background,
+        selectedItemColor: AppColors.textPrimary,
         unselectedItemColor: AppColors.textTertiary,
+        elevation: 0,
         type: BottomNavigationBarType.fixed,
         selectedLabelStyle: TextStyle(
           fontSize: 11,
@@ -106,7 +109,8 @@ class AppTheme {
           foregroundColor: Colors.white,
           disabledBackgroundColor: AppColors.surfaceElevated,
           disabledForegroundColor: AppColors.textTertiary,
-          minimumSize: const Size.fromHeight(52),
+          elevation: 0,
+          minimumSize: const Size.fromHeight(54),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(14),
           ),
@@ -123,10 +127,10 @@ class AppTheme {
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: AppColors.surface,
+        fillColor: AppColors.background,
         contentPadding: const EdgeInsets.symmetric(
-          horizontal: 16,
-          vertical: 14,
+          horizontal: 18,
+          vertical: 18,
         ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),

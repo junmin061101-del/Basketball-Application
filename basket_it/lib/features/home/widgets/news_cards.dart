@@ -28,7 +28,7 @@ class NewsHeadlineCard extends ConsumerWidget {
       onTap: () => ref.read(articleOpenerProvider)(context, article),
       child: Container(
         decoration: BoxDecoration(
-          color: AppColors.surface,
+          color: AppColors.background,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(color: AppColors.border),
         ),
@@ -58,13 +58,13 @@ class NewsHeadlineCard extends ConsumerWidget {
                     maxLines: 3,
                     overflow: TextOverflow.ellipsis,
                     style: Theme.of(context).textTheme.headlineMedium
-                        ?.copyWith(fontSize: 20, height: 1.25),
+                        ?.copyWith(fontSize: 17, height: 1.3),
                   ),
                   if (article.summary != null) ...[
                     const SizedBox(height: 8),
                     Text(
                       article.summary!,
-                      maxLines: 1,
+                      maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: Theme.of(context).textTheme.bodyMedium,
                     ),
@@ -96,29 +96,33 @@ class NewsRow extends ConsumerWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: SizedBox(
-                width: 86,
-                height: 86,
-                child: NewsThumbnail(article: article, team: team, height: 86),
-              ),
-            ),
-            const SizedBox(width: 14),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  NewsMetaLine(article: article),
-                  const SizedBox(height: 6),
                   Text(
                     article.title,
-                    maxLines: 3,
+                    maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.titleMedium
-                        ?.copyWith(height: 1.3),
+                    style: const TextStyle(
+                      fontSize: 14.5,
+                      fontWeight: FontWeight.w800,
+                      height: 1.35,
+                      color: AppColors.textPrimary,
+                    ),
                   ),
+                  const SizedBox(height: 6),
+                  NewsMetaLine(article: article),
                 ],
+              ),
+            ),
+            const SizedBox(width: 14),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: SizedBox(
+                width: 72,
+                height: 72,
+                child: NewsThumbnail(article: article, team: team, height: 72),
               ),
             ),
           ],

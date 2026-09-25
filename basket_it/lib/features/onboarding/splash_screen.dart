@@ -40,16 +40,14 @@ class SplashScreen extends StatelessWidget {
               const SizedBox(height: 24),
               Text(
                 'Basket it',
-                style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-                  fontSize: 36,
-                ),
+                style: Theme.of(context).textTheme.headlineLarge
+                    ?.copyWith(fontSize: 36),
               ),
               const SizedBox(height: 8),
               Text(
                 'KBL 팬을 위한 단 하나의 앱',
-                style: Theme.of(
-                  context,
-                ).textTheme.bodyMedium?.copyWith(color: AppColors.textSecondary),
+                style: Theme.of(context).textTheme.bodyMedium
+                    ?.copyWith(color: AppColors.textSecondary),
               ),
               const Spacer(flex: 4),
               SizedBox(
@@ -57,9 +55,7 @@ class SplashScreen extends StatelessWidget {
                 child: ElevatedButton(
                   onPressed: () {
                     Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => const LoadingScreen(),
-                      ),
+                      MaterialPageRoute(builder: (_) => const LoadingScreen()),
                     );
                   },
                   child: const Text('시작하기'),

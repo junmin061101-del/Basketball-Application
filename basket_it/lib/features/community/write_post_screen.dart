@@ -56,9 +56,8 @@ class _WritePostScreenState extends ConsumerState<WritePostScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() => _submitting = false);
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('글을 올리지 못했어요: $e')));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('글을 올리지 못했어요: $e')));
     }
   }
 
@@ -146,10 +145,7 @@ class _WritePostScreenState extends ConsumerState<WritePostScreen> {
               maxLength: 2000,
               maxLines: 12,
               minLines: 8,
-              style: const TextStyle(
-                color: AppColors.textPrimary,
-                height: 1.5,
-              ),
+              style: const TextStyle(color: AppColors.textPrimary, height: 1.5),
               decoration: const InputDecoration(
                 hintText: '내용을 자유롭게 적어주세요',
                 alignLabelWithHint: true,

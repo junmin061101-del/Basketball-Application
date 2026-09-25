@@ -5,6 +5,7 @@ import 'package:webview_flutter/webview_flutter.dart';
 
 import '../../core/theme/app_colors.dart';
 import '../../data/models/news_article.dart';
+
 /// 앱 안에서 띄울 때만 쓰는 모바일 호스트 대응표.
 ///
 /// 일부 매체는 PC 페이지에 viewport 메타가 없어 좁은 화면에서 잘려 보인다.

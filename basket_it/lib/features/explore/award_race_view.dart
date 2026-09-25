@@ -413,9 +413,8 @@ class _LadderRow extends StatelessWidget {
                     const SizedBox(height: 2),
                     Text(
                       statLine,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: AppColors.textSecondary,
-                      ),
+                      style: Theme.of(context).textTheme.bodySmall
+                          ?.copyWith(color: AppColors.textSecondary),
                     ),
                   ],
                 ],

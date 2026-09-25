@@ -106,7 +106,7 @@ class PlayerDetailScreen extends ConsumerWidget {
                   // 한 경기도 안 뛴 신인은 기록이 없다.
                   data: (history) => history.isEmpty
                       ? const _NoRecords()
-                      : _SeasonQuickCard(latest: history.first),
+                      : _SeasonQuickCard(latest: history.first, accent: accent),
                 ),
                 const SizedBox(height: 28),
                 Text('최근 경기 기록', style: Theme.of(context).textTheme.titleLarge),
@@ -169,14 +169,8 @@ class _HeroHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 0, 20, 22),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          // 라이트 테마에서도 흰 글자 대비가 유지되도록 고정 다크 톤으로 페이드.
-          colors: [accent.withValues(alpha: 0.9), AppColors.heroDark],
-        ),
-      ),
+      // 디자인대로 팀 컬러 단색 위에 흰 글자를 올린다.
+      decoration: BoxDecoration(color: accent),
       child: Stack(
         clipBehavior: Clip.none,
         children: [
@@ -405,17 +399,17 @@ class _LoadingBlock extends StatelessWidget {
 
 class _SeasonQuickCard extends StatelessWidget {
   final PlayerSeasonStats latest;
+  final Color accent;
 
-  const _SeasonQuickCard({required this.latest});
+  const _SeasonQuickCard({required this.latest, required this.accent});
 
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.border),
+        color: accent.withValues(alpha: 0.07),
+        borderRadius: BorderRadius.circular(18),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

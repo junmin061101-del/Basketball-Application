@@ -75,10 +75,11 @@ class _TeamSelector extends ConsumerWidget {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 12),
               decoration: BoxDecoration(
-                color: active ? AppColors.textPrimary : AppColors.surface,
+                color: AppColors.background,
                 borderRadius: BorderRadius.circular(18),
                 border: Border.all(
                   color: active ? AppColors.textPrimary : AppColors.border,
+                  width: active ? 1.4 : 1,
                 ),
               ),
               child: Row(
@@ -90,8 +91,10 @@ class _TeamSelector extends ConsumerWidget {
                     team.shortName,
                     style: TextStyle(
                       fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                      color: active ? Colors.white : AppColors.textSecondary,
+                      fontWeight: active ? FontWeight.w800 : FontWeight.w600,
+                      color: active
+                          ? AppColors.textPrimary
+                          : AppColors.textSecondary,
                     ),
                   ),
                 ],
@@ -295,7 +298,7 @@ class _RankRow extends StatelessWidget {
                     Text(
                       rank,
                       style: const TextStyle(
-                        fontSize: 34,
+                        fontSize: 28,
                         height: 1.1,
                         fontWeight: FontWeight.w900,
                         color: AppColors.textPrimary,
@@ -459,16 +462,9 @@ class _FeaturedGame extends ConsumerWidget {
       child: Container(
         padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
         decoration: BoxDecoration(
+          color: AppColors.surface,
           borderRadius: BorderRadius.circular(16),
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              team.primaryColor.withValues(alpha: 0.16),
-              team.primaryColor.withValues(alpha: 0.04),
-            ],
-          ),
-          border: Border.all(color: team.primaryColor.withValues(alpha: 0.25)),
+          border: Border.all(color: AppColors.border),
         ),
         child: Column(
           children: [

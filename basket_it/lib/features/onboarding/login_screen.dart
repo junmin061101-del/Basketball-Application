@@ -83,9 +83,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   void _showError(AuthException e) {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(e.message)));
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(e.message)));
   }
 
   Future<void> _submit() async {

@@ -32,22 +32,30 @@ class TeamFollowScreen extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
+                  const Text(
                     '응원하는 팀을 선택하세요',
-                    style: Theme.of(context).textTheme.headlineMedium,
+                    style: TextStyle(
+                      fontSize: 23,
+                      fontWeight: FontWeight.w900,
+                      color: AppColors.textPrimary,
+                    ),
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'KBL과 NBA 팀을 함께 고를 수 있어요. 나중에 언제든 바꿀 수 있어요.',
-                    style: Theme.of(context).textTheme.bodyMedium,
+                  const SizedBox(height: 10),
+                  const Text(
+                    'KBL과 NBA 팀을 함께 고를 수 있어요\n나중에 언제든 바꿀 수 있어요',
+                    style: TextStyle(
+                      fontSize: 13,
+                      height: 1.5,
+                      color: AppColors.textSecondary,
+                    ),
                   ),
                 ],
               ),
             ),
             const SizedBox(height: 16),
             const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 4),
-              child: LeagueSwitch(),
+              padding: EdgeInsets.symmetric(horizontal: 24),
+              child: LeagueSwitch(expanded: true),
             ),
             const SizedBox(height: 12),
             Expanded(
@@ -55,16 +63,14 @@ class TeamFollowScreen extends ConsumerWidget {
                 loading: () => const Center(
                   child: CircularProgressIndicator(color: AppColors.primary),
                 ),
-                error: (err, _) => Center(
-                  child: Text('불러오지 못했어요: $err'),
-                ),
+                error: (err, _) => Center(child: Text('불러오지 못했어요: $err')),
                 data: (teams) => GridView.builder(
                   padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
                   gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                     crossAxisCount: 2,
                     mainAxisSpacing: 12,
                     crossAxisSpacing: 12,
-                    childAspectRatio: 2.6,
+                    childAspectRatio: 2.4,
                   ),
                   itemCount: teams.length,
                   itemBuilder: (context, index) {
@@ -80,8 +86,7 @@ class TeamFollowScreen extends ConsumerWidget {
                         } else {
                           next.add(team.id);
                         }
-                        ref.read(followedTeamIdsProvider.notifier).state =
-                            next;
+                        ref.read(followedTeamIdsProvider.notifier).state = next;
                       },
                     );
                   },
@@ -135,11 +140,11 @@ class _TeamTile extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14),
         decoration: BoxDecoration(
-          color: AppColors.surface,
+          color: AppColors.background,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: selected ? team.primaryColor : AppColors.border,
-            width: selected ? 1.5 : 1,
+            color: selected ? AppColors.positive : AppColors.border,
+            width: selected ? 1.6 : 1,
           ),
         ),
         child: Row(
@@ -151,15 +156,16 @@ class _TeamTile extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    team.city,
-                    style: Theme.of(context).textTheme.bodySmall,
-                  ),
+                  Text(team.city, style: Theme.of(context).textTheme.bodySmall),
                   Text(
                     team.name,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.titleMedium,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.textPrimary,
+                    ),
                   ),
                 ],
               ),

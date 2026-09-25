@@ -48,10 +48,7 @@ Future<void> showModerationMenu(
             onTap: () => Navigator.pop(ctx, 'report'),
           ),
           ListTile(
-            leading: const Icon(
-              Icons.block,
-              color: AppColors.textSecondary,
-            ),
+            leading: const Icon(Icons.block, color: AppColors.textSecondary),
             title: const Text('이 사용자 차단'),
             subtitle: const Text('이 사용자의 글과 댓글이 더 이상 보이지 않아요'),
             onTap: () => Navigator.pop(ctx, 'block'),
@@ -191,13 +188,10 @@ Future<void> _showReportDialog(
     if (!context.mounted) return;
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
-      ..showSnackBar(
-        const SnackBar(content: Text('신고를 접수했어요. 운영자가 확인할게요.')),
-      );
+      ..showSnackBar(const SnackBar(content: Text('신고를 접수했어요. 운영자가 확인할게요.')));
   } catch (e) {
     if (!context.mounted) return;
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text('신고하지 못했어요: $e')));
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text('신고하지 못했어요: $e')));
   }
 }

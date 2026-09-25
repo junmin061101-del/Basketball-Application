@@ -16,8 +16,7 @@ class PlayerSearchScreen extends ConsumerStatefulWidget {
   const PlayerSearchScreen({super.key});
 
   @override
-  ConsumerState<PlayerSearchScreen> createState() =>
-      _PlayerSearchScreenState();
+  ConsumerState<PlayerSearchScreen> createState() => _PlayerSearchScreenState();
 }
 
 class _PlayerSearchScreenState extends ConsumerState<PlayerSearchScreen> {
@@ -44,10 +43,7 @@ class _PlayerSearchScreenState extends ConsumerState<PlayerSearchScreen> {
               style: const TextStyle(color: AppColors.textPrimary),
               decoration: const InputDecoration(
                 hintText: '선수 이름으로 검색 (한글·영문)',
-                prefixIcon: Icon(
-                  Icons.search,
-                  color: AppColors.textTertiary,
-                ),
+                prefixIcon: Icon(Icons.search, color: AppColors.textTertiary),
               ),
             ),
           ),
@@ -75,9 +71,7 @@ class _PlayerSearchScreenState extends ConsumerState<PlayerSearchScreen> {
                     );
                     final filtered = _query.trim().isEmpty
                         ? players
-                        : players
-                              .where((p) => p.matchesQuery(_query))
-                              .toList();
+                        : players.where((p) => p.matchesQuery(_query)).toList();
                     if (filtered.isEmpty) {
                       return Center(
                         child: Text(
@@ -142,9 +136,8 @@ class _FollowingStrip extends ConsumerWidget {
             padding: const EdgeInsets.symmetric(horizontal: 20),
             child: Text(
               '팔로잉 · 탭하면 언팔로우',
-              style: Theme.of(
-                context,
-              ).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w700),
+              style: Theme.of(context).textTheme.bodySmall
+                  ?.copyWith(fontWeight: FontWeight.w700),
             ),
           ),
           const SizedBox(height: 10),
@@ -228,9 +221,7 @@ class _PlayerRow extends ConsumerWidget {
     return InkWell(
       onTap: () {
         Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (_) => PlayerDetailScreen(player: player),
-          ),
+          MaterialPageRoute(builder: (_) => PlayerDetailScreen(player: player)),
         );
       },
       borderRadius: BorderRadius.circular(12),

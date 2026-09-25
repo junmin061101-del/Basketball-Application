@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../common/league_switch.dart';
+import '../common/page_header.dart';
 
 import '../../core/theme/app_colors.dart';
 import '../../data/models/game.dart';
@@ -22,12 +24,16 @@ class GamesTab extends ConsumerWidget {
     final teamsAsync = ref.watch(teamsProvider);
     final followedIds = ref.watch(followedTeamIdsProvider);
 
+    final standings = ref.watch(standingsProvider).valueOrNull ?? const [];
+    final recordByTeam = {
+      for (final s in standings)
+        if (s.gamesPlayed > 0) s.teamId: '${s.wins}승 ${s.losses}패',
+    };
+
     return Scaffold(
-      appBar: AppBar(title: const Text('게임')),
       body: Column(
         children: [
-          const LeagueSwitch(),
-          const SizedBox(height: 4),
+          const PageHeader(title: 'GAMES', trailing: LeagueSwitch()),
           const DateCalendarBar(),
           const SizedBox(height: 4),
           Expanded(
@@ -59,6 +65,8 @@ class GamesTab extends ConsumerWidget {
                           game: game,
                           homeTeam: home,
                           awayTeam: away,
+                          homeRecord: recordByTeam[home.id],
+                          awayRecord: recordByTeam[away.id],
                           onTap: () {
                             Navigator.of(context).push(
                               MaterialPageRoute(
@@ -123,28 +131,41 @@ class _NoGames extends ConsumerWidget {
     void select(DateTime day) =>
         ref.read(selectedGameDateProvider.notifier).state = day;
 
-    return Center(
+    return SingleChildScrollView(
       child: Padding(
-        padding: const EdgeInsets.all(32),
+        padding: const EdgeInsets.fromLTRB(32, 48, 32, 32),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(
+            const Text(
               '이 날짜엔 경기가 없어요',
-              style: Theme.of(context).textTheme.bodyMedium,
+              style: TextStyle(fontSize: 14, color: AppColors.textTertiary),
             ),
             if (nextDay != null) ...[
-              const SizedBox(height: 16),
-              ElevatedButton(
-                onPressed: () => select(nextDay),
-                child: Text('다음 경기 · ${_dayLabel(nextDay)}'),
+              const SizedBox(height: 22),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () => select(nextDay),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.textPrimary,
+                    foregroundColor: Colors.white,
+                  ),
+                  child: Text('다음 경기 · ${_dayLabel(nextDay)}'),
+                ),
               ),
             ],
             if (previousDay != null) ...[
-              const SizedBox(height: 8),
-              TextButton(
-                onPressed: () => select(previousDay),
-                child: Text('지난 경기 · ${_dayLabel(previousDay)}'),
+              const SizedBox(height: 14),
+              GestureDetector(
+                onTap: () => select(previousDay),
+                child: Text(
+                  '지난 경기 · ${_dayLabel(previousDay)}',
+                  style: const TextStyle(
+                    fontSize: 13,
+                    color: AppColors.textTertiary,
+                  ),
+                ),
               ),
             ],
           ],

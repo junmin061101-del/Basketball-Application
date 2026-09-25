@@ -26,7 +26,11 @@ class CommunityTab extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('커뮤니티'),
+        titleSpacing: 20,
+        title: const Text(
+          '커뮤니티',
+          style: TextStyle(fontSize: 26, fontWeight: FontWeight.w900),
+        ),
         actions: [
           IconButton(
             tooltip: '차단한 사용자',
@@ -204,9 +208,8 @@ class _PostRow extends ConsumerWidget {
               post.title,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style: Theme.of(
-                context,
-              ).textTheme.titleMedium?.copyWith(fontSize: 16, height: 1.3),
+              style: Theme.of(context).textTheme.titleMedium
+                  ?.copyWith(fontSize: 16, height: 1.3),
             ),
             if (post.body.trim().isNotEmpty) ...[
               const SizedBox(height: 4),

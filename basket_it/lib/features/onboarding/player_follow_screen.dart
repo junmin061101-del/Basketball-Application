@@ -57,15 +57,11 @@ class PlayerFollowScreen extends ConsumerWidget {
               padding: const EdgeInsets.symmetric(horizontal: 24),
               child: TextField(
                 onChanged: (value) =>
-                    ref.read(playerSearchQueryProvider.notifier).state =
-                        value,
+                    ref.read(playerSearchQueryProvider.notifier).state = value,
                 style: const TextStyle(color: AppColors.textPrimary),
                 decoration: const InputDecoration(
                   hintText: '선수 이름으로 검색',
-                  prefixIcon: Icon(
-                    Icons.search,
-                    color: AppColors.textTertiary,
-                  ),
+                  prefixIcon: Icon(Icons.search, color: AppColors.textTertiary),
                 ),
               ),
             ),
@@ -90,9 +86,7 @@ class PlayerFollowScreen extends ConsumerWidget {
                   );
                   final filtered = query.trim().isEmpty
                       ? players
-                      : players
-                            .where((p) => p.matchesQuery(query))
-                            .toList();
+                      : players.where((p) => p.matchesQuery(query)).toList();
 
                   if (filtered.isEmpty) {
                     return Center(

@@ -116,7 +116,10 @@ class _PodiumCard extends StatelessWidget {
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [_accent.withValues(alpha: big ? 0.2 : 0.12), AppColors.surface],
+          colors: [
+            _accent.withValues(alpha: big ? 0.2 : 0.12),
+            AppColors.surface,
+          ],
         ),
       ),
       child: Row(
@@ -153,9 +156,8 @@ class _PodiumCard extends StatelessWidget {
                   maskDisplayName(entry.displayName),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                    fontSize: big ? 24 : 20,
-                  ),
+                  style: Theme.of(context).textTheme.headlineMedium
+                      ?.copyWith(fontSize: big ? 24 : 20),
                 ),
                 const SizedBox(height: 2),
                 Text(

@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../providers/game_providers.dart';
 
-const _cellWidth = 56.0;
+const _cellWidth = 52.0;
 const _weekdayLabels = ['월', '화', '수', '목', '금', '토', '일'];
 
 /// 좌우로 스와이프하는 날짜 캘린더 바.
@@ -110,33 +110,44 @@ class _DateCalendarBarState extends ConsumerState<DateCalendarBar> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(20, 4, 12, 8),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                _titleFor(selected, _today),
-                style: Theme.of(context).textTheme.titleLarge,
+        // 달 표시를 누르면 달력에서 날짜를 고를 수 있다.
+        Center(
+          child: GestureDetector(
+            onTap: _openPicker,
+            behavior: HitTestBehavior.opaque,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 16),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(
+                    Icons.calendar_today_outlined,
+                    size: 15,
+                    color: AppColors.textPrimary,
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    _titleFor(selected, _today),
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                ],
               ),
-              IconButton(
-                onPressed: _openPicker,
-                icon: const Icon(
-                  Icons.calendar_month_outlined,
-                  color: AppColors.textSecondary,
-                ),
-              ),
-            ],
+            ),
           ),
         ),
+        const SizedBox(height: 4),
         SizedBox(
-          height: 68,
+          height: 78,
           child: ListView.builder(
             controller: _controller,
             scrollDirection: Axis.horizontal,
             itemCount: _itemCount,
             itemExtent: _cellWidth,
-            padding: const EdgeInsets.symmetric(horizontal: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 12),
             itemBuilder: (context, index) {
               final date = _rangeStart.add(Duration(days: index));
               final isSelected = _isSameDate(date, selected);
@@ -159,11 +170,9 @@ class _DateCalendarBarState extends ConsumerState<DateCalendarBar> {
   bool _isSameDate(DateTime a, DateTime b) =>
       a.year == b.year && a.month == b.month && a.day == b.day;
 
-  String _titleFor(DateTime selected, DateTime today) {
-    final label = '${selected.year}년 ${selected.month}월 ${selected.day}일';
-    if (_isSameDate(selected, today)) return '$label · 오늘';
-    return label;
-  }
+  /// 달력 위에 적는 달. 디자인처럼 "2025년 11월"만 적는다.
+  String _titleFor(DateTime selected, DateTime today) =>
+      '${selected.year}년 ${selected.month}월';
 }
 
 class _DateCell extends StatelessWidget {
@@ -188,51 +197,49 @@ class _DateCell extends StatelessWidget {
     final weekday = _weekdayLabels[date.weekday - 1];
     return GestureDetector(
       onTap: onTap,
-      child: Container(
-        width: _cellWidth - 8,
-        margin: const EdgeInsets.symmetric(horizontal: 4),
-        decoration: BoxDecoration(
-          color: selected ? AppColors.primary : AppColors.surface,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-            color: selected
-                ? AppColors.primary
-                : (isToday ? AppColors.textTertiary : AppColors.border),
-          ),
-        ),
-        alignment: Alignment.center,
+      behavior: HitTestBehavior.opaque,
+      child: SizedBox(
+        width: _cellWidth,
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Text(
               weekday,
-              style: TextStyle(
-                fontSize: 11,
+              style: const TextStyle(
+                fontSize: 12,
                 fontWeight: FontWeight.w600,
-                color: selected ? Colors.white70 : AppColors.textTertiary,
+                color: AppColors.textTertiary,
               ),
             ),
-            const SizedBox(height: 2),
-            Text(
-              '${date.day}',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w800,
-                color: selected ? Colors.white : AppColors.textPrimary,
+            const SizedBox(height: 6),
+            Container(
+              width: 34,
+              height: 34,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: selected ? AppColors.primarySoft : Colors.transparent,
+                border: isToday && !selected
+                    ? Border.all(color: AppColors.border)
+                    : null,
+              ),
+              child: Text(
+                '${date.day}',
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: selected ? FontWeight.w900 : FontWeight.w600,
+                  color: AppColors.textPrimary,
+                ),
               ),
             ),
-            const SizedBox(height: 3),
+            const SizedBox(height: 4),
             // 점이 없는 날도 자리를 남겨 칸 높이가 들쭉날쭉하지 않게 한다.
             Container(
               width: 4,
               height: 4,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: !hasGames
-                    ? Colors.transparent
-                    : selected
-                    ? Colors.white
-                    : AppColors.primary,
+                color: hasGames ? AppColors.primary : Colors.transparent,
               ),
             ),
           ],

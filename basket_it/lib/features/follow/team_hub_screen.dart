@@ -29,8 +29,7 @@ class TeamHubScreen extends ConsumerWidget {
       recentResultsProvider((teamId: team.id, limit: 5)),
     );
     final teamById = {
-      for (final t in ref.watch(teamsProvider).valueOrNull ?? <Team>[])
-        t.id: t,
+      for (final t in ref.watch(teamsProvider).valueOrNull ?? <Team>[]) t.id: t,
     };
 
     return Scaffold(
@@ -153,7 +152,8 @@ class _TeamHeader extends ConsumerWidget {
                 Text(
                   [
                     ?rankLabel,
-                    if (standing != null) '${standing.wins}승 ${standing.losses}패',
+                    if (standing != null)
+                      '${standing.wins}승 ${standing.losses}패',
                     if (form != null && form.played > 0) '최근5 ${form.record}',
                   ].join(' · '),
                   style: const TextStyle(

@@ -52,39 +52,52 @@ class _MainShellState extends ConsumerState<MainShell> {
         bottom: false,
         child: IndexedStack(index: _index, children: _tabs),
       ),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _index,
-        onTap: (i) => setState(() => _index = i),
-        backgroundColor: AppColors.surface,
-        selectedFontSize: 10,
-        unselectedFontSize: 10,
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home_outlined),
-            activeIcon: Icon(Icons.home),
-            label: '홈',
+      bottomNavigationBar: Container(
+        decoration: const BoxDecoration(
+          color: AppColors.background,
+          border: Border(top: BorderSide(color: AppColors.border)),
+        ),
+        child: Theme(
+          data: Theme.of(context).copyWith(
+            splashColor: Colors.transparent,
+            highlightColor: Colors.transparent,
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.sports_basketball_outlined),
-            activeIcon: Icon(Icons.sports_basketball),
-            label: '게임',
+          child: BottomNavigationBar(
+            currentIndex: _index,
+            onTap: (i) => setState(() => _index = i),
+            backgroundColor: AppColors.background,
+            elevation: 0,
+            selectedFontSize: 10,
+            unselectedFontSize: 10,
+            items: const [
+              BottomNavigationBarItem(
+                icon: Icon(Icons.home_outlined),
+                activeIcon: Icon(Icons.home),
+                label: '홈',
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.calendar_today_outlined),
+                activeIcon: Icon(Icons.calendar_today),
+                label: '경기',
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.insights_outlined),
+                activeIcon: Icon(Icons.insights),
+                label: '예측',
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.article_outlined),
+                activeIcon: Icon(Icons.article),
+                label: '커뮤니티',
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.search_outlined),
+                activeIcon: Icon(Icons.search),
+                label: '탐색',
+              ),
+            ],
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.how_to_vote_outlined),
-            activeIcon: Icon(Icons.how_to_vote),
-            label: '예측',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.forum_outlined),
-            activeIcon: Icon(Icons.forum),
-            label: '커뮤니티',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.explore_outlined),
-            activeIcon: Icon(Icons.explore),
-            label: '탐색',
-          ),
-        ],
+        ),
       ),
     );
   }
