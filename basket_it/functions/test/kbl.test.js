@@ -6,6 +6,8 @@ const assert = require('node:assert/strict');
 const {
   TEAMS,
   englishName,
+  isCompleteBoxScore,
+  isFinalBoxScore,
   kstDate,
   pointsAgainstByTeam,
   seasonHighlights,
@@ -143,4 +145,34 @@ test('더블더블·트리플더블·최다 득점을 박스스코어로 센다'
     { lines: [line(33, 1, 2, 3)] },
   ]).get('p');
   assert.deepEqual(h, { dd2: 2, td3: 1, gameHigh: 33 });
+});
+
+// 경기 중에 받은 반쪽 기록이 끝난 경기의 기록으로 굳는 것을 막는 규칙.
+// (2026-09-26 SK-DB 경기가 선발 5명씩 10줄로 몇 날 동안 남아 있었다.)
+const boxOf = (count) => ({
+  lines: Array.from({ length: count }, (_, i) => ({ teamId: i * 2 < count ? 'sk' : 'db' })),
+});
+
+test('끝난 경기라도 양 팀 기록이 다 와야 최종으로 적어 둔다', () => {
+  const now = new Date('2026-09-29T00:00:00Z');
+  const justEnded = { status: 'finished', startTime: '2026-09-28T22:00:00+09:00' };
+  const longAgo = { status: 'finished', startTime: '2026-09-26T19:00:00+09:00' };
+
+  assert.equal(isFinalBoxScore(boxOf(24), justEnded, now), true);
+  // 끝난 직후에는 기록 API가 늦게 채워질 수 있어 반쪽이면 최종으로 보지 않는다.
+  assert.equal(isFinalBoxScore(boxOf(10), justEnded, now), false);
+  // 반나절이 지났으면 더 채워질 것이 없다(선수가 적게 뛴 경기도 있다).
+  assert.equal(isFinalBoxScore(boxOf(10), longAgo, now), true);
+  // 진행 중인 경기는 언제나 최종이 아니다.
+  assert.equal(isFinalBoxScore(boxOf(24), { status: 'live', startTime: '2026-09-28T23:00:00+09:00' }, now), false);
+});
+
+test('최종 표시가 없거나 반쪽인 기록은 다시 쓰지 않는다', () => {
+  assert.equal(isCompleteBoxScore({ final: true, lines: boxOf(2).lines }), true);
+  assert.equal(isCompleteBoxScore({ final: false, lines: boxOf(24).lines }), false);
+  // 표시가 없던 예전 파일은 양 팀 기록이 다 들어 있을 때만 그대로 쓴다.
+  assert.equal(isCompleteBoxScore(boxOf(24)), true);
+  assert.equal(isCompleteBoxScore(boxOf(10)), false);
+  assert.equal(isCompleteBoxScore({ final: true, lines: [] }), false);
+  assert.equal(isCompleteBoxScore(null), false);
 });

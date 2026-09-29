@@ -367,6 +367,45 @@ async function fetchGames(fromDate, toDate) {
   return games.sort((a, b) => a.startTime.localeCompare(b.startTime));
 }
 
+/** 양 팀 기록이 다 들어온 것처럼 보이는지. 프로 경기는 한 팀에서 보통 8명은 뛴다. */
+function hasBothRosters(box) {
+  const lines = box?.lines;
+  if (!Array.isArray(lines) || lines.length < 14) return false;
+  return new Set(lines.map((line) => line.teamId)).size >= 2;
+}
+
+/** 경기가 끝난 뒤 기록이 다 채워질 때까지 기다려 주는 시간. */
+const SETTLE_MS = 12 * 60 * 60 * 1000;
+
+/**
+ * 방금 받은 기록을 최종으로 못 박아도 되는지.
+ *
+ * 일정에 끝났다고 나와도 기록 API는 조금 늦게 채워질 수 있다. 그래서 끝난
+ * 직후에는 양 팀 기록이 다 들어왔을 때만 최종으로 본다. 반나절이 지난 경기는
+ * 더 채워질 것이 없으니 받은 그대로 둔다(선수가 적게 뛴 경기도 있다).
+ */
+function isFinalBoxScore(box, game, now = new Date()) {
+  if (game?.status !== 'finished') return false;
+  if (hasBothRosters(box)) return true;
+  const started = Date.parse(game.startTime ?? '');
+  return Number.isFinite(started) && now.getTime() - started > SETTLE_MS;
+}
+
+/**
+ * 이미 받아 둔 박스스코어를 그대로 다시 써도 되는지.
+ *
+ * 경기 중에 받으면 그때까지 뛴 선수만(시작 직후면 선발 5명씩) 들어 있다. 그걸
+ * 끝난 경기의 기록으로 계속 다시 쓰면 영영 반쪽으로 남는다. 그래서 받을 당시
+ * 최종 기록이었는지를 final에 적어 두고, 그 표시가 있을 때만 다시 쓴다.
+ * final이 없던 예전 파일은 양 팀 기록이 다 들어 있을 때만 온전한 것으로 본다.
+ */
+function isCompleteBoxScore(box) {
+  const lines = box?.lines;
+  if (!Array.isArray(lines) || lines.length === 0) return false;
+  if ('final' in box) return box.final === true;
+  return hasBothRosters(box);
+}
+
 /** 경기 하나의 박스스코어. 기록이 없거나 실패하면 예외를 던진다. */
 async function fetchBoxScore(gameId) {
   const rows = await kblGet(`/match/${gameId}/player-stat`);
@@ -383,13 +422,15 @@ async function fetchBoxScores(games) {
   const results = await mapLimit(targets, CONCURRENCY, async (game) => {
     if (game.status === 'finished') {
       const previous = await getPrevious(`kbl/boxscores/${game.id}.json`);
-      if (previous?.lines?.length) {
+      // 경기가 끝난 뒤에 받아 둔 온전한 기록만 다시 쓴다.
+      if (isCompleteBoxScore(previous)) {
         reused += 1;
         return previous;
       }
     }
     try {
-      return await fetchBoxScore(game.id);
+      const box = await fetchBoxScore(game.id);
+      return { ...box, final: isFinalBoxScore(box, game) };
     } catch (error) {
       failed += 1;
       return null;
@@ -583,7 +624,14 @@ async function main() {
   for (const box of boxScores) {
     await fs.writeFile(
       path.join(outDir, 'boxscores', `${box.gameId}.json`),
-      JSON.stringify({ generated_at: generatedAt, gameId: box.gameId, lines: box.lines }),
+      // final: 경기가 끝난 뒤 받은 온전한 기록인지. 다음 실행이 이 표시를 보고
+      // 다시 받을지 정한다(경기 중에 받은 반쪽 기록을 굳히지 않기 위해).
+      JSON.stringify({
+        generated_at: generatedAt,
+        gameId: box.gameId,
+        final: isCompleteBoxScore(box),
+        lines: box.lines,
+      }),
     );
   }
   console.log(`player_seasons.json: ${playerSeasons.length}줄, boxscores/: ${boxScores.length}경기`);
@@ -600,6 +648,8 @@ module.exports = {
   CONCURRENCY,
   TEAMS,
   fetchBoxScore,
+  isCompleteBoxScore,
+  isFinalBoxScore,
   doubleDigitCount,
   englishName,
   kstDate,

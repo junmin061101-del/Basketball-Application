@@ -19,6 +19,7 @@ const fs = require('fs/promises');
 const path = require('path');
 
 const { fetchAwardRaces } = require('./nba-ladders');
+const { isCompleteBoxScore, isFinalBoxScore } = require('./fetch-kbl');
 const {
   fetchWikidataKoreanNames,
   loadPlayerNames,
@@ -911,13 +912,15 @@ async function fetchBoxScores(games) {
   const results = await mapLimit(targets, CONCURRENCY, async (game) => {
     if (game.status === 'finished') {
       const previous = await getPrevious(`nba/boxscores/${game.id}.json`);
-      if (previous?.lines?.length) {
+      // 경기 중에 받은 반쪽 기록은 다시 쓰지 않고, 끝난 뒤 한 번 더 받는다.
+      if (isCompleteBoxScore(previous)) {
         reused += 1;
         return previous;
       }
     }
     try {
-      return await fetchBoxScore(game.id);
+      const box = await fetchBoxScore(game.id);
+      return { ...box, final: isFinalBoxScore(box, game) };
     } catch (error) {
       console.warn(`  박스스코어 실패 ${game.id}: ${error.message}`);
       return null;
@@ -1113,7 +1116,8 @@ async function main() {
   for (const box of boxScores) {
     await fs.writeFile(
       path.join(outDir, 'boxscores', `${box.gameId}.json`),
-      JSON.stringify({ generated_at: generatedAt, ...box }),
+      // final: 경기가 끝난 뒤 받은 온전한 기록인지(다음 실행의 판단 기준).
+      JSON.stringify({ generated_at: generatedAt, ...box, final: isCompleteBoxScore(box) }),
     );
   }
   console.log(`boxscores/: ${boxScores.length}경기`);

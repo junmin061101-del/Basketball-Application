@@ -23,6 +23,8 @@
 const fs = require('fs/promises');
 const path = require('path');
 
+const { isCompleteBoxScore } = require('./fetch-kbl');
+
 /** 연달아 이만큼 실패하면(차단 등) 이번 실행은 그만 받는다. */
 const MAX_CONSECUTIVE_FAILURES = 20;
 
@@ -35,12 +37,14 @@ async function readJson(file) {
 }
 
 /**
- * 보관된 파일이 지금 형식인지. 선발 여부(starter)·출전 시간 초(seconds, 모르면
- * null) 칸이 없는 예전 파일은 다시 받아 앱이 선발/후보와 "34:23"을 보여주게 한다.
+ * 보관된 파일이 지금 형식이고 온전한지. 선발 여부(starter)·출전 시간 초(seconds,
+ * 모르면 null) 칸이 없는 예전 파일은 다시 받아 앱이 선발/후보와 "34:23"을
+ * 보여주게 한다. 경기 중에 받아 선수 몇 명만 든 반쪽 기록도 다시 받는다.
  */
 function isCurrentFormat(box) {
   const first = Array.isArray(box?.lines) ? box.lines[0] : null;
-  return first != null && 'starter' in first && 'seconds' in first;
+  if (first == null || !('starter' in first) || !('seconds' in first)) return false;
+  return isCompleteBoxScore(box);
 }
 
 /** [dir]에서 지금 형식인 박스스코어 id만. */
@@ -115,6 +119,8 @@ async function archiveLeague({
       JSON.stringify({
         generated_at: now(),
         gameId: box.gameId,
+        // 보관소에는 끝난 경기만 넣으므로 모두 최종 기록이다.
+        final: true,
         lines: box.lines.map((line) => ({ ...line, name: rename(line) })),
       }),
     );

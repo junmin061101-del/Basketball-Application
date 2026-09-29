@@ -649,7 +649,7 @@ class _StatCol {
   const _StatCol(
     this.label,
     this.value, {
-    this.width = 62,
+    this.width = 46,
     this.emphasize = false,
     this.leaderValue,
   });
@@ -657,37 +657,41 @@ class _StatCol {
 
 String _pct(double ratio) => (ratio * 100).toStringAsFixed(1);
 
+// 순서는 네이버 스포츠처럼 많이 보는 기록(득점·리바운드·어시스트·스틸·블락)을
+// 앞에 두고, 슛 세부 기록을 뒤에 둔다. 칸은 값이 들어갈 만큼만 좁게 잡아
+// 한 화면에 여러 항목이 함께 보이게 한다(머리글은 두 줄로 접힌다).
 final _boxScoreColumns = <_StatCol>[
   // "31:04"(KBL) / "22분"(NBA는 분 단위만 온다)
-  _StatCol('시간', (s) => s.playTimeLabel, width: 66),
+  _StatCol('시간', (s) => s.playTimeLabel, width: 54),
   _StatCol(
     '득점',
     (s) => '${s.points}',
+    width: 44,
     emphasize: true,
     leaderValue: (s) => s.points,
   ),
-  _StatCol('야투 성공', (s) => '${s.fgm}', width: 80),
-  _StatCol('야투 시도', (s) => '${s.fga}', width: 80),
-  _StatCol('야투율', (s) => _pct(s.fgPct), width: 66),
-  _StatCol('3점 성공', (s) => '${s.tpm}', width: 76),
-  _StatCol('3점 시도', (s) => '${s.tpa}', width: 76),
-  _StatCol('3점슛률', (s) => _pct(s.tpPct), width: 72),
-  _StatCol('자유투 성공', (s) => '${s.ftm}', width: 90),
-  _StatCol('자유투 시도', (s) => '${s.fta}', width: 90),
-  _StatCol('자유투율', (s) => _pct(s.ftPct), width: 74),
-  _StatCol('공격 리바', (s) => '${s.oreb}', width: 80),
-  _StatCol('수비 리바', (s) => '${s.dreb}', width: 80),
-  _StatCol('리바운드', (s) => '${s.reb}', width: 74, leaderValue: (s) => s.reb),
-  _StatCol('어시스트', (s) => '${s.ast}', width: 74, leaderValue: (s) => s.ast),
-  _StatCol('턴오버', (s) => '${s.tov}', width: 66),
-  _StatCol('스틸', (s) => '${s.stl}', leaderValue: (s) => s.stl),
-  _StatCol('블록', (s) => '${s.blk}', leaderValue: (s) => s.blk),
-  _StatCol('파울', (s) => '${s.pf}'),
+  _StatCol('리바운드', (s) => '${s.reb}', width: 52, leaderValue: (s) => s.reb),
+  _StatCol('어시스트', (s) => '${s.ast}', width: 52, leaderValue: (s) => s.ast),
+  _StatCol('스틸', (s) => '${s.stl}', width: 40, leaderValue: (s) => s.stl),
+  _StatCol('블락', (s) => '${s.blk}', width: 40, leaderValue: (s) => s.blk),
+  _StatCol('야투 성공', (s) => '${s.fgm}', width: 46),
+  _StatCol('야투 시도', (s) => '${s.fga}', width: 46),
+  _StatCol('야투율', (s) => _pct(s.fgPct), width: 48),
+  _StatCol('3점 성공', (s) => '${s.tpm}', width: 46),
+  _StatCol('3점 시도', (s) => '${s.tpa}', width: 46),
+  _StatCol('3점슛 성공률', (s) => _pct(s.tpPct), width: 50),
+  _StatCol('자유투 성공', (s) => '${s.ftm}', width: 50),
+  _StatCol('자유투 시도', (s) => '${s.fta}', width: 50),
+  _StatCol('자유투 성공률', (s) => _pct(s.ftPct), width: 50),
+  _StatCol('공격 리바운드', (s) => '${s.oreb}', width: 52),
+  _StatCol('수비 리바운드', (s) => '${s.dreb}', width: 52),
+  _StatCol('턴오버', (s) => '${s.tov}', width: 44),
+  _StatCol('파울', (s) => '${s.pf}', width: 40),
   _StatCol('득실마진', (s) {
     final pm = s.plusMinus;
     if (pm == null) return '-';
     return pm > 0 ? '+$pm' : '$pm';
-  }, width: 74),
+  }, width: 52),
 ];
 
 /// 박스스코어 한 묶음. [title]이 null이면 선발/후보를 모르는 예전 기록이다.
@@ -815,7 +819,8 @@ class _TeamChip extends StatelessWidget {
 }
 
 const _boxScoreRowHeight = 44.0;
-const _boxScoreHeaderHeight = 34.0;
+// 머리글이 두 줄로 접히는 칸("자유투 성공률")까지 들어가는 높이.
+const _boxScoreHeaderHeight = 38.0;
 
 /// 선발·후보로 나눈 박스스코어 표.
 ///
@@ -850,6 +855,7 @@ class _BoxScoreTable extends StatelessWidget {
     );
     const headerStyle = TextStyle(
       fontSize: 11,
+      height: 1.15,
       fontWeight: FontWeight.w700,
       color: AppColors.textTertiary,
     );
@@ -916,6 +922,7 @@ class _BoxScoreTable extends StatelessWidget {
                               child: Text(
                                 col.label,
                                 textAlign: TextAlign.center,
+                                maxLines: 2,
                                 style: headerStyle,
                               ),
                             ),

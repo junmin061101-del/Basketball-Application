@@ -58,6 +58,7 @@ class _RecentGamesTable extends StatelessWidget {
   Widget build(BuildContext context) {
     const headerStyle = TextStyle(
       fontSize: 11,
+      height: 1.15,
       fontWeight: FontWeight.w700,
       color: AppColors.textTertiary,
     );
@@ -144,6 +145,7 @@ class _RecentGamesTable extends StatelessWidget {
                               child: Text(
                                 col.label,
                                 textAlign: TextAlign.center,
+                                maxLines: 2,
                                 style: headerStyle,
                               ),
                             ),
@@ -188,7 +190,8 @@ class _RecentGamesTable extends StatelessWidget {
   }
 }
 
-const _recentHeaderHeight = 34.0;
+// 머리글이 두 줄로 접히는 칸까지 들어가는 높이.
+const _recentHeaderHeight = 38.0;
 const _recentRowHeight = 44.0;
 
 class _RecentCol {
@@ -200,39 +203,39 @@ class _RecentCol {
   const _RecentCol(
     this.label,
     this.value, {
-    this.width = 62,
+    this.width = 46,
     this.emphasize = false,
   });
 }
 
 String _pct(double ratio) => (ratio * 100).toStringAsFixed(1);
 
-/// 시즌별 기록표와 같은 항목을 같은 순서로 둔다.
+/// 시즌별 기록표·경기 박스스코어와 같은 항목을 같은 순서로 둔다.
 final _recentColumns = <_RecentCol>[
-  _RecentCol('시간', (s) => s.playTimeLabel, width: 66),
-  _RecentCol('득점', (s) => '${s.points}', emphasize: true),
-  _RecentCol('야투 성공', (s) => '${s.fgm}', width: 80),
-  _RecentCol('야투 시도', (s) => '${s.fga}', width: 80),
-  _RecentCol('야투율', (s) => _pct(s.fgPct), width: 66),
-  _RecentCol('3점 성공', (s) => '${s.tpm}', width: 76),
-  _RecentCol('3점 시도', (s) => '${s.tpa}', width: 76),
-  _RecentCol('3점슛률', (s) => _pct(s.tpPct), width: 72),
-  _RecentCol('자유투 성공', (s) => '${s.ftm}', width: 90),
-  _RecentCol('자유투 시도', (s) => '${s.fta}', width: 90),
-  _RecentCol('자유투율', (s) => _pct(s.ftPct), width: 74),
-  _RecentCol('공격 리바', (s) => '${s.oreb}', width: 80),
-  _RecentCol('수비 리바', (s) => '${s.dreb}', width: 80),
-  _RecentCol('리바운드', (s) => '${s.reb}', width: 74),
-  _RecentCol('어시스트', (s) => '${s.ast}', width: 74),
-  _RecentCol('턴오버', (s) => '${s.tov}', width: 66),
-  _RecentCol('스틸', (s) => '${s.stl}'),
-  _RecentCol('블록', (s) => '${s.blk}'),
-  _RecentCol('파울', (s) => '${s.pf}'),
+  _RecentCol('시간', (s) => s.playTimeLabel, width: 54),
+  _RecentCol('득점', (s) => '${s.points}', width: 44, emphasize: true),
+  _RecentCol('리바운드', (s) => '${s.reb}', width: 52),
+  _RecentCol('어시스트', (s) => '${s.ast}', width: 52),
+  _RecentCol('스틸', (s) => '${s.stl}', width: 40),
+  _RecentCol('블락', (s) => '${s.blk}', width: 40),
+  _RecentCol('야투 성공', (s) => '${s.fgm}', width: 46),
+  _RecentCol('야투 시도', (s) => '${s.fga}', width: 46),
+  _RecentCol('야투율', (s) => _pct(s.fgPct), width: 48),
+  _RecentCol('3점 성공', (s) => '${s.tpm}', width: 46),
+  _RecentCol('3점 시도', (s) => '${s.tpa}', width: 46),
+  _RecentCol('3점슛 성공률', (s) => _pct(s.tpPct), width: 50),
+  _RecentCol('자유투 성공', (s) => '${s.ftm}', width: 50),
+  _RecentCol('자유투 시도', (s) => '${s.fta}', width: 50),
+  _RecentCol('자유투 성공률', (s) => _pct(s.ftPct), width: 50),
+  _RecentCol('공격 리바운드', (s) => '${s.oreb}', width: 52),
+  _RecentCol('수비 리바운드', (s) => '${s.dreb}', width: 52),
+  _RecentCol('턴오버', (s) => '${s.tov}', width: 44),
+  _RecentCol('파울', (s) => '${s.pf}', width: 40),
   _RecentCol('득실마진', (s) {
     final pm = s.plusMinus;
     if (pm == null) return '-';
     return pm > 0 ? '+$pm' : '$pm';
-  }, width: 74),
+  }, width: 52),
 ];
 
 /// 왼쪽 고정 칸: 승/패 · 날짜 · 상대 팀.

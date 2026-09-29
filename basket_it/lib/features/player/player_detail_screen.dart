@@ -507,7 +507,7 @@ class _SeasonCol {
   const _SeasonCol(
     this.label,
     this.value, {
-    this.width = 62,
+    this.width = 48,
     this.emphasize = false,
   });
 }
@@ -515,30 +515,31 @@ class _SeasonCol {
 String _pct(double ratio) => (ratio * 100).toStringAsFixed(1);
 String _f1(double v) => v.toStringAsFixed(1);
 
-/// 머리글은 네이버 스포츠 선수 기록표처럼 한국어로 적는다.
+/// 머리글은 네이버 스포츠 선수 기록표처럼 한국어로 적고, 순서는 경기
+/// 박스스코어·최근 경기 기록과 똑같이 맞춘다.
 final _seasonColumns = <_SeasonCol>[
-  _SeasonCol('경기', (s, _) => '${s.gamesPlayed}', width: 52),
+  _SeasonCol('경기', (s, _) => '${s.gamesPlayed}', width: 46),
   // 팀 표기는 표가 줄마다 계산해서 넘긴다(시즌별 소속팀, 여러 팀 합계 줄은 합계).
-  _SeasonCol('팀', (_, teamLabel) => teamLabel, width: 108),
-  _SeasonCol('출전시간', (s, _) => _f1(s.minutes), width: 74),
-  _SeasonCol('득점', (s, _) => _f1(s.points), emphasize: true),
-  _SeasonCol('야투 성공', (s, _) => _f1(s.fgm), width: 80),
-  _SeasonCol('야투 시도', (s, _) => _f1(s.fga), width: 80),
-  _SeasonCol('야투율', (s, _) => _pct(s.fgPct), width: 66),
-  _SeasonCol('3점 성공', (s, _) => _f1(s.tpm), width: 76),
-  _SeasonCol('3점 시도', (s, _) => _f1(s.tpa), width: 76),
-  _SeasonCol('3점슛률', (s, _) => _pct(s.tpPct), width: 72),
-  _SeasonCol('자유투 성공', (s, _) => _f1(s.ftm), width: 90),
-  _SeasonCol('자유투 시도', (s, _) => _f1(s.fta), width: 90),
-  _SeasonCol('자유투율', (s, _) => _pct(s.ftPct), width: 74),
-  _SeasonCol('공격 리바', (s, _) => _f1(s.oreb), width: 80),
-  _SeasonCol('수비 리바', (s, _) => _f1(s.dreb), width: 80),
-  _SeasonCol('리바운드', (s, _) => _f1(s.reb), width: 74),
-  _SeasonCol('어시스트', (s, _) => _f1(s.ast), width: 74),
-  _SeasonCol('턴오버', (s, _) => _f1(s.tov), width: 66),
-  _SeasonCol('스틸', (s, _) => _f1(s.stl)),
-  _SeasonCol('블록', (s, _) => _f1(s.blk)),
-  _SeasonCol('파울', (s, _) => _f1(s.pf)),
+  _SeasonCol('팀', (_, teamLabel) => teamLabel, width: 96),
+  _SeasonCol('출전시간', (s, _) => _f1(s.minutes), width: 56),
+  _SeasonCol('득점', (s, _) => _f1(s.points), width: 48, emphasize: true),
+  _SeasonCol('리바운드', (s, _) => _f1(s.reb), width: 52),
+  _SeasonCol('어시스트', (s, _) => _f1(s.ast), width: 52),
+  _SeasonCol('스틸', (s, _) => _f1(s.stl), width: 44),
+  _SeasonCol('블락', (s, _) => _f1(s.blk), width: 44),
+  _SeasonCol('야투 성공', (s, _) => _f1(s.fgm), width: 48),
+  _SeasonCol('야투 시도', (s, _) => _f1(s.fga), width: 48),
+  _SeasonCol('야투율', (s, _) => _pct(s.fgPct), width: 50),
+  _SeasonCol('3점 성공', (s, _) => _f1(s.tpm), width: 48),
+  _SeasonCol('3점 시도', (s, _) => _f1(s.tpa), width: 48),
+  _SeasonCol('3점슛 성공률', (s, _) => _pct(s.tpPct), width: 52),
+  _SeasonCol('자유투 성공', (s, _) => _f1(s.ftm), width: 50),
+  _SeasonCol('자유투 시도', (s, _) => _f1(s.fta), width: 50),
+  _SeasonCol('자유투 성공률', (s, _) => _pct(s.ftPct), width: 52),
+  _SeasonCol('공격 리바운드', (s, _) => _f1(s.oreb), width: 52),
+  _SeasonCol('수비 리바운드', (s, _) => _f1(s.dreb), width: 52),
+  _SeasonCol('턴오버', (s, _) => _f1(s.tov), width: 46),
+  _SeasonCol('파울', (s, _) => _f1(s.pf), width: 44),
   // ESPN 시즌 평균에는 득실마진이 없어 0으로 온다. 0.0으로 적으면 실제 기록처럼 보인다.
   _SeasonCol(
     '득실마진',
@@ -547,13 +548,14 @@ final _seasonColumns = <_SeasonCol>[
         : s.plusMinus > 0
         ? '+${_f1(s.plusMinus)}'
         : _f1(s.plusMinus),
-    width: 74,
+    width: 52,
   ),
 ];
 
 const _seasonColWidth = 76.0;
 const _seasonRowHeight = 46.0;
-const _seasonHeaderHeight = 34.0;
+// 머리글이 두 줄로 접히는 칸까지 들어가는 높이.
+const _seasonHeaderHeight = 38.0;
 
 class _SeasonStatsTable extends StatelessWidget {
   final List<PlayerSeasonStats> history;
@@ -635,8 +637,13 @@ class _SeasonStatsTable extends StatelessWidget {
                               child: Text(
                                 col.label,
                                 textAlign: TextAlign.center,
+                                maxLines: 2,
                                 style: Theme.of(context).textTheme.bodySmall
-                                    ?.copyWith(fontWeight: FontWeight.w700),
+                                    ?.copyWith(
+                                      fontSize: 11,
+                                      height: 1.15,
+                                      fontWeight: FontWeight.w700,
+                                    ),
                               ),
                             ),
                         ],

@@ -27,8 +27,12 @@ async function setup() {
   const dist = path.join(root, 'dist');
   await fs.mkdir(path.join(archive, 'nba', 'boxscores'), { recursive: true });
   await fs.mkdir(path.join(dist, 'nba', 'boxscores'), { recursive: true });
-  const put = (dir, id, lines) =>
-    fs.writeFile(path.join(dir, 'nba', 'boxscores', `${id}.json`), JSON.stringify({ gameId: id, lines }));
+  // final: 경기가 끝난 뒤 받은 온전한 기록이라는 표시. 이게 없거나 false면 다시 받는다.
+  const put = (dir, id, lines, rest = { final: true }) =>
+    fs.writeFile(
+      path.join(dir, 'nba', 'boxscores', `${id}.json`),
+      JSON.stringify({ gameId: id, lines, ...rest }),
+    );
   const line = (name) => [{ playerId: '1', name, points: 10, starter: true, seconds: null }];
   return { root, archive, dist, put, line };
 }
@@ -120,4 +124,34 @@ test('선발·출전 시간(초) 칸이 없는 예전 형식 파일은 다시 �
   assert.deepEqual(asked, ['old-format']);
   const refreshed = JSON.parse(await fs.readFile(path.join(archive, 'nba', 'boxscores', 'old-format.json'), 'utf8'));
   assert.equal(refreshed.lines[0].starter, true);
+});
+
+test('경기 중에 받은 반쪽 기록은 보관하지 않고 다시 받는다', async () => {
+  const { archive, dist, put, line } = await setup();
+  await fs.writeFile(
+    path.join(dist, 'nba', 'games.json'),
+    JSON.stringify({ games: [game('half', '2026-04-01T00:00Z'), game('done', '2026-04-02T00:00Z')] }),
+  );
+  // 경기 중에 받아 둔 기록(final: false)과, 끝난 뒤 받은 기록.
+  await put(dist, 'half', line('Starter Only'), { final: false });
+  await put(dist, 'done', line('Final Line'));
+
+  const asked = [];
+  const summary = await archiveLeague({
+    league: 'nba',
+    archiveRoot: archive,
+    distRoot: dist,
+    limit: 10,
+    fetchBoxScore: async (id) => {
+      asked.push(id);
+      return { gameId: id, lines: line('Everyone') };
+    },
+  });
+
+  // 반쪽 기록은 보관하지 않고 원본에서 다시 받는다.
+  assert.deepEqual(asked, ['half']);
+  assert.equal(summary.copiedIn, 1);
+  const archived = JSON.parse(await fs.readFile(path.join(archive, 'nba', 'boxscores', 'half.json'), 'utf8'));
+  assert.equal(archived.lines[0].name, 'Everyone');
+  assert.equal(archived.final, true); // 보관소에 넣는 기록은 모두 최종이다
 });
