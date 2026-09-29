@@ -1,4 +1,6 @@
 import '../models/game.dart';
+import '../models/league.dart';
+import '../models/live_game_state.dart';
 import '../models/player.dart';
 import '../models/player_game_stats.dart';
 import '../models/player_season_stats.dart';
@@ -130,4 +132,32 @@ abstract class CollectedPlayerRepository implements PlayerRepository {
   Future<List<PlayerSeasonStats>> getCurrentSeasonStatsForAllPlayers() {
     return source.leaders();
   }
+}
+
+/// [inner]가 준 경기에 실시간 상태를 덮어쓰는 껍데기.
+///
+/// 정적 JSON은 20분에 한 번 올라와서 경기 중 점수가 한참 늦는다. 서버가
+/// 30초마다 Firestore에 적어 두는 값(live_game_state.dart)을 여기서 씌워,
+/// 게임 탭·홈·예측 화면이 모두 같은 최신 점수를 보게 한다.
+class LiveOverlayGameRepository implements GameRepository {
+  final GameRepository inner;
+  final Map<String, LiveGameState> states;
+  final League league;
+
+  const LiveOverlayGameRepository(this.inner, this.states, this.league);
+
+  Game _apply(Game game) => applyLiveState(game, states, league);
+
+  @override
+  Future<List<Game>> getGamesByDate(DateTime date) async {
+    return (await inner.getGamesByDate(date)).map(_apply).toList();
+  }
+
+  @override
+  Future<List<Game>> getGamesInRange(DateTime from, DateTime to) async {
+    return (await inner.getGamesInRange(from, to)).map(_apply).toList();
+  }
+
+  @override
+  Future<List<PlayerGameStats>> getBoxScore(Game game) => inner.getBoxScore(game);
 }

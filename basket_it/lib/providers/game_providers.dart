@@ -4,11 +4,23 @@ import '../data/models/game.dart';
 import '../data/models/player_game_stats.dart';
 import '../data/repositories/collected_repositories.dart';
 import '../data/repositories/game_repository.dart';
+import 'live_game_providers.dart';
 import 'repository_providers.dart';
 
 /// 선택된 리그의 일정·결과·박스스코어. 두 리그 모두 수집기가 모은 실제 경기다.
+///
+/// 진행 중인 경기는 서버가 30초마다 갱신하는 실시간 상태를 덮어쓴다. 그래서
+/// 이 provider는 실시간 값이 바뀔 때마다 다시 만들어지고, 이걸 지켜보는
+/// 화면들이 새 점수를 받는다.
 final gameRepositoryProvider = Provider<GameRepository>((ref) {
-  return CollectedGameRepository(ref.watch(leagueSourceProvider));
+  final base = CollectedGameRepository(ref.watch(leagueSourceProvider));
+  final live = ref.watch(liveGameStatesProvider).valueOrNull ?? const {};
+  if (live.isEmpty) return base;
+  return LiveOverlayGameRepository(
+    base,
+    live,
+    ref.watch(selectedLeagueProvider),
+  );
 });
 
 /// 지금 리그에서 경기가 있는 날짜들(오름차순).

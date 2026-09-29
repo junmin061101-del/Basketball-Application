@@ -8,11 +8,10 @@ import '../../../data/models/team.dart';
 import '../../../providers/onboarding_providers.dart';
 import '../../../shared/widgets/team_logo_placeholder.dart';
 
-/// 경기 카드: 맨 위에 경기 상태, 가운데에 팁오프 시각(또는 점수),
-/// 좌우에 팀 로고·이름·전적을 세로로 쌓는다.
+/// 경기 카드: 양옆에 팀(로고·이름·전적), 가운데에 점수와 상태.
 ///
-/// 이름을 로고 아래에 두면 "한국가스공사"처럼 긴 이름도 가운데 시각과 겹치지
-/// 않고, 카드가 커져 한눈에 읽힌다. 끝난 경기는 진 쪽 점수를 흐리게 둔다.
+/// 한 줄짜리 낮은 카드로 두어 한 화면에 여러 경기가 들어오게 한다. 이름을
+/// 로고 아래에 두므로 "한국가스공사"처럼 긴 이름도 가운데 숫자와 겹치지 않는다.
 class GameCard extends ConsumerWidget {
   final Game game;
   final Team homeTeam;
@@ -44,59 +43,44 @@ class GameCard extends ConsumerWidget {
 
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(20),
+      borderRadius: BorderRadius.circular(16),
       child: Container(
-        padding: const EdgeInsets.fromLTRB(18, 16, 18, 20),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
         decoration: BoxDecoration(
           color: AppColors.surfaceCream,
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: isFollowedGame ? AppColors.primary : Colors.transparent,
-            width: 1.4,
+            width: 1.3,
           ),
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
+        child: Row(
           children: [
-            if (game.status == GameStatus.live)
-              _LiveLabel(clock: game.liveClock)
-            else
-              Text(
-                finished ? '경기 종료' : dayLabel(game.startTime),
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.textTertiary,
-                ),
-              ),
-            const SizedBox(height: 14),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(child: _Side(team: homeTeam, record: homeRecord)),
-                Padding(
-                  // 로고 높이의 가운데에 시각·점수가 오게 맞춘다.
-                  padding: const EdgeInsets.only(top: 14),
-                  child: started
-                      ? _Scores(
-                          home: game.homeScore,
-                          away: game.awayScore,
-                          dimLoser: finished,
-                        )
-                      : Text(
-                          timeLabel(game.startTime),
-                          style: const TextStyle(
-                            fontSize: 30,
-                            fontWeight: FontWeight.w900,
-                            color: AppColors.textPrimary,
-                            height: 1.0,
-                          ),
-                        ),
-                ),
-                Expanded(child: _Side(team: awayTeam, record: awayRecord)),
-              ],
+            Expanded(child: _Side(team: homeTeam, record: homeRecord)),
+            SizedBox(
+              // 세 자리 점수 둘("103 종료 103")이 줄바꿈 없이 들어가는 너비.
+              width: 132,
+              child: started
+                  ? _Scores(
+                      home: game.homeScore,
+                      away: game.awayScore,
+                      dimLoser: finished,
+                      status: finished
+                          ? const _StatusLabel.finished()
+                          : _StatusLabel.live(game.liveClock),
+                    )
+                  : Text(
+                      timeLabel(game.startTime),
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        fontSize: 19,
+                        fontWeight: FontWeight.w900,
+                        color: AppColors.textPrimary,
+                        height: 1.1,
+                      ),
+                    ),
             ),
+            Expanded(child: _Side(team: awayTeam, record: awayRecord)),
           ],
         ),
       ),
@@ -115,27 +99,29 @@ class _Side extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        TeamLogoPlaceholder(team: team, size: 56),
-        const SizedBox(height: 11),
+        TeamLogoPlaceholder(team: team, size: 40),
+        const SizedBox(height: 7),
         Text(
           team.name,
           textAlign: TextAlign.center,
-          maxLines: 2,
+          maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: const TextStyle(
-            fontSize: 16,
+            fontSize: 13.5,
             fontWeight: FontWeight.w800,
-            height: 1.2,
+            height: 1.1,
             color: AppColors.textPrimary,
           ),
         ),
         if (record != null) ...[
-          const SizedBox(height: 4),
+          const SizedBox(height: 3),
           Text(
             record!,
             textAlign: TextAlign.center,
+            maxLines: 1,
             style: const TextStyle(
-              fontSize: 12.5,
+              fontSize: 11.5,
+              height: 1.1,
               color: AppColors.textTertiary,
             ),
           ),
@@ -145,15 +131,69 @@ class _Side extends StatelessWidget {
   }
 }
 
+/// 점수 사이에 들어가는 작은 상태 글씨("종료" / "LIVE · 3쿼터 07:12").
+class _StatusLabel extends StatelessWidget {
+  final String? clock;
+  final bool isFinished;
+
+  const _StatusLabel.finished() : clock = null, isFinished = true;
+  const _StatusLabel.live(this.clock) : isFinished = false;
+
+  @override
+  Widget build(BuildContext context) {
+    if (isFinished) {
+      return const Text(
+        '종료',
+        textAlign: TextAlign.center,
+        style: TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w800,
+          height: 1.1,
+          color: AppColors.textTertiary,
+        ),
+      );
+    }
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const Text(
+          'LIVE',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w900,
+            height: 1.1,
+            color: AppColors.live,
+          ),
+        ),
+        if (clock != null && clock!.isNotEmpty)
+          Text(
+            clock!,
+            textAlign: TextAlign.center,
+            maxLines: 2,
+            style: const TextStyle(
+              fontSize: 9.5,
+              fontWeight: FontWeight.w700,
+              height: 1.15,
+              color: AppColors.live,
+            ),
+          ),
+      ],
+    );
+  }
+}
+
 class _Scores extends StatelessWidget {
   final int home;
   final int away;
   final bool dimLoser;
+  final Widget status;
 
   const _Scores({
     required this.home,
     required this.away,
     required this.dimLoser,
+    required this.status,
   });
 
   @override
@@ -163,57 +203,34 @@ class _Scores extends StatelessWidget {
         : AppColors.textPrimary;
 
     const style = TextStyle(
-      fontSize: 30,
+      fontSize: 24,
       fontWeight: FontWeight.w900,
-      height: 1.0,
+      height: 1.05,
       fontFeatures: [FontFeature.tabularFigures()],
     );
     return Row(
-      children: [
-        Text('$home', style: style.copyWith(color: colorFor(home, away))),
-        const Padding(
-          padding: EdgeInsets.symmetric(horizontal: 7),
-          child: Text(
-            ':',
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.w800,
-              height: 1.2,
-              color: AppColors.textTertiary,
-            ),
-          ),
-        ),
-        Text('$away', style: style.copyWith(color: colorFor(away, home))),
-      ],
-    );
-  }
-}
-
-class _LiveLabel extends StatelessWidget {
-  final String? clock;
-
-  const _LiveLabel({required this.clock});
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Container(
-          width: 6,
-          height: 6,
-          decoration: const BoxDecoration(
-            color: AppColors.live,
-            shape: BoxShape.circle,
+        Expanded(
+          child: Text(
+            '$home',
+            textAlign: TextAlign.right,
+            maxLines: 1,
+            softWrap: false,
+            style: style.copyWith(color: colorFor(home, away)),
           ),
         ),
-        const SizedBox(width: 6),
-        Text(
-          'LIVE${clock == null || clock!.isEmpty ? '' : ' · $clock'}',
-          style: const TextStyle(
-            color: AppColors.live,
-            fontSize: 12.5,
-            fontWeight: FontWeight.w800,
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 5),
+          child: SizedBox(width: 34, child: status),
+        ),
+        Expanded(
+          child: Text(
+            '$away',
+            textAlign: TextAlign.left,
+            maxLines: 1,
+            softWrap: false,
+            style: style.copyWith(color: colorFor(away, home)),
           ),
         ),
       ],

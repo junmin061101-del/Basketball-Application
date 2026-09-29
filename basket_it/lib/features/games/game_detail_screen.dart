@@ -4,12 +4,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/utils/game_time.dart';
 import '../../data/models/game.dart';
+import '../../data/models/live_game_state.dart';
 import '../../data/models/player.dart';
 import '../../data/models/player_game_stats.dart';
 import '../../data/models/team.dart';
 import '../../data/models/team_season_stats.dart';
 import '../../providers/follow_feed_providers.dart';
 import '../../providers/game_providers.dart';
+import '../../providers/live_game_providers.dart';
 import '../../providers/repository_providers.dart';
 import '../../shared/widgets/team_logo_placeholder.dart';
 import '../explore/team_detail_screen.dart';
@@ -17,6 +19,7 @@ import '../player/player_detail_screen.dart';
 
 /// 경기 상세 화면: 스코어보드 + 이 경기 최고 활약 + 양 팀 기록 비교 + 박스스코어.
 class GameDetailScreen extends ConsumerWidget {
+  /// 목록에서 넘어올 때의 경기. 진행 중이면 실시간 상태를 덮어써서 쓴다.
   final Game game;
   final Team homeTeam;
   final Team awayTeam;
@@ -37,6 +40,13 @@ class GameDetailScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // 화면을 보고 있는 동안 점수가 바뀌도록 실시간 상태를 씌운다.
+    final live = ref.watch(liveGameStatesProvider).valueOrNull ?? const {};
+    final game = applyLiveState(
+      this.game,
+      live,
+      ref.watch(selectedLeagueProvider),
+    );
     final boxScoreAsync = ref.watch(boxScoreProvider(game));
     final playersAsync = ref.watch(allPlayersProvider);
     final standings = ref.watch(standingsProvider).valueOrNull ?? const [];

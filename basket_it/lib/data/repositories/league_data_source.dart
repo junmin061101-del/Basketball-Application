@@ -51,6 +51,17 @@ class LeagueDataSource {
     : this(baseUrl: kblBaseUrl, leagueLabel: 'KBL', client: client);
 
   final Map<String, Future<Map<dynamic, dynamic>>> _cache = {};
+  final Map<String, DateTime> _fetchedAt = {};
+
+  /// 경기 결과처럼 그날그날 바뀌는 문서는 이 시간이 지나면 다시 받는다.
+  /// 팀·선수 명단처럼 시즌 내내 그대로인 것은 한 번만 받는다.
+  static const _freshFor = Duration(minutes: 2);
+
+  static bool _changesOften(String path) =>
+      path == 'games' ||
+      path == 'standings' ||
+      path == 'leaders' ||
+      path.startsWith('boxscores/');
 
   /// `<name>.json`을 읽어 그 안의 `<name>` 배열을 준다.
   Future<List<dynamic>> _load(String name) async {
@@ -61,6 +72,14 @@ class LeagueDataSource {
 
   /// `<path>.json` 문서 전체를 읽는다. 결과는 캐시한다.
   Future<Map<dynamic, dynamic>> _loadDoc(String path) {
+    final fetchedAt = _fetchedAt[path];
+    if (fetchedAt != null &&
+        _changesOften(path) &&
+        DateTime.now().difference(fetchedAt) > _freshFor) {
+      _cache.remove(path);
+      _fetchedAt.remove(path);
+    }
+    _fetchedAt[path] ??= DateTime.now();
     return _cache.putIfAbsent(path, () async {
       final uri = Uri.parse('$baseUrl/$path.json');
       final http.Response response;
@@ -89,7 +108,10 @@ class LeagueDataSource {
   }
 
   /// 다음에 다시 받아오도록 캐시를 버린다.
-  void invalidate() => _cache.clear();
+  void invalidate() {
+    _cache.clear();
+    _fetchedAt.clear();
+  }
 
   Future<List<Team>> teams() async {
     final rows = await _load('teams');
