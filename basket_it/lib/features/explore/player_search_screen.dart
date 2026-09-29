@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/theme/app_colors.dart';
 import '../../data/models/player.dart';
+import '../../data/models/team.dart';
 import '../../providers/follow_actions.dart';
 import '../../providers/onboarding_providers.dart';
 import '../../providers/repository_providers.dart';
@@ -22,8 +23,11 @@ class PlayerSearchScreen extends ConsumerStatefulWidget {
 class _PlayerSearchScreenState extends ConsumerState<PlayerSearchScreen> {
   String _query = '';
 
-  /// 기본은 "내 팀 먼저". 팔로우한 팀 선수를 가나다순으로 먼저 보여준다.
+  /// 기본은 "나의 팀". 팔로우한 팀 선수를 가나다순으로 먼저 보여준다.
   PlayerSort _sort = PlayerSort.myTeams;
+
+  /// "팀별"에서 고른 팀. null이면 모든 팀을 팀 이름순으로 보여준다.
+  String? _teamFilter;
 
   @override
   Widget build(BuildContext context) {
@@ -49,7 +53,11 @@ class _PlayerSearchScreenState extends ConsumerState<PlayerSearchScreen> {
           ),
           _SortChips(
             selected: _sort,
-            onSelected: (sort) => setState(() => _sort = sort),
+            onSelected: (sort) => setState(() {
+              _sort = sort;
+              // 다른 정렬로 옮기면 팀 선택은 초기화한다.
+              if (sort != PlayerSort.byTeam) _teamFilter = null;
+            }),
           ),
           Expanded(
             child: teamsAsync.when(
@@ -59,7 +67,7 @@ class _PlayerSearchScreenState extends ConsumerState<PlayerSearchScreen> {
                 final teamLabelOf = {
                   for (final t in teams) t.id: '${t.city} ${t.name}',
                 };
-                return playersAsync.when(
+                final body = playersAsync.when(
                   loading: () => const _Loading(),
                   error: (err, _) => Center(child: Text('불러오지 못했어요: $err')),
                   data: (allPlayers) {
@@ -69,9 +77,14 @@ class _PlayerSearchScreenState extends ConsumerState<PlayerSearchScreen> {
                       followedTeamIds: followedTeamIds,
                       teamNameOf: (id) => teamLabelOf[id] ?? id,
                     );
-                    final filtered = _query.trim().isEmpty
+                    final inTeam = _teamFilter == null
                         ? players
-                        : players.where((p) => p.matchesQuery(_query)).toList();
+                        : players
+                              .where((p) => p.teamId == _teamFilter)
+                              .toList();
+                    final filtered = _query.trim().isEmpty
+                        ? inTeam
+                        : inTeam.where((p) => p.matchesQuery(_query)).toList();
                     if (filtered.isEmpty) {
                       return Center(
                         child: Text(
@@ -81,7 +94,7 @@ class _PlayerSearchScreenState extends ConsumerState<PlayerSearchScreen> {
                       );
                     }
                     final followedPlayers = _query.trim().isEmpty
-                        ? players
+                        ? inTeam
                               .where((p) => followedIds.contains(p.id))
                               .toList()
                         : const <Player>[];
@@ -110,9 +123,61 @@ class _PlayerSearchScreenState extends ConsumerState<PlayerSearchScreen> {
                     );
                   },
                 );
+                if (_sort != PlayerSort.byTeam) return body;
+                // "팀별"일 때만 팀 고르기 줄을 얹는다.
+                return Column(
+                  children: [
+                    _TeamChips(
+                      teams: teams,
+                      selectedTeamId: _teamFilter,
+                      onSelected: (id) => setState(() => _teamFilter = id),
+                    ),
+                    Expanded(child: body),
+                  ],
+                );
               },
             ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+/// "팀별"에서 팀을 고르는 줄. 맨 앞 "전체"는 모든 팀을 보여준다.
+class _TeamChips extends StatelessWidget {
+  final List<Team> teams;
+  final String? selectedTeamId;
+  final ValueChanged<String?> onSelected;
+
+  const _TeamChips({
+    required this.teams,
+    required this.selectedTeamId,
+    required this.onSelected,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 46,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.fromLTRB(20, 0, 20, 10),
+        children: [
+          _SortChip(
+            label: '전체',
+            active: selectedTeamId == null,
+            onTap: () => onSelected(null),
+          ),
+          const SizedBox(width: 8),
+          for (final team in teams) ...[
+            _SortChip(
+              label: team.shortName,
+              active: team.id == selectedTeamId,
+              onTap: () => onSelected(team.id),
+            ),
+            const SizedBox(width: 8),
+          ],
         ],
       ),
     );
