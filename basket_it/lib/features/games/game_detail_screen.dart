@@ -636,25 +636,58 @@ class _CompareRow extends StatelessWidget {
 
 /// 박스스코어 표의 스탯 칸 하나.
 ///
-/// 디자인처럼 화면 너비에 5칸(선수·시간·득점·리바운드·어시스트)을 맞춘다.
-/// 더 자세한 기록(야투·3점·턴오버 등)은 선수 상세에서 본다.
+/// 선수 이름 칸은 왼쪽에 고정하고, 기록은 가로로 스크롤해 전 항목을 본다.
 class _StatCol {
   final String label;
-  final int flex;
+  final double width;
   final String Function(PlayerGameStats) value;
+  final bool emphasize;
 
   /// 팀 안에서 가장 높은 값을 파랗게 칠할 때 쓰는 비교값. null이면 강조하지 않는다.
   final int? Function(PlayerGameStats)? leaderValue;
 
-  const _StatCol(this.label, this.value, {this.flex = 2, this.leaderValue});
+  const _StatCol(
+    this.label,
+    this.value, {
+    this.width = 62,
+    this.emphasize = false,
+    this.leaderValue,
+  });
 }
+
+String _pct(double ratio) => (ratio * 100).toStringAsFixed(1);
 
 final _boxScoreColumns = <_StatCol>[
   // "31:04"(KBL) / "22분"(NBA는 분 단위만 온다)
-  _StatCol('시간', (s) => s.playTimeLabel, flex: 3),
-  _StatCol('득점', (s) => '${s.points}', leaderValue: (s) => s.points),
-  _StatCol('리바운드', (s) => '${s.reb}', flex: 3, leaderValue: (s) => s.reb),
-  _StatCol('어시스트', (s) => '${s.ast}', flex: 3, leaderValue: (s) => s.ast),
+  _StatCol('시간', (s) => s.playTimeLabel, width: 66),
+  _StatCol(
+    '득점',
+    (s) => '${s.points}',
+    emphasize: true,
+    leaderValue: (s) => s.points,
+  ),
+  _StatCol('야투 성공', (s) => '${s.fgm}', width: 80),
+  _StatCol('야투 시도', (s) => '${s.fga}', width: 80),
+  _StatCol('야투율', (s) => _pct(s.fgPct), width: 66),
+  _StatCol('3점 성공', (s) => '${s.tpm}', width: 76),
+  _StatCol('3점 시도', (s) => '${s.tpa}', width: 76),
+  _StatCol('3점슛률', (s) => _pct(s.tpPct), width: 72),
+  _StatCol('자유투 성공', (s) => '${s.ftm}', width: 90),
+  _StatCol('자유투 시도', (s) => '${s.fta}', width: 90),
+  _StatCol('자유투율', (s) => _pct(s.ftPct), width: 74),
+  _StatCol('공격 리바', (s) => '${s.oreb}', width: 80),
+  _StatCol('수비 리바', (s) => '${s.dreb}', width: 80),
+  _StatCol('리바운드', (s) => '${s.reb}', width: 74, leaderValue: (s) => s.reb),
+  _StatCol('어시스트', (s) => '${s.ast}', width: 74, leaderValue: (s) => s.ast),
+  _StatCol('턴오버', (s) => '${s.tov}', width: 66),
+  _StatCol('스틸', (s) => '${s.stl}', leaderValue: (s) => s.stl),
+  _StatCol('블록', (s) => '${s.blk}', leaderValue: (s) => s.blk),
+  _StatCol('파울', (s) => '${s.pf}'),
+  _StatCol('득실마진', (s) {
+    final pm = s.plusMinus;
+    if (pm == null) return '-';
+    return pm > 0 ? '+$pm' : '$pm';
+  }, width: 74),
 ];
 
 /// 박스스코어 한 묶음. [title]이 null이면 선발/후보를 모르는 예전 기록이다.
@@ -784,10 +817,11 @@ class _TeamChip extends StatelessWidget {
 const _boxScoreRowHeight = 44.0;
 const _boxScoreHeaderHeight = 34.0;
 
-/// 선발·후보 묶음마다 머리줄을 둔 박스스코어 표.
+/// 선발·후보로 나눈 박스스코어 표.
 ///
-/// 팀 안에서 득점·리바운드·어시스트가 가장 많은 선수는 그 칸을 파랗게 칠하고,
-/// 이름 앞에 파란 막대를 둔다.
+/// 왼쪽 선수 칸은 고정하고 기록은 가로로 스크롤한다. 팀 안에서 득점·리바운드·
+/// 어시스트·스틸·블록이 가장 많은 선수는 그 칸을 파랗게 칠하고 이름 앞에
+/// 파란 막대를 둔다.
 class _BoxScoreTable extends StatelessWidget {
   final List<PlayerGameStats> lines;
   final Map<String, Player> playerById;
@@ -814,6 +848,11 @@ class _BoxScoreTable extends StatelessWidget {
           (leaders[col.label] ?? 0) > 0 &&
           col.leaderValue!(line) == leaders[col.label],
     );
+    const headerStyle = TextStyle(
+      fontSize: 11,
+      fontWeight: FontWeight.w700,
+      color: AppColors.textTertiary,
+    );
 
     return ClipRRect(
       borderRadius: BorderRadius.circular(16),
@@ -822,19 +861,100 @@ class _BoxScoreTable extends StatelessWidget {
           borderRadius: BorderRadius.circular(16),
           border: Border.all(color: AppColors.border),
         ),
-        child: Column(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _HeaderRow(title: '선수'),
-            for (final group in groups) ...[
-              if (group.title != null) _GroupBand(title: group.title!),
-              for (final line in group.lines)
-                _BoxScoreRow(
-                  stats: line,
-                  player: playerById[line.playerId],
-                  leaders: leaders,
-                  highlightName: leads(line),
+            // 왼쪽 고정: 선수 이름
+            Container(
+              width: _boxScoreNameWidth,
+              decoration: const BoxDecoration(
+                border: Border(right: BorderSide(color: AppColors.border)),
+              ),
+              child: Column(
+                children: [
+                  Container(
+                    height: _boxScoreHeaderHeight,
+                    alignment: Alignment.centerLeft,
+                    padding: const EdgeInsets.only(left: 12),
+                    child: const Text('선수', style: headerStyle),
+                  ),
+                  for (final group in groups) ...[
+                    if (group.title != null) _GroupBand(title: group.title!),
+                    for (final line in group.lines)
+                      Container(
+                        height: _boxScoreRowHeight,
+                        padding: const EdgeInsets.symmetric(horizontal: 10),
+                        decoration: const BoxDecoration(
+                          border: Border(
+                            top: BorderSide(color: AppColors.border),
+                          ),
+                        ),
+                        child: _BoxScoreNameCell(
+                          player: playerById[line.playerId],
+                          stats: line,
+                          leader: leads(line),
+                        ),
+                      ),
+                  ],
+                ],
+              ),
+            ),
+            // 오른쪽: 기록(가로 스크롤)
+            Expanded(
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SizedBox(
+                      height: _boxScoreHeaderHeight,
+                      child: Row(
+                        children: [
+                          for (final col in _boxScoreColumns)
+                            SizedBox(
+                              width: col.width,
+                              child: Text(
+                                col.label,
+                                textAlign: TextAlign.center,
+                                style: headerStyle,
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                    for (final group in groups) ...[
+                      if (group.title != null)
+                        Container(
+                          height: _boxScoreBandHeight,
+                          width: _boxScoreColumns.fold<double>(
+                            0,
+                            (sum, col) => sum + col.width,
+                          ),
+                          color: AppColors.surfaceElevated,
+                        ),
+                      for (final line in group.lines)
+                        SizedBox(
+                          height: _boxScoreRowHeight,
+                          child: Row(
+                            children: [
+                              for (final col in _boxScoreColumns)
+                                _ValueCell(
+                                  col: col,
+                                  stats: line,
+                                  isLeader:
+                                      col.leaderValue != null &&
+                                      (leaders[col.label] ?? 0) > 0 &&
+                                      col.leaderValue!(line) ==
+                                          leaders[col.label],
+                                ),
+                            ],
+                          ),
+                        ),
+                    ],
+                  ],
                 ),
-            ],
+              ),
+            ),
           ],
         ),
       ),
@@ -842,31 +962,35 @@ class _BoxScoreTable extends StatelessWidget {
   }
 }
 
-class _HeaderRow extends StatelessWidget {
-  final String title;
+class _ValueCell extends StatelessWidget {
+  final _StatCol col;
+  final PlayerGameStats stats;
+  final bool isLeader;
 
-  const _HeaderRow({required this.title});
+  const _ValueCell({
+    required this.col,
+    required this.stats,
+    required this.isLeader,
+  });
 
   @override
   Widget build(BuildContext context) {
-    const style = TextStyle(
-      fontSize: 11,
-      fontWeight: FontWeight.w700,
-      color: AppColors.textTertiary,
-    );
     return Container(
-      height: _boxScoreHeaderHeight,
-      padding: const EdgeInsets.symmetric(horizontal: 12),
+      width: col.width,
       alignment: Alignment.center,
-      child: Row(
-        children: [
-          Expanded(flex: 5, child: Text(title, style: style)),
-          for (final col in _boxScoreColumns)
-            Expanded(
-              flex: col.flex,
-              child: Text(col.label, textAlign: TextAlign.center, style: style),
-            ),
-        ],
+      decoration: const BoxDecoration(
+        border: Border(top: BorderSide(color: AppColors.border)),
+      ),
+      child: Text(
+        col.value(stats),
+        textAlign: TextAlign.center,
+        style: TextStyle(
+          fontSize: 13,
+          fontWeight: isLeader || col.emphasize
+              ? FontWeight.w900
+              : FontWeight.w600,
+          color: isLeader ? AppColors.accent : AppColors.textPrimary,
+        ),
       ),
     );
   }
@@ -880,7 +1004,7 @@ class _GroupBand extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 30,
+      height: _boxScoreBandHeight,
       width: double.infinity,
       color: AppColors.surfaceElevated,
       padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -897,65 +1021,8 @@ class _GroupBand extends StatelessWidget {
   }
 }
 
-class _BoxScoreRow extends StatelessWidget {
-  final PlayerGameStats stats;
-  final Player? player;
-  final Map<String, int> leaders;
-  final bool highlightName;
-
-  const _BoxScoreRow({
-    required this.stats,
-    required this.player,
-    required this.leaders,
-    required this.highlightName,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: _boxScoreRowHeight,
-      padding: const EdgeInsets.symmetric(horizontal: 12),
-      decoration: const BoxDecoration(
-        border: Border(top: BorderSide(color: AppColors.border)),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            flex: 5,
-            child: _BoxScoreNameCell(
-              player: player,
-              stats: stats,
-              leader: highlightName,
-            ),
-          ),
-          for (final col in _boxScoreColumns)
-            Expanded(
-              flex: col.flex,
-              child: Builder(
-                builder: (context) {
-                  final isLeader =
-                      col.leaderValue != null &&
-                      (leaders[col.label] ?? 0) > 0 &&
-                      col.leaderValue!(stats) == leaders[col.label];
-                  return Text(
-                    col.value(stats),
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: isLeader ? FontWeight.w900 : FontWeight.w600,
-                      color: isLeader
-                          ? AppColors.accent
-                          : AppColors.textPrimary,
-                    ),
-                  );
-                },
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-}
+const _boxScoreNameWidth = 106.0;
+const _boxScoreBandHeight = 30.0;
 
 class _BoxScoreNameCell extends StatelessWidget {
   final Player? player;

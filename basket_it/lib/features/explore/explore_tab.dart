@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../providers/main_tab_provider.dart';
 import '../common/league_switch.dart';
 import '../common/page_header.dart';
 
@@ -19,55 +21,60 @@ class ExploreTab extends StatelessWidget {
       body: Column(
         children: [
           const PageHeader(title: '탐색', trailing: LeagueSwitch()),
+          const Divider(height: 1, color: AppColors.border),
           Expanded(
-            child: Padding(
-              padding: const EdgeInsets.all(20),
-              child: GridView.count(
-                crossAxisCount: 2,
-                mainAxisSpacing: 16,
-                crossAxisSpacing: 16,
-                childAspectRatio: 1.05,
-                children: [
-                  _MenuCard(
-                    icon: Icons.leaderboard_rounded,
-                    title: '팀 순위',
-                    color: const Color(0xFF2A3F8F),
-                    onTap: () => Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => const StandingsScreen(),
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
+              children: [
+                GridView.count(
+                  crossAxisCount: 2,
+                  mainAxisSpacing: 14,
+                  crossAxisSpacing: 14,
+                  childAspectRatio: 1.0,
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  children: [
+                    _MenuCard(
+                      icon: Icons.bar_chart_rounded,
+                      title: '팀 순위',
+                      onTap: () => Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => const StandingsScreen(),
+                        ),
                       ),
                     ),
-                  ),
-                  _MenuCard(
-                    icon: Icons.person_search_rounded,
-                    title: '선수 정보',
-                    color: const Color(0xFF8E1B3A),
-                    onTap: () => Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => const PlayerSearchScreen(),
+                    _MenuCard(
+                      icon: Icons.people_alt_outlined,
+                      title: '선수 정보',
+                      onTap: () => Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => const PlayerSearchScreen(),
+                        ),
                       ),
                     ),
-                  ),
-                  _MenuCard(
-                    icon: Icons.groups_rounded,
-                    title: '팀 정보',
-                    color: const Color(0xFF1F7A4D),
-                    onTap: () => Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => const TeamListScreen()),
-                    ),
-                  ),
-                  _MenuCard(
-                    icon: Icons.emoji_events_rounded,
-                    title: '랭킹',
-                    color: const Color(0xFFC8102E),
-                    onTap: () => Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => const StatLeadersScreen(),
+                    _MenuCard(
+                      icon: Icons.checkroom_outlined,
+                      title: '팀 정보',
+                      onTap: () => Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => const TeamListScreen(),
+                        ),
                       ),
                     ),
-                  ),
-                ],
-              ),
+                    _MenuCard(
+                      icon: Icons.workspace_premium_outlined,
+                      title: '랭킹',
+                      onTap: () => Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => const StatLeadersScreen(),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 18),
+                const _PredictionBanner(),
+              ],
             ),
           ),
         ],
@@ -76,16 +83,65 @@ class ExploreTab extends StatelessWidget {
   }
 }
 
+/// 예측 탭으로 보내는 어두운 배너.
+class _PredictionBanner extends ConsumerWidget {
+  const _PredictionBanner();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(16),
+      // 하단 탭을 예측으로 바꾼다.
+      onTap: () => ref.read(mainTabIndexProvider.notifier).state = 2,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+        decoration: BoxDecoration(
+          color: const Color(0xFF0F172A),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              decoration: BoxDecoration(
+                color: AppColors.primary,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Text(
+                'LIVE',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w900,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            const Expanded(
+              child: Text(
+                '오늘의 실시간 경기 예측 참여하기',
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w800,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _MenuCard extends StatelessWidget {
   final IconData icon;
   final String title;
-  final Color color;
   final VoidCallback onTap;
 
   const _MenuCard({
     required this.icon,
     required this.title,
-    required this.color,
     required this.onTap,
   });
 
@@ -93,36 +149,46 @@ class _MenuCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(20),
+      borderRadius: BorderRadius.circular(18),
       child: Container(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.fromLTRB(18, 18, 14, 18),
         decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.circular(20),
+          color: AppColors.background,
+          borderRadius: BorderRadius.circular(18),
           border: Border.all(color: AppColors.border),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              width: 60,
-              height: 60,
-              decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.14),
-                borderRadius: BorderRadius.circular(16),
-              ),
-              alignment: Alignment.center,
-              child: Icon(icon, color: color, size: 32),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(icon, size: 26, color: AppColors.textPrimary),
+                const Spacer(),
+                Container(
+                  width: 38,
+                  height: 38,
+                  alignment: Alignment.center,
+                  decoration: const BoxDecoration(
+                    color: AppColors.textPrimary,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.arrow_forward,
+                    size: 18,
+                    color: Colors.white,
+                  ),
+                ),
+              ],
             ),
             const Spacer(),
             Text(
               title,
               style: const TextStyle(
-                fontSize: 22,
+                fontSize: 18,
                 fontWeight: FontWeight.w900,
                 color: AppColors.textPrimary,
                 letterSpacing: -0.3,
-                height: 1.15,
               ),
             ),
           ],

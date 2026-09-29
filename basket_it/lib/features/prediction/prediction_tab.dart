@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../common/league_switch.dart';
 import '../common/page_header.dart';
 
 import '../../core/theme/app_colors.dart';
@@ -22,13 +23,25 @@ class PredictionTab extends StatelessWidget {
       child: Scaffold(
         body: Column(
           children: [
-            const PageHeader(title: '예측'),
+            const PageHeader(title: '승부 예측', trailing: LeagueSwitch()),
+            const Divider(height: 1, color: AppColors.border),
             const TabBar(
+              indicatorColor: AppColors.primary,
+              indicatorWeight: 2.5,
+              indicatorSize: TabBarIndicatorSize.tab,
+              labelColor: AppColors.textPrimary,
+              unselectedLabelColor: AppColors.textTertiary,
+              labelStyle: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+              unselectedLabelStyle: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+              ),
               tabs: [
                 Tab(text: '예측하기'),
                 Tab(text: '랭킹'),
               ],
             ),
+            const Divider(height: 1, color: AppColors.border),
             const Expanded(
               child: TabBarView(
                 children: [_PredictionList(), LeaderboardView()],

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/theme/app_colors.dart';
+import '../../providers/main_tab_provider.dart';
 import '../../providers/onboarding_providers.dart';
 import '../../services/live_score_push.dart';
 import '../community/community_tab.dart';
@@ -20,8 +21,6 @@ class MainShell extends ConsumerStatefulWidget {
 }
 
 class _MainShellState extends ConsumerState<MainShell> {
-  int _index = 0;
-
   @override
   void initState() {
     super.initState();
@@ -47,10 +46,11 @@ class _MainShellState extends ConsumerState<MainShell> {
 
   @override
   Widget build(BuildContext context) {
+    final index = ref.watch(mainTabIndexProvider);
     return Scaffold(
       body: SafeArea(
         bottom: false,
-        child: IndexedStack(index: _index, children: _tabs),
+        child: IndexedStack(index: index, children: _tabs),
       ),
       bottomNavigationBar: Container(
         decoration: const BoxDecoration(
@@ -63,8 +63,8 @@ class _MainShellState extends ConsumerState<MainShell> {
             highlightColor: Colors.transparent,
           ),
           child: BottomNavigationBar(
-            currentIndex: _index,
-            onTap: (i) => setState(() => _index = i),
+            currentIndex: index,
+            onTap: (i) => ref.read(mainTabIndexProvider.notifier).state = i,
             backgroundColor: AppColors.background,
             elevation: 0,
             selectedFontSize: 10,
