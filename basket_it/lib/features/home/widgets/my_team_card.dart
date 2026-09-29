@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_colors.dart';
+import '../../../core/utils/game_time.dart';
 import '../../../data/models/game.dart';
 import '../../../data/models/player_game_stats.dart';
 import '../../../data/models/team.dart';
@@ -689,20 +690,4 @@ class _CardLoading extends StatelessWidget {
       child: Center(child: CircularProgressIndicator(color: AppColors.primary)),
     );
   }
-}
-
-const _weekdays = ['월', '화', '수', '목', '금', '토', '일'];
-
-/// "4월 8일 (수)". 올해가 아니면 연도를 붙인다.
-String dayLabel(DateTime time, {DateTime? now}) {
-  final today = now ?? DateTime.now();
-  final day = '${time.month}월 ${time.day}일 (${_weekdays[time.weekday - 1]})';
-  return time.year == today.year ? day : '${time.year}년 $day';
-}
-
-/// 기기 시간 기준 "오후 7:00".
-String timeLabel(DateTime time) {
-  final hour = time.hour % 12 == 0 ? 12 : time.hour % 12;
-  final minute = time.minute.toString().padLeft(2, '0');
-  return '${time.hour < 12 ? '오전' : '오후'} $hour:$minute';
 }

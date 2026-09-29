@@ -71,11 +71,16 @@ void main() {
     await tester.tap(next);
     await tester.pumpAndSettle();
 
-    // 카드는 디자인대로 로고와 짧은 팀 이름을 함께 보여준다.
-    // (로고 이미지가 없는 테스트 팀은 로고 자리에도 이름 글자가 들어간다)
-    expect(find.text('디트로이트'), findsWidgets);
-    expect(find.text('보스턴'), findsWidgets);
-    // 예정 경기는 점수 자리에 팁오프 시각이 들어간다.
-    expect(find.text('오전 8:30'), findsOneWidget);
+    // 카드는 로고 아래에 팀 이름을 둔다(NBA는 별칭).
+    expect(find.text('피스톤스'), findsOneWidget);
+    expect(find.text('셀틱스'), findsOneWidget);
+    // 예정 경기는 점수 자리에 팁오프 시각이 크게 들어간다.
+    expect(find.text('8:30 AM'), findsOneWidget);
+    // 경기 날짜도 카드 맨 위에 적는다.
+    const weekdays = ['월', '화', '수', '목', '금', '토', '일'];
+    final dayText =
+        '${gameDay.month}월 ${gameDay.day}일 '
+        '(${weekdays[gameDay.weekday - 1]})';
+    expect(find.text(dayText), findsOneWidget);
   });
 }

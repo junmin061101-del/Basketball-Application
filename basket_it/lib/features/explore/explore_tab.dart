@@ -53,7 +53,8 @@ class ExploreTab extends StatelessWidget {
                       ),
                     ),
                     _MenuCard(
-                      icon: Icons.checkroom_outlined,
+                      // 팀 엠블럼을 떠올리게 하는 방패. (옷걸이 아이콘이었다)
+                      icon: Icons.shield_outlined,
                       title: '팀 정보',
                       onTap: () => Navigator.of(context).push(
                         MaterialPageRoute(

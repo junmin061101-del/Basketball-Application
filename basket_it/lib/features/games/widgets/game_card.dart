@@ -2,15 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_colors.dart';
+import '../../../core/utils/game_time.dart';
 import '../../../data/models/game.dart';
 import '../../../data/models/team.dart';
 import '../../../providers/onboarding_providers.dart';
 import '../../../shared/widgets/team_logo_placeholder.dart';
 
-/// 경기 카드: 크림색 판에 양 팀 이름·전적과 가운데 점수.
+/// 경기 카드: 맨 위에 경기 상태, 가운데에 팁오프 시각(또는 점수),
+/// 좌우에 팀 로고·이름·전적을 세로로 쌓는다.
 ///
-/// 디자인대로 로고 없이 이름과 숫자만 둔다. 끝난 경기는 이긴 쪽 점수만 진하게
-/// 보이고, 예정 경기는 점수 자리에 팁오프 시각이 들어간다.
+/// 이름을 로고 아래에 두면 "한국가스공사"처럼 긴 이름도 가운데 시각과 겹치지
+/// 않고, 카드가 커져 한눈에 읽힌다. 끝난 경기는 진 쪽 점수를 흐리게 둔다.
 class GameCard extends ConsumerWidget {
   final Game game;
   final Team homeTeam;
@@ -42,12 +44,12 @@ class GameCard extends ConsumerWidget {
 
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(18),
+      borderRadius: BorderRadius.circular(20),
       child: Container(
-        padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
+        padding: const EdgeInsets.fromLTRB(18, 16, 18, 20),
         decoration: BoxDecoration(
           color: AppColors.surfaceCream,
-          borderRadius: BorderRadius.circular(18),
+          borderRadius: BorderRadius.circular(20),
           border: Border.all(
             color: isFollowedGame ? AppColors.primary : Colors.transparent,
             width: 1.4,
@@ -56,42 +58,43 @@ class GameCard extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            if (game.status == GameStatus.live) ...[
-              _LiveLabel(clock: game.liveClock),
-              const SizedBox(height: 8),
-            ],
+            if (game.status == GameStatus.live)
+              _LiveLabel(clock: game.liveClock)
+            else
+              Text(
+                finished ? '경기 종료' : dayLabel(game.startTime),
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textTertiary,
+                ),
+              ),
+            const SizedBox(height: 14),
             Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(
-                  child: _Side(
-                    team: homeTeam,
-                    record: homeRecord,
-                    alignEnd: false,
-                  ),
+                Expanded(child: _Side(team: homeTeam, record: homeRecord)),
+                Padding(
+                  // 로고 높이의 가운데에 시각·점수가 오게 맞춘다.
+                  padding: const EdgeInsets.only(top: 14),
+                  child: started
+                      ? _Scores(
+                          home: game.homeScore,
+                          away: game.awayScore,
+                          dimLoser: finished,
+                        )
+                      : Text(
+                          timeLabel(game.startTime),
+                          style: const TextStyle(
+                            fontSize: 30,
+                            fontWeight: FontWeight.w900,
+                            color: AppColors.textPrimary,
+                            height: 1.0,
+                          ),
+                        ),
                 ),
-                if (started)
-                  _Scores(
-                    home: game.homeScore,
-                    away: game.awayScore,
-                    dimLoser: finished,
-                  )
-                else
-                  Text(
-                    tipOffLabel(game.startTime),
-                    style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w800,
-                      color: AppColors.textSecondary,
-                    ),
-                  ),
-                Expanded(
-                  child: _Side(
-                    team: awayTeam,
-                    record: awayRecord,
-                    alignEnd: true,
-                  ),
-                ),
+                Expanded(child: _Side(team: awayTeam, record: awayRecord)),
               ],
             ),
           ],
@@ -101,51 +104,43 @@ class GameCard extends ConsumerWidget {
   }
 }
 
+/// 로고 · 팀 이름 · 전적을 세로로 쌓은 한쪽.
 class _Side extends StatelessWidget {
   final Team team;
   final String? record;
-  final bool alignEnd;
 
-  const _Side({
-    required this.team,
-    required this.record,
-    required this.alignEnd,
-  });
+  const _Side({required this.team, required this.record});
 
   @override
   Widget build(BuildContext context) {
-    final texts = Column(
-      crossAxisAlignment: alignEnd
-          ? CrossAxisAlignment.end
-          : CrossAxisAlignment.start,
+    return Column(
       children: [
+        TeamLogoPlaceholder(team: team, size: 56),
+        const SizedBox(height: 11),
         Text(
-          team.shortName,
+          team.name,
+          textAlign: TextAlign.center,
+          maxLines: 2,
           overflow: TextOverflow.ellipsis,
-          textAlign: alignEnd ? TextAlign.end : TextAlign.start,
           style: const TextStyle(
-            fontSize: 15,
+            fontSize: 16,
             fontWeight: FontWeight.w800,
+            height: 1.2,
             color: AppColors.textPrimary,
           ),
         ),
         if (record != null) ...[
-          const SizedBox(height: 3),
+          const SizedBox(height: 4),
           Text(
             record!,
-            style: const TextStyle(fontSize: 12, color: AppColors.textTertiary),
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontSize: 12.5,
+              color: AppColors.textTertiary,
+            ),
           ),
         ],
       ],
-    );
-    final logo = TeamLogoPlaceholder(team: team, size: 34);
-    return Row(
-      mainAxisAlignment: alignEnd
-          ? MainAxisAlignment.end
-          : MainAxisAlignment.start,
-      children: alignEnd
-          ? [Flexible(child: texts), const SizedBox(width: 10), logo]
-          : [logo, const SizedBox(width: 10), Flexible(child: texts)],
     );
   }
 }
@@ -168,29 +163,28 @@ class _Scores extends StatelessWidget {
         : AppColors.textPrimary;
 
     const style = TextStyle(
-      fontSize: 24,
+      fontSize: 30,
       fontWeight: FontWeight.w900,
+      height: 1.0,
       fontFeatures: [FontFeature.tabularFigures()],
     );
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12),
-      child: Row(
-        children: [
-          Text('$home', style: style.copyWith(color: colorFor(home, away))),
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 6),
-            child: Text(
-              ':',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.w800,
-                color: AppColors.textTertiary,
-              ),
+    return Row(
+      children: [
+        Text('$home', style: style.copyWith(color: colorFor(home, away))),
+        const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 7),
+          child: Text(
+            ':',
+            style: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.w800,
+              height: 1.2,
+              color: AppColors.textTertiary,
             ),
           ),
-          Text('$away', style: style.copyWith(color: colorFor(away, home))),
-        ],
-      ),
+        ),
+        Text('$away', style: style.copyWith(color: colorFor(away, home))),
+      ],
     );
   }
 }
@@ -218,18 +212,11 @@ class _LiveLabel extends StatelessWidget {
           'LIVE${clock == null || clock!.isEmpty ? '' : ' · $clock'}',
           style: const TextStyle(
             color: AppColors.live,
-            fontSize: 12,
+            fontSize: 12.5,
             fontWeight: FontWeight.w800,
           ),
         ),
       ],
     );
   }
-}
-
-/// 기기 시간 기준 "오전 8:30".
-String tipOffLabel(DateTime time) {
-  final hour = time.hour % 12 == 0 ? 12 : time.hour % 12;
-  final minute = time.minute.toString().padLeft(2, '0');
-  return '${time.hour < 12 ? '오전' : '오후'} $hour:$minute';
 }

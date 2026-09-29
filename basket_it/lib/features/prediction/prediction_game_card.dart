@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/theme/app_colors.dart';
+import '../../core/utils/game_time.dart';
 import '../../core/utils/name_mask.dart';
 import '../../data/models/game.dart';
 import '../../data/models/prediction.dart';
@@ -60,7 +61,7 @@ class PredictionGameCard extends ConsumerWidget {
                 child: _StatusLine(game: game, now: now, open: open),
               ),
               Text(
-                _timeLabel(game.startTime),
+                '${timeLabel(game.startTime)} 시작',
                 style: const TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w700,
@@ -178,8 +179,6 @@ class PredictionGameCard extends ConsumerWidget {
     return game.homeScore > game.awayScore ? TeamSide.home : TeamSide.away;
   }
 
-  String _timeLabel(DateTime t) =>
-      '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')} 시작';
 }
 
 class _StatusLine extends StatelessWidget {

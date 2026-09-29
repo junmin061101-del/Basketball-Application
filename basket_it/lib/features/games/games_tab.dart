@@ -5,6 +5,7 @@ import '../common/league_switch.dart';
 import '../common/page_header.dart';
 
 import '../../core/theme/app_colors.dart';
+import '../../core/utils/game_time.dart';
 import '../../data/models/game.dart';
 import '../../providers/game_providers.dart';
 import '../../providers/onboarding_providers.dart';
@@ -51,9 +52,9 @@ class GamesTab extends ConsumerWidget {
                     }
                     final sorted = _sortWithFollowedFirst(games, followedIds);
                     return ListView.separated(
-                      padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+                      padding: const EdgeInsets.fromLTRB(20, 14, 20, 28),
                       itemCount: sorted.length,
-                      separatorBuilder: (_, _) => const SizedBox(height: 12),
+                      separatorBuilder: (_, _) => const SizedBox(height: 14),
                       itemBuilder: (context, index) {
                         final game = sorted[index];
                         final home = teamById[game.homeTeamId];
@@ -151,7 +152,7 @@ class _NoGames extends ConsumerWidget {
                     backgroundColor: AppColors.textPrimary,
                     foregroundColor: Colors.white,
                   ),
-                  child: Text('다음 경기 · ${_dayLabel(nextDay)}'),
+                  child: Text('다음 경기 · ${dayLabel(nextDay)}'),
                 ),
               ),
             ],
@@ -160,7 +161,7 @@ class _NoGames extends ConsumerWidget {
               GestureDetector(
                 onTap: () => select(previousDay),
                 child: Text(
-                  '지난 경기 · ${_dayLabel(previousDay)}',
+                  '지난 경기 · ${dayLabel(previousDay)}',
                   style: const TextStyle(
                     fontSize: 13,
                     color: AppColors.textTertiary,
@@ -175,12 +176,6 @@ class _NoGames extends ConsumerWidget {
   }
 }
 
-/// "10월 4일 (일)". 올해가 아니면 연도를 붙인다.
-String _dayLabel(DateTime day) {
-  const weekdays = ['월', '화', '수', '목', '금', '토', '일'];
-  final year = day.year == DateTime.now().year ? '' : '${day.year}년 ';
-  return '$year${day.month}월 ${day.day}일 (${weekdays[day.weekday - 1]})';
-}
 
 class _Loading extends StatelessWidget {
   const _Loading();
