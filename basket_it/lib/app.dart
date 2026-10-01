@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
+import 'core/theme/app_colors.dart';
 import 'core/theme/app_theme.dart';
 import 'features/auth/auth_gate.dart';
 import 'features/onboarding/splash_screen.dart';
@@ -27,7 +28,51 @@ class BasketItApp extends StatelessWidget {
       locale: const Locale('ko', 'KR'),
       supportedLocales: const [Locale('ko', 'KR'), Locale('en', 'US')],
       localizationsDelegates: GlobalMaterialLocalizations.delegates,
+      // PC 브라우저에서는 화면이 넓어 내용이 가로로 늘어지고, 기록표처럼 폭이
+      // 정해진 것 옆에 빈 공간만 남는다. 휴대폰 너비로 모아 가운데에 둔다.
+      builder: (context, child) =>
+          _PhoneWidth(child: child ?? const SizedBox.shrink()),
       home: firebaseReady ? const AuthGate() : const SplashScreen(),
+    );
+  }
+}
+
+/// 넓은 화면에서는 앱을 휴대폰 너비로 가운데에 모은다.
+///
+/// 이 앱의 화면은 모두 휴대폰 폭(390 안팎)에 맞춰 만들었다. PC 브라우저에서
+/// 그대로 늘리면 글씨만 양끝으로 흩어지고 표 옆이 비어 보여서, 바깥은 회색
+/// 바탕으로 두고 가운데만 앱으로 쓴다. 창이 좁으면(휴대폰) 아무것도 바꾸지 않는다.
+class _PhoneWidth extends StatelessWidget {
+  final Widget child;
+
+  /// 휴대폰 화면보다 조금 넉넉하게. 기록표는 이 안에서 가로로 스크롤한다.
+  static const maxWidth = 520.0;
+
+  const _PhoneWidth({required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    final media = MediaQuery.of(context);
+    if (media.size.width <= maxWidth) return child;
+    return ColoredBox(
+      color: AppColors.surfaceElevated,
+      child: Center(
+        child: Container(
+          width: maxWidth,
+          decoration: const BoxDecoration(
+            color: AppColors.background,
+            border: Border.symmetric(
+              vertical: BorderSide(color: AppColors.border),
+            ),
+          ),
+          clipBehavior: Clip.hardEdge,
+          // 안쪽 화면들이 창 전체가 아니라 이 폭을 기준으로 재도록 바꿔 준다.
+          child: MediaQuery(
+            data: media.copyWith(size: Size(maxWidth, media.size.height)),
+            child: child,
+          ),
+        ),
+      ),
     );
   }
 }
