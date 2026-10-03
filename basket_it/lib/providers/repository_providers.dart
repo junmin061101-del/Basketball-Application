@@ -10,29 +10,24 @@ import '../data/models/league.dart';
 import '../data/repositories/collected_repositories.dart';
 import '../data/repositories/kbl_repositories.dart';
 import '../data/repositories/league_data_source.dart';
-import '../data/repositories/nba_repositories.dart';
 import '../data/repositories/player_repository.dart';
 import '../data/repositories/team_repository.dart';
 
-/// 지금 보고 있는 리그. 홈·게임·탐색 탭이 이 값을 따라간다.
-final selectedLeagueProvider = StateProvider<League>((ref) => League.kbl);
-
-/// NBA 정적 데이터(ESPN에서 모은 팀·순위·일정·선수)를 읽는 곳. 결과를 캐시한다.
-final nbaSourceProvider = Provider<LeagueDataSource>(
-  (ref) => LeagueDataSource.nba(),
-);
+/// 앱이 다루는 리그. 지금은 KBL 하나다.
+///
+/// NBA 기록은 쓰던 API를 더 쓸 수 없게 되어 앱에서 내렸다. 뉴스만 KBL·NBA를
+/// 함께 보여주고(뉴스는 네이버에서 모은다), 그쪽은 [newsLeagueProvider]가
+/// 따로 들고 있다.
+final selectedLeagueProvider = Provider<League>((ref) => League.kbl);
 
 /// KBL 정적 데이터(KBL 공식 홈페이지에서 모은 팀·순위·일정·선수)를 읽는 곳.
 final kblSourceProvider = Provider<LeagueDataSource>(
   (ref) => LeagueDataSource.kbl(),
 );
 
-/// 선택된 리그의 데이터 소스.
+/// 화면이 읽는 데이터 소스.
 final leagueSourceProvider = Provider<LeagueDataSource>((ref) {
-  return switch (ref.watch(selectedLeagueProvider)) {
-    League.kbl => ref.watch(kblSourceProvider),
-    League.nba => ref.watch(nbaSourceProvider),
-  };
+  return ref.watch(kblSourceProvider);
 });
 
 /// Repository 구현체 주입 지점.
@@ -45,10 +40,7 @@ final teamRepositoryProvider = Provider<TeamRepository>((ref) {
 });
 
 final playerRepositoryProvider = Provider<PlayerRepository>((ref) {
-  return switch (ref.watch(selectedLeagueProvider)) {
-    League.kbl => KblPlayerRepository(ref.watch(kblSourceProvider)),
-    League.nba => NbaPlayerRepository(ref.watch(nbaSourceProvider)),
-  };
+  return KblPlayerRepository(ref.watch(kblSourceProvider));
 });
 
 /// 전체 팀 목록.

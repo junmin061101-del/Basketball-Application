@@ -23,7 +23,8 @@ class PlayerSearchScreen extends ConsumerStatefulWidget {
 class _PlayerSearchScreenState extends ConsumerState<PlayerSearchScreen> {
   String _query = '';
 
-  /// 기본은 "나의 팀". 팔로우한 팀 선수를 가나다순으로 먼저 보여준다.
+  /// 기본은 "나의 팀". 팔로우한 팀 선수를 먼저 보여준다. 리그에 없는 정렬이
+  /// 남아 있으면 build에서 그 리그의 첫 칸으로 바꿔 쓴다.
   PlayerSort _sort = PlayerSort.myTeams;
 
   /// "팀별"에서 고른 팀. null이면 모든 팀을 팀 이름순으로 보여준다.
@@ -31,6 +32,10 @@ class _PlayerSearchScreenState extends ConsumerState<PlayerSearchScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final league = ref.watch(selectedLeagueProvider);
+    final sorts = sortsFor(league);
+    // 리그를 바꾸면 그 리그에 없는 정렬(가나다순/ABC순)은 첫 칸으로 되돌린다.
+    final sort = sorts.contains(_sort) ? _sort : sorts.first;
     final playersAsync = ref.watch(playersByFollowersProvider);
     final teamsAsync = ref.watch(teamsProvider);
     final followedIds = ref.watch(followedPlayerIdsProvider);
@@ -52,7 +57,8 @@ class _PlayerSearchScreenState extends ConsumerState<PlayerSearchScreen> {
             ),
           ),
           _SortChips(
-            selected: _sort,
+            sorts: sorts,
+            selected: sort,
             onSelected: (sort) => setState(() {
               _sort = sort;
               // 다른 정렬로 옮기면 팀 선택은 초기화한다.
@@ -73,7 +79,7 @@ class _PlayerSearchScreenState extends ConsumerState<PlayerSearchScreen> {
                   data: (allPlayers) {
                     final players = sortPlayers(
                       allPlayers,
-                      sort: _sort,
+                      sort: sort,
                       followedTeamIds: followedTeamIds,
                       teamNameOf: (id) => teamLabelOf[id] ?? id,
                     );
@@ -123,7 +129,7 @@ class _PlayerSearchScreenState extends ConsumerState<PlayerSearchScreen> {
                     );
                   },
                 );
-                if (_sort != PlayerSort.byTeam) return body;
+                if (sort != PlayerSort.byTeam) return body;
                 // "팀별"일 때만 팀 고르기 줄을 얹는다.
                 return Column(
                   children: [
@@ -369,10 +375,15 @@ class _Loading extends StatelessWidget {
 
 /// 정렬 방식 선택 칩. 홈 필터 칩과 같은 모양을 쓴다.
 class _SortChips extends StatelessWidget {
+  final List<PlayerSort> sorts;
   final PlayerSort selected;
   final ValueChanged<PlayerSort> onSelected;
 
-  const _SortChips({required this.selected, required this.onSelected});
+  const _SortChips({
+    required this.sorts,
+    required this.selected,
+    required this.onSelected,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -382,7 +393,7 @@ class _SortChips extends StatelessWidget {
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.fromLTRB(20, 0, 20, 10),
         children: [
-          for (final sort in PlayerSort.values) ...[
+          for (final sort in sorts) ...[
             _SortChip(
               label: sort.label,
               active: sort == selected,

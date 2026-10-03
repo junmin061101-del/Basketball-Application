@@ -1,4 +1,5 @@
 import 'package:basket_it/data/models/player.dart';
+import 'package:basket_it/data/models/league.dart';
 import 'package:basket_it/features/explore/player_sort.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -86,15 +87,19 @@ void main() {
   });
 
   test('이름이 같으면 등번호로 갈라 순서가 흔들리지 않는다', () {
-    final same = [
-      p('김민수', 'sk', number: 23),
-      p('김민수', 'lg', number: 7),
-    ];
+    final same = [p('김민수', 'sk', number: 23), p('김민수', 'lg', number: 7)];
     final sorted = sortPlayers(same, sort: PlayerSort.name);
     expect(sorted.map((e) => e.backNumber), [7, 23]);
   });
 
   test('빈 목록도 처리한다', () {
     expect(sortPlayers(const [], sort: PlayerSort.alphabet), isEmpty);
+  });
+
+  test('리그마다 쓸모 있는 정렬만 보여준다', () {
+    // 이름이 한글뿐인 KBL에 ABC순은 의미가 없고,
+    // 이름을 영문으로 보여주는 NBA에 가나다순은 맞지 않는다.
+    expect(sortsFor(League.kbl).map((s) => s.label), ['나의 팀', '가나다순', '팀별']);
+    expect(sortsFor(League.nba).map((s) => s.label), ['나의 팀', 'ABC순', '팀별']);
   });
 }

@@ -3,7 +3,6 @@ import 'dart:convert';
 import 'package:flutter/material.dart' show Color;
 import 'package:http/http.dart' as http;
 
-import '../models/award_race.dart';
 import '../models/game.dart';
 import '../models/player.dart';
 import '../models/player_game_stats.dart';
@@ -20,12 +19,6 @@ import '../team_logo_assets.dart';
 /// 같은 모양의 정적 JSON으로 만들어 두고, 앱은 이 클래스 하나로 읽는다.
 /// 한 번 읽은 결과는 메모리에 들고 있어 화면을 오갈 때마다 다시 받지 않는다.
 class LeagueDataSource {
-  static const nbaBaseUrl = String.fromEnvironment(
-    'NBA_BASE_URL',
-    defaultValue:
-        'https://junmin061101-del.github.io/Basketball-Application/nba',
-  );
-
   static const kblBaseUrl = String.fromEnvironment(
     'KBL_BASE_URL',
     defaultValue:
@@ -43,9 +36,6 @@ class LeagueDataSource {
     required this.leagueLabel,
     http.Client? client,
   }) : _client = client ?? http.Client();
-
-  LeagueDataSource.nba({http.Client? client})
-    : this(baseUrl: nbaBaseUrl, leagueLabel: 'NBA', client: client);
 
   LeagueDataSource.kbl({http.Client? client})
     : this(baseUrl: kblBaseUrl, leagueLabel: 'KBL', client: client);
@@ -89,9 +79,7 @@ class LeagueDataSource {
         throw const LeagueDataUnavailableException('네트워크 연결을 확인해주세요.');
       }
       if (response.statusCode == 404) {
-        throw LeagueDataUnavailableException(
-          '아직 $leagueLabel 데이터가 준비되지 않았어요.',
-        );
+        throw LeagueDataUnavailableException('아직 $leagueLabel 데이터가 준비되지 않았어요.');
       }
       if (response.statusCode != 200) {
         throw LeagueDataUnavailableException('$leagueLabel 데이터를 불러오지 못했어요.');
@@ -100,9 +88,7 @@ class LeagueDataSource {
         final decoded = jsonDecode(utf8.decode(response.bodyBytes));
         return decoded is Map ? decoded : const {};
       } catch (_) {
-        throw LeagueDataUnavailableException(
-          '$leagueLabel 데이터 형식을 읽지 못했어요.',
-        );
+        throw LeagueDataUnavailableException('$leagueLabel 데이터 형식을 읽지 못했어요.');
       }
     });
   }
@@ -189,8 +175,7 @@ class LeagueDataSource {
         // 두 원본 모두 팔로워 수를 주지 않는다. 없는 값을 지어내지 않고 0으로 둔다.
         followerCount: 0,
         positionLabel: r['positionLabel'] as String?,
-        // NBA는 수집기가 name을 한국어로 바꾸고 원래 영문을 nameEn에 남긴다.
-        // KBL은 원래 한국어 이름이고 nameEn은 KBL이 주는 영문 표기다.
+        // KBL이 함께 주는 영문 표기. 영문으로도 검색할 수 있게 들고 있는다.
         englishName: r['nameEn'] as String?,
         photoUrl: r['headshot'] as String?,
       );
@@ -289,11 +274,6 @@ class LeagueDataSource {
       tripleDoubles: (r['td3'] as num?)?.toInt(),
       gameHigh: (r['gameHigh'] as num?)?.toInt(),
     );
-  }
-
-  /// MVP·올해의 수비수·신인왕 레이스(NBA.com 사다리와 시즌 수상 결과). NBA만 있다.
-  Future<AwardRaces> awardRaces() async {
-    return AwardRaces.parse(await _loadDoc('ladders'));
   }
 
   /// 팀별 시즌 평균.

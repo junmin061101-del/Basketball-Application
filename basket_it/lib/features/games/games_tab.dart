@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../common/league_switch.dart';
 import '../common/page_header.dart';
 
 import '../../core/theme/app_colors.dart';
@@ -34,7 +33,7 @@ class GamesTab extends ConsumerWidget {
     return Scaffold(
       body: Column(
         children: [
-          const PageHeader(title: 'GAMES', trailing: LeagueSwitch()),
+          const PageHeader(title: 'GAMES'),
           const DateCalendarBar(),
           const SizedBox(height: 4),
           Expanded(
@@ -175,7 +174,6 @@ class _NoGames extends ConsumerWidget {
     );
   }
 }
-
 
 class _Loading extends StatelessWidget {
   const _Loading();

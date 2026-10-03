@@ -2,9 +2,11 @@ import 'package:basket_it/services/live_score_push.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  test('팀 id 모양으로 리그를 가른다: 숫자는 NBA, 영문은 KBL', () {
-    expect(liveTeamKeys(['13', 'sk', '', '2', 'kogas']),
-        {'nba:13', 'kbl:sk', 'nba:2', 'kbl:kogas'});
+  test('KBL 팀만 올린다(예전에 팔로우한 NBA 팀 id는 버린다)', () {
+    expect(liveTeamKeys(['13', 'sk', '', '2', 'kogas']), {
+      'kbl:sk',
+      'kbl:kogas',
+    });
   });
 
   group('구독 문서 쓰기', () {
@@ -19,14 +21,14 @@ void main() {
 
     test('토큰이 생기기 전에는 쓰지 않고, 생기면 기억한 팀을 한 번에 쓴다', () async {
       final sub = make('android');
-      await sub.setTeams(['sk', '13']);
+      await sub.setTeams(['sk', 'kogas']);
       expect(writes, isEmpty);
 
       await sub.setFcmToken('fcm-1');
       expect(writes, hasLength(1));
       expect(writes.single.$1, 'fcm-1');
       expect(writes.single.$2, {
-        'teamKeys': ['kbl:sk', 'nba:13'],
+        'teamKeys': ['kbl:kogas', 'kbl:sk'],
       });
     });
 
@@ -48,7 +50,7 @@ void main() {
     test('토큰이 바뀌면 새 문서에 모든 값을 다시 쓴다', () async {
       final sub = make('ios');
       await sub.setFcmToken('fcm-1');
-      await sub.setTeams(['13']);
+      await sub.setTeams(['lg']);
       await sub.setPushToStartToken('p2s');
       await sub.setActivityTokens({'ABC-UUID': 'act-1'});
       writes.clear();
@@ -56,7 +58,7 @@ void main() {
       await sub.setFcmToken('fcm-2');
       expect(writes.single.$1, 'fcm-2');
       expect(writes.single.$2, {
-        'teamKeys': ['nba:13'],
+        'teamKeys': ['kbl:lg'],
         'pushToStartToken': 'p2s',
         'activityTokens': {'abc-uuid': 'act-1'},
       });

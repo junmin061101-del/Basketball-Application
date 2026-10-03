@@ -9,29 +9,26 @@ import '../../providers/my_team_providers.dart';
 import '../../providers/news_providers.dart';
 import '../../providers/onboarding_providers.dart';
 import '../../providers/repository_providers.dart';
-import '../common/league_switch.dart';
 import '../common/page_header.dart';
 import '../player/player_detail_screen.dart';
 import 'widgets/my_team_card.dart';
 import 'widgets/news_cards.dart';
 
-/// 홈 탭: 리그 전환(KBL / NBA) 아래로 **내 팀**을 먼저, 그 리그 뉴스를 그 다음에 보여준다.
+/// 홈 탭: **내 팀**을 먼저, 뉴스를 그 다음에 보여준다.
 ///
 /// 내 팀 카드는 팔로우한 팀의 순위·연승/연패·앞뒤 팀과의 게임차·최근 5경기·
-/// 오늘(없으면 최근) 경기를 담는다. 뉴스는 KBL과 NBA를 섞지 않고 고른 리그
-/// 기사만 보여준다(수집기가 기사 내용으로 리그를 다시 가른다). 맨 위 한 건은
+/// 오늘(없으면 최근) 경기를 담는다. 기록은 KBL만 다루지만 뉴스는 KBL·NBA를
+/// 함께 보여주고, 섹션 제목 옆 전환으로 고른다(섞지는 않는다). 맨 위 한 건은
 /// 큰 썸네일의 헤드라인 카드, 나머지는 작은 썸네일 목록이며 누르면 원문을 연다.
 class HomeTab extends ConsumerWidget {
   const HomeTab({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final league = ref.watch(selectedLeagueProvider);
-
     return Scaffold(
       body: Column(
         children: [
-          const PageHeader(title: 'Home', trailing: LeagueSwitch()),
+          const PageHeader(title: 'Home'),
           const _FollowChips(),
           Expanded(
             child: RefreshIndicator(
@@ -45,7 +42,7 @@ class HomeTab extends ConsumerWidget {
                 children: [
                   const MyTeamSection(),
                   const SizedBox(height: 28),
-                  _SectionTitle(league == League.kbl ? 'KBL 뉴스' : 'NBA 뉴스'),
+                  const _NewsHeader(),
                   const SizedBox(height: 12),
                   const _NewsSection(),
                 ],
@@ -58,30 +55,71 @@ class HomeTab extends ConsumerWidget {
   }
 }
 
-class _SectionTitle extends StatelessWidget {
-  final String text;
-
-  const _SectionTitle(this.text);
+/// 뉴스 섹션 제목과 리그 전환.
+///
+/// 기록·일정은 KBL만 다루지만 뉴스는 NBA도 볼 수 있다. 전환은 여기에만 둔다.
+class _NewsHeader extends ConsumerWidget {
+  const _NewsHeader();
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final selected = ref.watch(newsLeagueProvider);
     return Row(
       children: [
-        Text(
-          text,
-          style: const TextStyle(
+        const Text(
+          '뉴스',
+          style: TextStyle(
             fontSize: 19,
             fontWeight: FontWeight.w900,
             color: AppColors.textPrimary,
           ),
         ),
         const Spacer(),
-        const Icon(
-          Icons.chevron_right,
-          size: 20,
-          color: AppColors.textTertiary,
-        ),
+        for (final league in League.values) ...[
+          _NewsLeagueChip(
+            label: league.label,
+            active: league == selected,
+            onTap: () =>
+                ref.read(newsLeagueProvider.notifier).state = league,
+          ),
+          const SizedBox(width: 6),
+        ],
       ],
+    );
+  }
+}
+
+class _NewsLeagueChip extends StatelessWidget {
+  final String label;
+  final bool active;
+  final VoidCallback onTap;
+
+  const _NewsLeagueChip({
+    required this.label,
+    required this.active,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: active ? AppColors.textPrimary : AppColors.surfaceElevated,
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 12.5,
+            fontWeight: FontWeight.w800,
+            color: active ? Colors.white : AppColors.textSecondary,
+          ),
+        ),
+      ),
     );
   }
 }

@@ -8,12 +8,14 @@ import 'package:live_activities/live_activities.dart';
 import 'package:live_activities/models/activity_update.dart';
 
 /// 서버(functions/live-score.js)가 구독 기기를 찾는 팀 키.
-/// NBA 팀 id는 ESPN 숫자("13"), KBL 팀 id는 영문("sk")이라 모양으로 리그를 가른다.
+///
+/// 앱은 KBL만 다루므로 KBL 팀(영문 id "sk")만 올린다. 예전에 팔로우해 둔
+/// NBA 팀 id(ESPN 숫자 "13")가 남아 있어도 잠금화면에 띄우지 않는다.
 Set<String> liveTeamKeys(Iterable<String> teamIds) {
   final digits = RegExp(r'^\d+$');
   return {
     for (final id in teamIds)
-      if (id.isNotEmpty) digits.hasMatch(id) ? 'nba:$id' : 'kbl:$id',
+      if (id.isNotEmpty && !digits.hasMatch(id)) 'kbl:$id',
   };
 }
 

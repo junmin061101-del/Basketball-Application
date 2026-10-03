@@ -14,9 +14,6 @@ extension PlayerPositionLabel on PlayerPosition {
 }
 
 /// KBL 선수 정보.
-///
-/// [followerCount]는 Firestore 전체 팔로우 집계를 대신하는 목업 값으로,
-/// 선수 팔로우 화면에서 "가장 많이 팔로우된 선수" 정렬 기준으로 사용된다.
 @immutable
 class Player {
   final String id;
@@ -33,7 +30,7 @@ class Player {
   /// "포인트가드"라고 적게 된다. 값이 있으면 이쪽을 먼저 쓴다.
   final String? positionLabel;
 
-  /// 영문 원래 이름. NBA 선수는 [name]이 한국어라 영문 검색과 원문 대조에 쓴다.
+  /// 리그가 함께 주는 영문 표기. 영문으로도 검색할 수 있게 들고 있는다.
   final String? englishName;
 
   /// 얼굴 사진 주소. 없으면 화면이 이름 글자로 대신한다.

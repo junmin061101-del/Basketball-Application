@@ -4,8 +4,7 @@ import '../models/player_season_stats.dart';
 
 /// 선수 데이터 접근을 추상화한 Repository.
 ///
-/// 리그마다 구현이 있다. NBA는 [NbaPlayerRepository], KBL은
-/// [KblPlayerRepository]이고, 둘 다 수집기가 올려둔 실제 데이터를 읽는다.
+/// 구현은 [KblPlayerRepository]이고, 수집기가 올려둔 실제 데이터를 읽는다.
 /// 화면(Provider, UI)은 이 인터페이스만 안다.
 abstract class PlayerRepository {
   Future<List<Player>> getPlayers();

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../common/league_switch.dart';
 import '../common/page_header.dart';
 
 import '../../core/theme/app_colors.dart';
@@ -23,7 +22,7 @@ class PredictionTab extends StatelessWidget {
       child: Scaffold(
         body: Column(
           children: [
-            const PageHeader(title: '승부 예측', trailing: LeagueSwitch()),
+            const PageHeader(title: '승부 예측'),
             const Divider(height: 1, color: AppColors.border),
             const TabBar(
               indicatorColor: AppColors.primary,

@@ -6,7 +6,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/models/league.dart';
 import '../data/models/news_article.dart';
 import '../data/repositories/news_repository.dart';
-import 'repository_providers.dart';
 import '../features/home/article_view_screen.dart';
 
 /// 실제 뉴스 주입 지점.
@@ -32,12 +31,18 @@ final allNewsProvider = FutureProvider<List<NewsArticle>>((ref) {
   return ref.watch(newsRepositoryProvider).getNews();
 });
 
-/// 홈 탭 뉴스 섹션. 맨 위 리그 전환(KBL / NBA)을 그대로 따른다.
+/// 홈 탭 뉴스 섹션에서 고른 리그.
+///
+/// 기록·일정은 KBL만 다루지만 뉴스는 NBA도 함께 보여준다(뉴스는 네이버에서
+/// 모으므로 NBA 기록 API와 상관이 없다). 그래서 리그 선택을 뉴스만 따로 둔다.
+final newsLeagueProvider = StateProvider<League>((ref) => League.kbl);
+
+/// 지금 보고 있는 뉴스 섹션.
 ///
 /// 섹션은 KBL / NBA 두 개뿐이고 서로 섞지 않는다. 대표팀·해외파·다른 리그
 /// 기사는 수집기가 어느 쪽에도 넣지 않는다.
 final newsCategoryProvider = Provider<NewsCategory>((ref) {
-  return switch (ref.watch(selectedLeagueProvider)) {
+  return switch (ref.watch(newsLeagueProvider)) {
     League.kbl => NewsCategory.kbl,
     League.nba => NewsCategory.nba,
   };

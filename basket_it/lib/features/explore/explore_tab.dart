@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../providers/main_tab_provider.dart';
-import '../common/league_switch.dart';
 import '../common/page_header.dart';
 
 import '../../core/theme/app_colors.dart';
@@ -20,7 +19,7 @@ class ExploreTab extends StatelessWidget {
     return Scaffold(
       body: Column(
         children: [
-          const PageHeader(title: '탐색', trailing: LeagueSwitch()),
+          const PageHeader(title: '탐색'),
           const Divider(height: 1, color: AppColors.border),
           Expanded(
             child: ListView(

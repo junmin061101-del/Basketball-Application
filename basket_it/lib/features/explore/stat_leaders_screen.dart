@@ -2,20 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/theme/app_colors.dart';
-import '../../data/models/league.dart';
 import '../../data/models/player.dart';
 import '../../data/models/player_season_stats.dart';
 import '../../data/models/team.dart';
 import '../../providers/repository_providers.dart';
 import '../../shared/widgets/player_avatar.dart';
 import '../player/player_detail_screen.dart';
-import 'award_race_view.dart';
 import 'ranking_categories.dart';
 
-/// 탐색 - 랭킹.
-///
-/// 선수 기록 순위(네이버 스포츠와 같은 20개 부문)를 보여주고, NBA는 수상
-/// 레이스(MVP·올해의 수비수·신인왕)도 함께 둔다.
+/// 탐색 - 랭킹. 선수 기록 순위(네이버 스포츠와 같은 20개 부문)를 보여준다.
 class StatLeadersScreen extends ConsumerStatefulWidget {
   const StatLeadersScreen({super.key});
 
@@ -24,77 +19,11 @@ class StatLeadersScreen extends ConsumerStatefulWidget {
 }
 
 class _StatLeadersScreenState extends ConsumerState<StatLeadersScreen> {
-  bool _showAwards = false;
-
   @override
   Widget build(BuildContext context) {
-    final isNba = ref.watch(selectedLeagueProvider) == League.nba;
     return Scaffold(
       appBar: AppBar(title: const Text('랭킹')),
-      body: Column(
-        children: [
-          if (isNba)
-            _ModeSwitch(
-              showAwards: _showAwards,
-              onChanged: (value) => setState(() => _showAwards = value),
-            ),
-          Expanded(
-            child: isNba && _showAwards
-                ? const AwardRaceView()
-                : const _RecordRankings(),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// 기록 순위 / 수상 레이스 전환.
-class _ModeSwitch extends StatelessWidget {
-  final bool showAwards;
-  final ValueChanged<bool> onChanged;
-
-  const _ModeSwitch({required this.showAwards, required this.onChanged});
-
-  @override
-  Widget build(BuildContext context) {
-    Widget segment(String label, bool value) {
-      final active = showAwards == value;
-      return Expanded(
-        child: GestureDetector(
-          onTap: () => onChanged(value),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 150),
-            padding: const EdgeInsets.symmetric(vertical: 9),
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: active ? AppColors.surface : Colors.transparent,
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(
-                color: active ? AppColors.border : Colors.transparent,
-              ),
-            ),
-            child: Text(
-              label,
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w800,
-                color: active ? AppColors.textPrimary : AppColors.textTertiary,
-              ),
-            ),
-          ),
-        ),
-      );
-    }
-
-    return Container(
-      margin: const EdgeInsets.fromLTRB(20, 8, 20, 4),
-      padding: const EdgeInsets.all(4),
-      decoration: BoxDecoration(
-        color: AppColors.surfaceElevated,
-        borderRadius: BorderRadius.circular(13),
-      ),
-      child: Row(children: [segment('기록 순위', false), segment('수상 레이스', true)]),
+      body: const _RecordRankings(),
     );
   }
 }

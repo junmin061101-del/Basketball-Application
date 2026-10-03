@@ -1,3 +1,4 @@
+import '../../data/models/league.dart';
 import '../../data/models/player.dart';
 
 /// 선수 목록 정렬 방식.
@@ -22,6 +23,19 @@ enum PlayerSort {
     PlayerSort.byTeam => '팀별',
   };
 }
+
+/// [league]에서 고를 수 있는 정렬.
+///
+/// 이름이 한글뿐인 KBL에 ABC순은 쓸 데가 없고, 이름을 영문으로 보여주는
+/// NBA에 가나다순은 맞지 않는다. 리그마다 쓰는 것만 남긴다.
+List<PlayerSort> sortsFor(League league) => switch (league) {
+  League.kbl => const [PlayerSort.myTeams, PlayerSort.name, PlayerSort.byTeam],
+  League.nba => const [
+    PlayerSort.myTeams,
+    PlayerSort.alphabet,
+    PlayerSort.byTeam,
+  ],
+};
 
 /// 한글 이름 비교.
 ///
