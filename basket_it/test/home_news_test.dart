@@ -164,7 +164,7 @@ void main() {
     expect(opened.single.url, 'https://jumpball.co.kr/news/1');
   });
 
-  testWidgets('뉴스는 KBL / NBA 두 섹션뿐이고 섹션 전환을 따라간다', (tester) async {
+  testWidgets('뉴스는 KBL / NBA 두 섹션뿐이고 맨 위 전환을 따라간다', (tester) async {
     final repository = _FakeNewsRepository([
       ...feed,
       article(
@@ -178,18 +178,19 @@ void main() {
 
     // KBL 섹션: KBL 기사만, NBA 기사는 섞이지 않는다.
     expect(repository.requested, [NewsCategory.kbl]);
-    expect(find.text('뉴스'), findsOneWidget);
+    expect(find.text('KBL 뉴스'), findsOneWidget);
     expect(find.text('서울 SK, 창원 LG 꺾고 4연승'), findsOneWidget);
     expect(find.text('돈치치 40득점, 레이커스 역전승'), findsNothing);
     // 전체/해외파 같은 분류 칩은 없다.
     expect(find.text('전체'), findsNothing);
     expect(find.text('해외파'), findsNothing);
 
-    // 뉴스 섹션의 NBA를 누르면 NBA 기사로 바뀐다(기록은 KBL만 다룬다).
+    // 맨 위 전환을 NBA로 바꾸면 NBA 뉴스로 바뀐다(기록은 KBL만 다룬다).
     await tester.tap(find.text('NBA').first);
     await tester.pumpAndSettle(const Duration(milliseconds: 600));
 
     expect(repository.requested.last, NewsCategory.nba);
+    expect(find.text('NBA 뉴스'), findsOneWidget);
     expect(find.text('돈치치 40득점, 레이커스 역전승'), findsOneWidget);
     expect(find.text('서울 SK, 창원 LG 꺾고 4연승'), findsNothing);
   });
@@ -219,7 +220,7 @@ void main() {
     expect(find.text('내 팀을 정해 보세요'), findsOneWidget);
     expect(find.text('팀 고르기'), findsOneWidget);
     final card = tester.getTopLeft(find.text('내 팀을 정해 보세요'));
-    final news = tester.getTopLeft(find.text('뉴스'));
+    final news = tester.getTopLeft(find.text('KBL 뉴스'));
     expect(card.dy, lessThan(news.dy));
   });
 
@@ -275,7 +276,7 @@ void main() {
     // 내 팀 카드가 뉴스보다 위에 있다
     expect(
       tester.getTopLeft(find.text('2위')).dy,
-      lessThan(tester.getTopLeft(find.text('뉴스')).dy),
+      lessThan(tester.getTopLeft(find.text('KBL 뉴스')).dy),
     );
   });
 
