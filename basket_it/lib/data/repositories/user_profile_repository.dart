@@ -4,7 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 ///
 /// 팔로우와 같은 `users/{uid}` 문서에 `nickname` 한 칸으로 둔다. 이 이름은
 /// 글을 쓸 때 글 문서에 함께 저장돼(공용 컬렉션에서 다시 읽지 않는다)
-/// 커뮤니티·예측·랭킹에 그대로 보인다.
+/// 커뮤니티·예측 토론에 그대로 보인다.
 abstract class UserProfileRepository {
   /// 정해 둔 닉네임. 아직 없으면 null.
   Future<String?> loadNickname(String uid);

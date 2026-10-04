@@ -103,24 +103,6 @@ class PredictionComment {
   }
 }
 
-/// 승부예측 랭킹 한 줄.
-@immutable
-class LeaderboardEntry {
-  final String uid;
-  final String displayName;
-  final int correct;
-  final int settled; // 결과가 확정된 예측 수
-
-  const LeaderboardEntry({
-    required this.uid,
-    required this.displayName,
-    required this.correct,
-    required this.settled,
-  });
-
-  double get accuracy => settled == 0 ? 0 : correct / settled;
-}
-
 String _dateKey(DateTime d) =>
     '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
 

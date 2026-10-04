@@ -8,46 +8,21 @@ import '../../data/models/game.dart';
 import '../../data/models/team.dart';
 import '../../providers/prediction_providers.dart';
 import '../../providers/repository_providers.dart';
-import 'leaderboard_view.dart';
 import 'prediction_game_card.dart';
 
-/// 승부예측 탭: 예측하기(오늘~7일치 경기) / 랭킹.
+/// 승부예측 탭: 오늘~7일치 경기를 예측한다.
 class PredictionTab extends StatelessWidget {
   const PredictionTab({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return DefaultTabController(
-      length: 2,
-      child: Scaffold(
-        body: Column(
-          children: [
-            const PageHeader(title: '승부 예측'),
-            const Divider(height: 1, color: AppColors.border),
-            const TabBar(
-              indicatorColor: AppColors.primary,
-              indicatorWeight: 2.5,
-              indicatorSize: TabBarIndicatorSize.tab,
-              labelColor: AppColors.textPrimary,
-              unselectedLabelColor: AppColors.textTertiary,
-              labelStyle: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
-              unselectedLabelStyle: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-              ),
-              tabs: [
-                Tab(text: '예측하기'),
-                Tab(text: '랭킹'),
-              ],
-            ),
-            const Divider(height: 1, color: AppColors.border),
-            const Expanded(
-              child: TabBarView(
-                children: [_PredictionList(), LeaderboardView()],
-              ),
-            ),
-          ],
-        ),
+    return const Scaffold(
+      body: Column(
+        children: [
+          PageHeader(title: '승부 예측'),
+          Divider(height: 1, color: AppColors.border),
+          Expanded(child: _PredictionList()),
+        ],
       ),
     );
   }
@@ -101,7 +76,7 @@ class _PredictionList extends ConsumerWidget {
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
-                            '예측은 경기 시작 1시간 전까지 바꿀 수 있어요. 결과가 나오면 랭킹에 반영돼요.',
+                            '예측은 경기 시작 1시간 전까지 바꿀 수 있어요.',
                             style: Theme.of(context).textTheme.bodySmall
                                 ?.copyWith(color: AppColors.textSecondary),
                           ),

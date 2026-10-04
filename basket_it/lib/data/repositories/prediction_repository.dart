@@ -17,9 +17,6 @@ abstract class PredictionRepository {
   Stream<List<PredictionComment>> watchComments(String gameId);
 
   Future<void> addComment(PredictionComment comment);
-
-  /// 랭킹 계산용 전체 투표.
-  Future<List<PredictionVote>> getAllVotes();
 }
 
 class FirestorePredictionRepository implements PredictionRepository {
@@ -79,14 +76,5 @@ class FirestorePredictionRepository implements PredictionRepository {
       ...comment.toMap(),
       'createdAt': FieldValue.serverTimestamp(),
     });
-  }
-
-  @override
-  Future<List<PredictionVote>> getAllVotes() async {
-    final snap = await _votes.get();
-    return snap.docs
-        .map((d) => PredictionVote.fromMap(d.data()))
-        .whereType<PredictionVote>()
-        .toList();
   }
 }

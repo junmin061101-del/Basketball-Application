@@ -15,7 +15,7 @@ class AppUser {
 
   const AppUser({required this.uid, this.email, this.isAnonymous = false});
 
-  /// 승부예측 토론/랭킹에 표시할 이름. 게스트는 "게스트-xxxx".
+  /// 승부예측 토론에 표시할 이름. 게스트는 "게스트-xxxx".
   String get displayName {
     if (isAnonymous || email == null || email!.isEmpty) {
       return '게스트-${uid.substring(0, uid.length < 4 ? uid.length : 4)}';
