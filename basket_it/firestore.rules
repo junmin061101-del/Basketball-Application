@@ -25,6 +25,8 @@ service cloud.firestore {
         && request.resource.data.text is string
         && request.resource.data.text.size() > 0
         && request.resource.data.text.size() <= 300;
+      // 탈퇴할 때 글쓴이 표시만 지우는 것(비식별)만 허용한다.
+      allow update: if request.auth != null && anonymizingOwn();
       allow delete: if request.auth != null && resource.data.uid == request.auth.uid;
     }
 
@@ -117,7 +119,19 @@ service cloud.firestore {
         && request.resource.data.text is string
         && request.resource.data.text.size() > 0
         && request.resource.data.text.size() <= 500;
+      // 탈퇴할 때 글쓴이 표시만 지우는 것(비식별)만 허용한다.
+      allow update: if request.auth != null && anonymizingOwn();
       allow delete: if request.auth != null && resource.data.uid == request.auth.uid;
+    }
+
+    /// 내가 쓴 글의 글쓴이 표시만 "탈퇴한 사용자"로 바꾸는 수정인지.
+    /// 탈퇴해도 대화 맥락이 남도록 글은 지우지 않고 이것만 바꾼다.
+    function anonymizingOwn() {
+      return resource.data.uid == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['uid', 'displayName'])
+        && request.resource.data.uid == 'deleted'
+        && request.resource.data.displayName == '탈퇴한 사용자';
     }
   }
 }

@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/app_colors.dart';
 import '../../providers/main_tab_provider.dart';
 import '../../providers/onboarding_providers.dart';
+import '../../providers/push_settings.dart';
 import '../../services/live_score_push.dart';
 import '../community/community_tab.dart';
 import '../explore/explore_tab.dart';
@@ -29,11 +30,18 @@ class _MainShellState extends ConsumerState<MainShell> {
     if (Firebase.apps.isEmpty) return;
     final push = LiveScorePushService.start();
     if (push == null) return;
-    push.updateTeams(ref.read(followedTeamIdsProvider));
-    ref.listenManual(
-      followedTeamIdsProvider,
-      (_, next) => push.updateTeams(next),
-    );
+
+    // 알림을 끄면 빈 목록을 올려 서버가 이 기기를 찾지 못하게 한다.
+    void sync() {
+      final enabled = ref.read(livePushEnabledProvider).valueOrNull ?? true;
+      push.updateTeams(
+        enabled ? ref.read(followedTeamIdsProvider) : const <String>[],
+      );
+    }
+
+    sync();
+    ref.listenManual(followedTeamIdsProvider, (_, _) => sync());
+    ref.listenManual(livePushEnabledProvider, (_, _) => sync());
   }
 
   static const _tabs = [

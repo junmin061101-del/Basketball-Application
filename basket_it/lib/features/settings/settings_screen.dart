@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/app_colors.dart';
 import '../../providers/account_actions.dart';
 import '../../providers/auth_providers.dart';
+import '../../providers/push_settings.dart';
+import '../../services/live_score_push.dart';
 import '../legal/policy_detail_screen.dart';
 import '../legal/policy_documents.dart';
 
@@ -40,6 +42,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 ),
               ],
             ),
+            if (LiveScorePushService.supported) ...[
+              const _SectionLabel('알림'),
+              _Card(children: [_PushToggle()]),
+            ],
             const _SectionLabel('약관'),
             _Card(
               children: [
@@ -111,7 +117,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       title: '정말 탈퇴할까요?',
       body:
           '계정과 팔로우·예측 기록이 바로 지워지고 되돌릴 수 없어요.\n'
-          '커뮤니티에 쓴 글과 댓글은 남으니, 지우려면 탈퇴 전에 먼저 삭제해주세요.',
+          '커뮤니티에 쓴 글과 댓글은 대화 맥락을 위해 남지만, 글쓴이는 '
+          '"$anonymousName"으로 바뀌어 누가 썼는지 알 수 없게 됩니다.',
       action: '탈퇴하기',
       danger: true,
     );
@@ -165,6 +172,33 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         context,
       ).showSnackBar(SnackBar(content: Text('$e')));
     }
+  }
+}
+
+/// 잠금화면 실시간 스코어 알림 켜기/끄기.
+class _PushToggle extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final enabled = ref.watch(livePushEnabledProvider).valueOrNull ?? true;
+    return SwitchListTile.adaptive(
+      value: enabled,
+      onChanged: (value) =>
+          ref.read(livePushEnabledProvider.notifier).set(value),
+      activeTrackColor: AppColors.primary,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      title: const Text(
+        '실시간 경기 알림',
+        style: TextStyle(
+          fontSize: 15,
+          fontWeight: FontWeight.w700,
+          color: AppColors.textPrimary,
+        ),
+      ),
+      subtitle: const Text(
+        '팔로우한 팀 경기가 열리면 잠금화면에 점수를 보여줘요',
+        style: TextStyle(fontSize: 12.5, color: AppColors.textTertiary),
+      ),
+    );
   }
 }
 

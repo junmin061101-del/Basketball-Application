@@ -37,6 +37,8 @@ class LiveScoreSubscription {
   final LiveSubscriberWrite write;
 
   String? _token;
+  String? get fcmToken => _token;
+
   Set<String> _teamKeys = {};
   Set<String>? _writtenTeamKeys;
   String? _pushToStartToken;
@@ -111,6 +113,9 @@ class LiveScorePushService {
 
   static LiveScorePushService? _instance;
 
+  /// 이미 시작했다면 그 인스턴스. 설정·탈퇴 화면이 쓴다.
+  static LiveScorePushService? get instance => _instance;
+
   /// iOS 앱과 위젯 확장이 함께 쓰는 App Group. Xcode에서 같은 이름으로 켜야 한다.
   static const appGroupId = 'group.com.basketit.basketIt.liveScore';
 
@@ -140,8 +145,20 @@ class LiveScorePushService {
   Timer? _activitySync;
 
   /// 팔로우한 팀이 바뀔 때마다 부른다.
+  ///
+  /// 알림을 끈 상태면 빈 목록이 와서, 서버가 이 기기를 찾지 못해 보내지 않는다.
   void updateTeams(Iterable<String> teamIds) {
     _guard('팔로우 팀 저장', () => _subscription.setTeams(teamIds));
+  }
+
+  /// 이 기기의 구독 문서를 지운다. 회원 탈퇴할 때 쓴다.
+  Future<void> unsubscribe() async {
+    final token = _subscription.fcmToken;
+    if (token == null) return;
+    await FirebaseFirestore.instance
+        .collection('liveSubscribers')
+        .doc(token)
+        .delete();
   }
 
   static Future<void> _firestoreWrite(
