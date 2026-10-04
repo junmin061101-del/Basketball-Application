@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/gestures.dart' show PointerDeviceKind;
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
@@ -28,6 +30,7 @@ class BasketItApp extends StatelessWidget {
       locale: const Locale('ko', 'KR'),
       supportedLocales: const [Locale('ko', 'KR'), Locale('en', 'US')],
       localizationsDelegates: GlobalMaterialLocalizations.delegates,
+      scrollBehavior: const AppScrollBehavior(),
       // PC 브라우저에서는 화면이 넓어 내용이 가로로 늘어지고, 기록표처럼 폭이
       // 정해진 것 옆에 빈 공간만 남는다. 휴대폰 너비로 모아 가운데에 둔다.
       builder: (context, child) =>
@@ -74,5 +77,38 @@ class _PhoneWidth extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+/// 마우스로 끌어서도 스크롤되게 한다.
+///
+/// 기록표와 칩 줄은 가로로 넘쳐서 밀어 봐야 나머지가 보인다. 휴대폰에서는
+/// 손가락으로 밀면 되지만, PC 브라우저의 기본 설정은 마우스 끌기를 스크롤로
+/// 보지 않아 뒷부분을 볼 방법이 없었다. 가로로 넘치는 곳에는 스크롤 막대도
+/// 함께 보여 더 볼 것이 있다는 걸 알린다.
+class AppScrollBehavior extends MaterialScrollBehavior {
+  const AppScrollBehavior();
+
+  @override
+  Set<PointerDeviceKind> get dragDevices => const {
+    PointerDeviceKind.touch,
+    PointerDeviceKind.mouse,
+    PointerDeviceKind.trackpad,
+    PointerDeviceKind.stylus,
+    PointerDeviceKind.invertedStylus,
+  };
+
+  @override
+  Widget buildScrollbar(
+    BuildContext context,
+    Widget child,
+    ScrollableDetails details,
+  ) {
+    final horizontal = details.direction == AxisDirection.left ||
+        details.direction == AxisDirection.right;
+    if (horizontal && kIsWeb) {
+      return Scrollbar(controller: details.controller, child: child);
+    }
+    return super.buildScrollbar(context, child, details);
   }
 }
