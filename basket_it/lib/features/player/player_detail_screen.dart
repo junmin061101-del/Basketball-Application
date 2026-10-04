@@ -504,13 +504,20 @@ class _SeasonCol {
   final String Function(PlayerSeasonStats, String teamLabel) value;
   final bool emphasize;
 
+  /// 칸보다 긴 글자는 줄여서 넣는다(팀 이름처럼 길이가 들쭉날쭉한 칸).
+  final bool shrinkToFit;
+
   const _SeasonCol(
     this.label,
     this.value, {
     this.width = 48,
     this.emphasize = false,
+    this.shrinkToFit = false,
   });
 }
+
+/// 표 칸이 좁아서 긴 이름은 흔히 쓰는 줄임말로 적는다.
+const _tableTeamAlias = {'한국가스공사': '가스공사', '현대모비스': '모비스'};
 
 String _pct(double ratio) => (ratio * 100).toStringAsFixed(1);
 String _f1(double v) => v.toStringAsFixed(1);
@@ -518,10 +525,11 @@ String _f1(double v) => v.toStringAsFixed(1);
 /// 머리글은 네이버 스포츠 선수 기록표처럼 한국어로 적고, 순서는 경기
 /// 박스스코어·최근 경기 기록과 똑같이 맞춘다.
 final _seasonColumns = <_SeasonCol>[
-  _SeasonCol('경기', (s, _) => '${s.gamesPlayed}', width: 46),
+  _SeasonCol('경기', (s, _) => '${s.gamesPlayed}', width: 42),
   // 팀 표기는 표가 줄마다 계산해서 넘긴다(시즌별 소속팀, 여러 팀 합계 줄은 합계).
-  _SeasonCol('팀', (_, teamLabel) => teamLabel, width: 96),
-  _SeasonCol('출전시간', (s, _) => _f1(s.minutes), width: 56),
+  // 대부분 "DB"처럼 짧은데 "한국가스공사"도 있어서, 칸은 좁게 두고 긴 이름만 줄인다.
+  _SeasonCol('팀', (_, teamLabel) => teamLabel, width: 62, shrinkToFit: true),
+  _SeasonCol('출전시간', (s, _) => _f1(s.minutes), width: 52),
   _SeasonCol('득점', (s, _) => _f1(s.points), width: 48, emphasize: true),
   _SeasonCol('리바운드', (s, _) => _f1(s.reb), width: 52),
   _SeasonCol('어시스트', (s, _) => _f1(s.ast), width: 52),
@@ -557,6 +565,31 @@ const _seasonRowHeight = 46.0;
 // 머리글이 두 줄로 접히는 칸까지 들어가는 높이.
 const _seasonHeaderHeight = 38.0;
 
+/// 표의 칸 하나. 긴 글자는 칸에 맞게 줄여 넣는다.
+class _SeasonCell extends StatelessWidget {
+  final String text;
+  final bool shrinkToFit;
+  final TextStyle? style;
+
+  const _SeasonCell({
+    required this.text,
+    required this.shrinkToFit,
+    required this.style,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final label = Text(
+      text,
+      textAlign: TextAlign.center,
+      maxLines: 1,
+      style: style,
+    );
+    if (!shrinkToFit) return label;
+    return FittedBox(fit: BoxFit.scaleDown, child: label);
+  }
+}
+
 class _SeasonStatsTable extends StatelessWidget {
   final List<PlayerSeasonStats> history;
   final Map<String, Team> teamById;
@@ -567,9 +600,9 @@ class _SeasonStatsTable extends StatelessWidget {
   String _teamLabelOf(PlayerSeasonStats s) {
     if (s.isTotals) return '합계';
     // 지금은 없는 옛 구단은 팀 목록에 없어 원본이 준 이름을 쓴다.
-    return teamById[s.teamId]?.shortName ??
-        s.teamName ??
-        s.teamId.toUpperCase();
+    final name =
+        teamById[s.teamId]?.shortName ?? s.teamName ?? s.teamId.toUpperCase();
+    return _tableTeamAlias[name] ?? name;
   }
 
   @override
@@ -663,9 +696,12 @@ class _SeasonStatsTable extends StatelessWidget {
                                     top: BorderSide(color: AppColors.border),
                                   ),
                                 ),
-                                child: Text(
-                                  col.value(s, _teamLabelOf(s)),
-                                  textAlign: TextAlign.center,
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: col.shrinkToFit ? 4 : 0,
+                                ),
+                                child: _SeasonCell(
+                                  text: col.value(s, _teamLabelOf(s)),
+                                  shrinkToFit: col.shrinkToFit,
                                   style: col.emphasize
                                       ? const TextStyle(
                                           fontWeight: FontWeight.w800,
