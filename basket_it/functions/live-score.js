@@ -26,6 +26,9 @@ const ATTRIBUTES_TYPE = 'LiveActivitiesAppAttributes';
 const SUBSCRIBERS = 'liveSubscribers';
 const LIVE_GAMES = 'liveGames';
 
+/** 진행 중인 경기의 선수 기록. 앱이 이 문서를 구독해 경기 중에도 기록을 본다. */
+const LIVE_BOX_SCORES = 'liveBoxScores';
+
 /**
  * KBL 팀 코드 → 앱 팀 id. tools/fetch-kbl.js의 TEAMS와 같아야 한다
  * (테스트가 둘을 비교한다). 함수 배포 묶음에는 tools 폴더가 들어가지 않아 따로 둔다.
@@ -118,6 +121,7 @@ function makeGame(league, id, home, away, status, period, clock) {
   return {
     key: `${league}:${id}`,
     league,
+    gameId: String(id),
     homeTeamKey: `${league}:${home.teamId}`,
     awayTeamKey: `${league}:${away.teamId}`,
     homeTeamId: home.teamId,
@@ -321,6 +325,79 @@ async function fetchGames(fetchImpl, nowMs) {
 }
 
 /**
+ * KBL 선수 기록 한 줄.
+ *
+ * tools/fetch-kbl.js의 toBoxLine과 같은 모양이어야 한다(테스트가 두 결과를
+ * 비교한다). 함수 배포 묶음에 tools 폴더가 들어가지 않아 여기에 따로 둔다.
+ */
+function toLiveBoxLine(row) {
+  const r = row?.records ?? {};
+  const p = row?.player ?? {};
+  const seconds = (Number(r.playMin) || 0) * 60 + (Number(r.playSec) || 0);
+  if (seconds === 0) return null;
+  const n = (v) => Number(v) || 0;
+  return {
+    playerId: String(p.pcode),
+    name: p.pname ?? '',
+    headshot: p.img ?? null,
+    teamId: KBL_TEAM_IDS[p.tcode] ?? '',
+    starter: String(row.startFlag) === '1',
+    minutes: Math.round(seconds / 60),
+    seconds,
+    points: n(r.score),
+    // fg/fgA는 2점슛만, fgt/fgtA가 3점을 포함한 전체 야투다.
+    fgm: n(r.fgt),
+    fga: n(r.fgtA),
+    tpm: n(r.threep),
+    tpa: n(r.threepA),
+    ftm: n(r.ft),
+    fta: n(r.ftA),
+    oreb: n(r.offr),
+    dreb: n(r.defr),
+    ast: n(r.ast),
+    tov: n(r.to),
+    stl: n(r.stl),
+    blk: n(r.bs),
+    pf: n(r.foul),
+    // 득실마진을 모르면 KBL은 999를 준다. 그대로 두면 "+999"로 보여 비워 둔다.
+    plusMinus: Number(r.marginCn) === 999 ? null : n(r.marginCn),
+  };
+}
+
+/** 경기 하나의 지금까지 선수 기록. */
+async function fetchKblBoxScore(fetchImpl, gameId) {
+  const rows = await getJson(fetchImpl, `${KBL_API}/match/${gameId}/player-stat`, KBL_HEADERS);
+  return (Array.isArray(rows) ? rows : []).map(toLiveBoxLine).filter(Boolean);
+}
+
+/**
+ * 진행 중(막 끝난) 경기의 선수 기록을 Firestore에 적는다.
+ *
+ * 앱이 읽는 정적 JSON은 20분에 한 번 올라와서, 경기가 시작하고 한참 동안
+ * "기록이 아직 없어요"만 보인다. 여기서 30초마다 채워 준다.
+ */
+async function writeBoxScores({ db, fetchImpl, games, nowMs }) {
+  let written = 0;
+  for (const game of games) {
+    if (game.league !== 'kbl') continue;
+    try {
+      const lines = await fetchKblBoxScore(fetchImpl, game.gameId);
+      if (lines.length === 0) continue;
+      await db.collection(LIVE_BOX_SCORES).doc(game.key).set({
+        gameId: game.gameId,
+        lines,
+        final: game.status === 'final',
+        updatedAt: nowMs,
+      });
+      written += 1;
+    } catch (error) {
+      console.warn(`선수 기록 실패 ${game.key}: ${error.message}`);
+    }
+  }
+  return written;
+}
+
+/**
  * 한 번 확인하고 보낸다. 반환: { live, sent, removed }.
  * [db]는 firebase-admin Firestore, [messaging]은 admin.messaging().
  */
@@ -335,6 +412,18 @@ async function pushOnce({ db, messaging, fetchImpl, nowMs }) {
     const snap = await db.collection(LIVE_GAMES).doc(game.key).get();
     if (snap.exists) previousByKey[game.key] = snap.data();
   }
+
+  // 진행 중이거나 방금 끝난 경기의 선수 기록을 채운다(푸시 여부와 상관없이).
+  await writeBoxScores({
+    db,
+    fetchImpl,
+    nowMs,
+    games: candidates.filter(
+      (g) =>
+        g.status === 'live' ||
+        previousByKey[g.key]?.state?.status === 'live',
+    ),
+  });
   const plans = planUpdates(candidates, previousByKey);
 
   let sent = 0;
@@ -392,13 +481,16 @@ async function runLivePush({ db, messaging, fetchImpl = fetch, now = () => Date.
 
 module.exports = {
   ATTRIBUTES_TYPE,
+  LIVE_BOX_SCORES,
   KBL_TEAM_IDS,
   LIVE_GAMES,
   SUBSCRIBERS,
   buildMessage,
   contentState,
+  fetchKblBoxScore,
   kblClock,
   kstDate,
+  toLiveBoxLine,
   parseKblGame,
   planUpdates,
   pushOnce,

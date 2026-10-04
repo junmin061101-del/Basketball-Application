@@ -315,34 +315,10 @@ class LeagueDataSource {
     }
     final rows = doc['lines'];
     if (rows is! List) return const [];
-    int i(Map r, String k) => (r[k] as num?)?.toInt() ?? 0;
-    return rows.whereType<Map>().map((r) {
-      return PlayerGameStats(
-        playerId: r['playerId'] as String? ?? '',
-        gameId: gameId,
-        teamId: r['teamId'] as String? ?? '',
-        minutes: i(r, 'minutes'),
-        points: i(r, 'points'),
-        fgm: i(r, 'fgm'),
-        fga: i(r, 'fga'),
-        tpm: i(r, 'tpm'),
-        tpa: i(r, 'tpa'),
-        ftm: i(r, 'ftm'),
-        fta: i(r, 'fta'),
-        oreb: i(r, 'oreb'),
-        dreb: i(r, 'dreb'),
-        ast: i(r, 'ast'),
-        tov: i(r, 'tov'),
-        stl: i(r, 'stl'),
-        blk: i(r, 'blk'),
-        pf: i(r, 'pf'),
-        plusMinus: (r['plusMinus'] as num?)?.toInt(),
-        seconds: (r['seconds'] as num?)?.toInt(),
-        starter: r['starter'] as bool?,
-        name: r['name'] as String?,
-        photoUrl: r['headshot'] as String?,
-      );
-    }).toList();
+    return rows
+        .whereType<Map>()
+        .map((r) => PlayerGameStats.fromMap(r, gameId))
+        .toList();
   }
 
   Team _toTeam(Map row) {

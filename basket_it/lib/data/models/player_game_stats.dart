@@ -66,6 +66,37 @@ class PlayerGameStats {
     this.photoUrl,
   });
 
+  /// 수집기와 서버가 같은 모양으로 적어 둔 한 줄을 읽는다.
+  /// (정적 JSON의 boxscores/*.json, Firestore의 liveBoxScores 둘 다 이 모양이다)
+  factory PlayerGameStats.fromMap(Map<dynamic, dynamic> row, String gameId) {
+    int i(String key) => (row[key] as num?)?.toInt() ?? 0;
+    return PlayerGameStats(
+      playerId: row['playerId'] as String? ?? '',
+      gameId: gameId,
+      teamId: row['teamId'] as String? ?? '',
+      minutes: i('minutes'),
+      points: i('points'),
+      fgm: i('fgm'),
+      fga: i('fga'),
+      tpm: i('tpm'),
+      tpa: i('tpa'),
+      ftm: i('ftm'),
+      fta: i('fta'),
+      oreb: i('oreb'),
+      dreb: i('dreb'),
+      ast: i('ast'),
+      tov: i('tov'),
+      stl: i('stl'),
+      blk: i('blk'),
+      pf: i('pf'),
+      plusMinus: (row['plusMinus'] as num?)?.toInt(),
+      seconds: (row['seconds'] as num?)?.toInt(),
+      starter: row['starter'] as bool?,
+      name: row['name'] as String?,
+      photoUrl: row['headshot'] as String?,
+    );
+  }
+
   int get reb => oreb + dreb;
 
   /// 출전 시간 표기. 초를 알면 "31:04", 분만 알면(NBA) "22분".

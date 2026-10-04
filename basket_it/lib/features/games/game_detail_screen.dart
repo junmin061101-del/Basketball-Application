@@ -11,6 +11,7 @@ import '../../data/models/team.dart';
 import '../../data/models/team_season_stats.dart';
 import '../../providers/follow_feed_providers.dart';
 import '../../providers/game_providers.dart';
+import '../../providers/live_box_score_providers.dart';
 import '../../providers/live_game_providers.dart';
 import '../../providers/repository_providers.dart';
 import '../../shared/widgets/team_logo_placeholder.dart';
@@ -48,6 +49,8 @@ class GameDetailScreen extends ConsumerWidget {
       ref.watch(selectedLeagueProvider),
     );
     final boxScoreAsync = ref.watch(boxScoreProvider(game));
+    // 경기 중에는 서버가 30초마다 적어 주는 기록을 쓴다.
+    final liveLines = ref.watch(liveBoxScoreProvider(game)).valueOrNull ?? const [];
     final playersAsync = ref.watch(allPlayersProvider);
     final standings = ref.watch(standingsProvider).valueOrNull ?? const [];
     final recordByTeam = {
@@ -97,11 +100,15 @@ class GameDetailScreen extends ConsumerWidget {
                   return boxScoreAsync.when(
                     loading: () => const _SectionLoading(),
                     error: (err, _) => Text('불러오지 못했어요: $err'),
-                    data: (boxScore) => _GameBody(
+                    data: (stored) => _GameBody(
                       game: game,
                       homeTeam: homeTeam,
                       awayTeam: awayTeam,
-                      boxScore: boxScore,
+                      boxScore: chooseBoxScore(
+                        stored: stored,
+                        live: liveLines,
+                        status: game.status,
+                      ),
                       playerById: playerById,
                     ),
                   );

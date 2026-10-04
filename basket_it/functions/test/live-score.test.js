@@ -8,6 +8,7 @@ const {
   buildMessage,
   kblClock,
   parseKblGame,
+  toLiveBoxLine,
   planUpdates,
   quarterLabel,
   runLivePush,
@@ -135,7 +136,11 @@ test('iPhone: 활동 토큰이 있으면 갱신, 없으면 push-to-start로 한 
 
 /** Firestore에서 쓰는 부분만 흉내 낸 가짜. */
 function fakeDb(subscribers) {
-  const collections = { liveSubscribers: new Map(Object.entries(subscribers)), liveGames: new Map() };
+  const collections = {
+    liveSubscribers: new Map(Object.entries(subscribers)),
+    liveGames: new Map(),
+    liveBoxScores: new Map(),
+  };
   const docRef = (name, id) => ({
     get: async () => ({ exists: collections[name].has(id), data: () => collections[name].get(id) }),
     set: async (value, options) => {
@@ -228,4 +233,42 @@ test('iPhone 시작을 보내면 기기 문서에 기록해 다음 확인 때 �
   // 첫 확인에서 시작 1번, 점수가 바뀐 두 번째 확인에서는 토큰이 아직 없어 보내지 않는다
   assert.equal(count, 1);
   assert.ok(db.collections.liveSubscribers.get('fcm-i').startedActivities[uuidV5('kbl:S49G01N7')]);
+});
+
+// --- 진행 중인 경기의 선수 기록 ---
+
+const kblPlayerStatRow = {
+  startFlag: '1',
+  player: { pcode: 291248, pname: '자밀 워니', tcode: '55', img: 'warney.png' },
+  records: {
+    playMin: 36, playSec: 54, score: 29, fgt: 14, fgtA: 30, threep: 1, threepA: 7,
+    ft: 0, ftA: 2, offr: 4, defr: 9, ast: 5, to: 0, stl: 0, bs: 1, foul: 2, marginCn: -23,
+  },
+};
+
+test('선수 기록 한 줄은 수집기(tools/fetch-kbl.js)와 같은 모양이다', () => {
+  const { toBoxLine } = require('../../tools/fetch-kbl');
+  assert.deepEqual(toLiveBoxLine(kblPlayerStatRow), toBoxLine(kblPlayerStatRow));
+  // 뛰지 않은 선수는 빼고 보여준다.
+  assert.equal(toLiveBoxLine({ player: {}, records: { playMin: 0, playSec: 0 } }), null);
+});
+
+test('진행 중인 경기는 선수 기록을 Firestore에 적는다', async () => {
+  const db = fakeDb({});
+  const messaging = { sendEach: async (m) => ({ responses: m.map(() => ({ success: true })) }) };
+  const fetchImpl = async (url) => {
+    if (url.includes('player-stat')) {
+      return { ok: true, json: async () => [kblPlayerStatRow] };
+    }
+    return fakeFetch({ kbl: kblRows })(url);
+  };
+
+  await runLivePush({ db, messaging, fetchImpl, now: () => 1000, sleep: async () => {} });
+
+  const box = db.collections.liveBoxScores.get('kbl:S49G01N7');
+  assert.equal(box.gameId, 'S49G01N7');
+  assert.equal(box.final, false);
+  assert.equal(box.lines.length, 1);
+  assert.equal(box.lines[0].points, 29);
+  assert.equal(box.lines[0].teamId, 'sk');
 });
