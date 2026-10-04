@@ -8,6 +8,7 @@ import '../../data/models/team_standing.dart';
 import '../../providers/repository_providers.dart';
 import '../../shared/widgets/team_logo_placeholder.dart';
 import 'team_detail_screen.dart';
+import '../../core/utils/team_label.dart';
 
 /// 탐색 - 팀 순위 화면: 승/패/승률/게임차 + 득점/리바운드/야투% 등 상세 팀 기록.
 /// NBA는 동부·서부 컨퍼런스별로 표를 나눠 각각 1위부터 매긴다.
@@ -48,7 +49,7 @@ class StandingsScreen extends ConsumerWidget {
                   children: [
                     if (seasonCaption != null)
                       Padding(
-                        padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
+                        padding: const EdgeInsets.fromLTRB(20, 10, 20, 0),
                         child: Text(
                           '$seasonCaption 순위',
                           style: const TextStyle(
@@ -61,7 +62,7 @@ class StandingsScreen extends ConsumerWidget {
                     for (final group in groupStandings(standings)) ...[
                       if (group.title != null)
                         Padding(
-                          padding: const EdgeInsets.fromLTRB(20, 18, 20, 0),
+                          padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
                           child: Text(
                             group.title!,
                             style: Theme.of(context).textTheme.titleLarge,
@@ -135,9 +136,9 @@ final _columns = <_Col>[
   _Col('파울', (_, t) => _f1(t.pf), (_, t) => t.pf),
 ];
 
-const _teamColWidth = 168.0;
-const _rowHeight = 56.0;
-const _headerHeight = 34.0;
+const _teamColWidth = 176.0;
+const _rowHeight = 46.0;
+const _headerHeight = 32.0;
 
 class _StandingsTable extends StatefulWidget {
   final List<TeamStanding> standings;
@@ -191,7 +192,7 @@ class _StandingsTableState extends State<_StandingsTable> {
     }
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(16),
         child: Container(
@@ -214,7 +215,7 @@ class _StandingsTableState extends State<_StandingsTable> {
                     Container(
                       height: _headerHeight,
                       alignment: Alignment.centerLeft,
-                      padding: const EdgeInsets.only(left: 14),
+                      padding: const EdgeInsets.only(left: 12),
                       child: Text(
                         '팀',
                         style: Theme.of(context).textTheme.bodySmall
@@ -297,8 +298,7 @@ class _HeaderCell extends StatelessWidget {
       onTap: onTap,
       child: Container(
         width: col.width,
-        alignment: Alignment.centerRight,
-        padding: const EdgeInsets.only(right: 6),
+        alignment: Alignment.center,
         color: active ? AppColors.primary.withValues(alpha: 0.08) : null,
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -340,8 +340,7 @@ class _ValueCell extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: col.width,
-      alignment: Alignment.centerRight,
-      padding: const EdgeInsets.only(right: 10),
+      alignment: Alignment.center,
       decoration: BoxDecoration(
         color: active ? AppColors.primary.withValues(alpha: 0.05) : null,
         border: const Border(top: BorderSide(color: AppColors.border)),
@@ -369,7 +368,7 @@ class _TeamCell extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       height: _rowHeight,
-      padding: const EdgeInsets.symmetric(horizontal: 14),
+      padding: const EdgeInsets.symmetric(horizontal: 12),
       decoration: const BoxDecoration(
         border: Border(top: BorderSide(color: AppColors.border)),
       ),
@@ -387,7 +386,7 @@ class _TeamCell extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 6),
-          TeamLogoPlaceholder(team: team, size: 28),
+          TeamLogoPlaceholder(team: team, size: 24),
           const SizedBox(width: 8),
           // 팀 이름을 탭했을 때만 팀 상세로 이동한다(로고/행 전체는 반응하지 않음).
           Expanded(
@@ -400,7 +399,7 @@ class _TeamCell extends StatelessWidget {
                 );
               },
               child: Text(
-                team.fullName,
+                compactTeamName(team.fullName),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: Theme.of(context).textTheme.titleMedium

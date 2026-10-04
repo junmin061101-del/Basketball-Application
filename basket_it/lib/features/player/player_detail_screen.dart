@@ -13,6 +13,7 @@ import '../../providers/onboarding_providers.dart';
 import '../../providers/repository_providers.dart';
 import '../../shared/widgets/team_logo_placeholder.dart';
 import 'widgets/player_feed_sections.dart';
+import '../../core/utils/team_label.dart';
 
 /// 선수 상세 화면.
 ///
@@ -516,9 +517,6 @@ class _SeasonCol {
   });
 }
 
-/// 표 칸이 좁아서 긴 이름은 흔히 쓰는 줄임말로 적는다.
-const _tableTeamAlias = {'한국가스공사': '가스공사', '현대모비스': '모비스'};
-
 String _pct(double ratio) => (ratio * 100).toStringAsFixed(1);
 String _f1(double v) => v.toStringAsFixed(1);
 
@@ -602,7 +600,7 @@ class _SeasonStatsTable extends StatelessWidget {
     // 지금은 없는 옛 구단은 팀 목록에 없어 원본이 준 이름을 쓴다.
     final name =
         teamById[s.teamId]?.shortName ?? s.teamName ?? s.teamId.toUpperCase();
-    return _tableTeamAlias[name] ?? name;
+    return compactTeamName(name);
   }
 
   @override

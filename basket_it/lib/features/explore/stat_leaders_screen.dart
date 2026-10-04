@@ -185,7 +185,7 @@ class _TopLeaderCard extends StatelessWidget {
         MaterialPageRoute(builder: (_) => PlayerDetailScreen(player: player)),
       ),
       child: Container(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(20),
           border: Border.all(color: accent.withValues(alpha: 0.5)),
@@ -208,7 +208,7 @@ class _TopLeaderCard extends StatelessWidget {
             Stack(
               clipBehavior: Clip.none,
               children: [
-                PlayerAvatar(player: player, radius: 30),
+                PlayerAvatar(player: player, radius: 26),
                 Positioned(
                   left: -4,
                   top: -6,
@@ -233,7 +233,7 @@ class _TopLeaderCard extends StatelessWidget {
                 ),
               ],
             ),
-            const SizedBox(width: 16),
+            const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -243,45 +243,52 @@ class _TopLeaderCard extends StatelessWidget {
                     style: TextStyle(
                       color: accent,
                       fontWeight: FontWeight.w800,
-                      fontSize: 12,
+                      fontSize: 11.5,
                     ),
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 3),
                   Text(
                     player.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: Theme.of(context).textTheme.headlineMedium
-                        ?.copyWith(fontSize: 22),
+                        ?.copyWith(fontSize: 18),
                   ),
                   const SizedBox(height: 2),
                   Text(
                     team?.fullName ?? '',
-                    style: Theme.of(context).textTheme.bodyMedium,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.bodySmall,
                   ),
                 ],
               ),
             ),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(
-                  category.format(value),
-                  style: const TextStyle(
-                    fontSize: 36,
-                    fontWeight: FontWeight.w900,
-                    color: AppColors.textPrimary,
-                    height: 1,
+            const SizedBox(width: 10),
+            // 숫자와 단위를 한 줄에 둔다(단위가 아래로 떨어지면 무너져 보인다).
+            Text.rich(
+              TextSpan(
+                children: [
+                  TextSpan(
+                    text: category.format(value),
+                    style: const TextStyle(
+                      fontSize: 26,
+                      fontWeight: FontWeight.w900,
+                      color: AppColors.textPrimary,
+                      height: 1.1,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  category.unit,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.textTertiary,
+                  TextSpan(
+                    text: ' ${category.unit}',
+                    style: const TextStyle(
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textTertiary,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
+              maxLines: 1,
             ),
           ],
         ),
@@ -328,31 +335,37 @@ class _LeaderRow extends StatelessWidget {
                 ),
               ),
             ),
-            PlayerAvatar(player: player, radius: 18),
-            const SizedBox(width: 12),
+            PlayerAvatar(player: player, radius: 17),
+            const SizedBox(width: 10),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     player.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
                   const SizedBox(height: 2),
                   Text(
                     team?.fullName ?? '',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
                 ],
               ),
             ),
+            const SizedBox(width: 8),
             Text.rich(
+              maxLines: 1,
               TextSpan(
                 children: [
                   TextSpan(
                     text: value,
                     style: const TextStyle(
-                      fontSize: 18,
+                      fontSize: 17,
                       fontWeight: FontWeight.w900,
                       color: AppColors.textPrimary,
                     ),
