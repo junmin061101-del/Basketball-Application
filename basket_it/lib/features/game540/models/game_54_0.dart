@@ -149,15 +149,52 @@ class LineupResult {
   /// 같은 구단·같은 시대를 함께한 조합(0~100).
   final double synergyScore;
 
+  /// 다섯 명의 경기당 기록을 더한 값. 이 라인업이 한 경기에 쌓는 기록이다.
+  final double ppg;
+  final double rpg;
+  final double apg;
+  final double spg;
+  final double bpg;
+
+  /// 무작위로 만든 라인업 [rankPool]팀과 견준 순위(1위가 가장 좋다).
+  final int rank;
+  final int rankPool;
+
   const LineupResult({
     required this.wins,
     required this.powerScore,
     required this.fitScore,
     required this.synergyScore,
+    this.ppg = 0,
+    this.rpg = 0,
+    this.apg = 0,
+    this.spg = 0,
+    this.bpg = 0,
+    this.rank = 0,
+    this.rankPool = 0,
   });
+
+  LineupResult withRank({required int rank, required int rankPool}) =>
+      LineupResult(
+        wins: wins,
+        powerScore: powerScore,
+        fitScore: fitScore,
+        synergyScore: synergyScore,
+        ppg: ppg,
+        rpg: rpg,
+        apg: apg,
+        spg: spg,
+        bpg: bpg,
+        rank: rank,
+        rankPool: rankPool,
+      );
 
   int get losses => 54 - wins;
   bool get isPerfect => wins >= 54;
+
+  /// 상위 몇 %인가. 순위를 매기지 않았으면 null이다.
+  double? get topPercent =>
+      rankPool <= 0 ? null : (rank / rankPool * 100).clamp(0.1, 100.0);
 
   String get headline => isPerfect ? '54승 0패 달성!' : '$wins승 $losses패';
 }

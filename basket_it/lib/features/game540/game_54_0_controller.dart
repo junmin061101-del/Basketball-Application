@@ -20,8 +20,16 @@ class Game540State {
   /// 1~5.
   final int round;
 
-  /// 이번 라운드 조건과 등판한 선수. 결과 화면에서는 null이다.
+  /// 이번 라운드에 룰렛이 멈춘 조건. 결과 화면에서는 null이다.
   final RoundCondition? condition;
+
+  /// 그 조건에서 고를 수 있는 선수들(이미 뽑은 선수는 빠진다).
+  final List<LegendPlayer> pool;
+
+  /// 룰렛이 도는 중인가. 다 돌면 화면이 [settle]을 불러 명단을 연다.
+  final bool spinning;
+
+  /// 고른 선수. 자리에 넣기 전까지는 바꿀 수 있다.
   final LegendPlayer? candidate;
 
   /// 자리에 들어간 선수. 한 번 넣으면 못 바꾼다.
@@ -30,15 +38,21 @@ class Game540State {
   /// 조건 다시 뽑기는 한 게임에 한 번.
   final bool rerollUsed;
 
+  /// 룰렛이 돌 때 스쳐 지나갈 수 있는 모든 조건.
+  final List<RoundCondition> allConditions;
+
   final LineupResult? result;
 
   const Game540State({
     this.phase = GamePhase.intro,
     this.round = 1,
     this.condition,
+    this.pool = const [],
+    this.spinning = false,
     this.candidate,
     this.lineup = const {},
     this.rerollUsed = false,
+    this.allConditions = const [],
     this.result,
   });
 
@@ -46,7 +60,10 @@ class Game540State {
     GamePhase? phase,
     int? round,
     RoundCondition? condition,
+    List<LegendPlayer>? pool,
+    bool? spinning,
     LegendPlayer? candidate,
+    bool clearCandidate = false,
     Map<LineupSlot, LegendPlayer>? lineup,
     bool? rerollUsed,
     LineupResult? result,
@@ -54,9 +71,12 @@ class Game540State {
     phase: phase ?? this.phase,
     round: round ?? this.round,
     condition: condition ?? this.condition,
-    candidate: candidate ?? this.candidate,
+    pool: pool ?? this.pool,
+    spinning: spinning ?? this.spinning,
+    candidate: clearCandidate ? null : (candidate ?? this.candidate),
     lineup: lineup ?? this.lineup,
     rerollUsed: rerollUsed ?? this.rerollUsed,
+    allConditions: allConditions,
     result: result ?? this.result,
   );
 
@@ -74,6 +94,8 @@ final game540Provider =
 class Game540Controller extends AsyncNotifier<Game540State> {
   final _repository = LegendPlayerRepository();
   late RoundDraw _draw;
+  WinDistribution? _distribution;
+  Future<WinDistribution>? _distributionJob;
 
   /// 테스트에서 같은 순서가 나오도록 씨앗을 넣을 수 있다.
   @visibleForTesting
@@ -82,33 +104,46 @@ class Game540Controller extends AsyncNotifier<Game540State> {
   @override
   Future<Game540State> build() async {
     final players = await _repository.load();
+    final byCondition = groupByCondition(players);
     _draw = RoundDraw(
-      byCondition: groupByCondition(players),
+      byCondition: byCondition,
       random: seed == null ? Random() : Random(seed),
     );
-    return const Game540State();
+    _warmUpRanking();
+    return Game540State(allConditions: byCondition.keys.toList());
   }
 
   Game540State get _now => state.value ?? const Game540State();
 
   void start() {
-    final drawn = _draw.draw();
+    final drawn = _draw.drawCondition();
     if (drawn == null) return;
     state = AsyncData(
       Game540State(
         phase: GamePhase.playing,
         round: 1,
         condition: drawn.condition,
-        candidate: drawn.player,
+        pool: drawn.pool,
+        spinning: true,
+        allConditions: _now.allConditions,
       ),
     );
   }
 
-  /// 마음에 안 드는 조건을 한 번 바꾼다(구단·시대·선수가 함께 바뀐다).
+  /// 룰렛이 멈췄다. 이제 선수 명단을 보여준다.
+  void settle() {
+    final now = _now;
+    if (!now.spinning) return;
+    state = AsyncData(now.copyWith(spinning: false));
+  }
+
+  /// 마음에 안 드는 조건을 한 번 바꾼다(구단·시대가 함께 바뀐다).
   void reroll() {
     final now = _now;
-    if (now.phase != GamePhase.playing || now.rerollUsed) return;
-    final drawn = _draw.draw(
+    if (now.phase != GamePhase.playing || now.rerollUsed || now.spinning) {
+      return;
+    }
+    final drawn = _draw.drawCondition(
       usedConditions: {if (now.condition != null) now.condition!},
       usedPlayerIds: _placedIds(now),
     );
@@ -116,10 +151,26 @@ class Game540Controller extends AsyncNotifier<Game540State> {
     state = AsyncData(
       now.copyWith(
         condition: drawn.condition,
-        candidate: drawn.player,
+        pool: drawn.pool,
+        spinning: true,
+        clearCandidate: true,
         rerollUsed: true,
       ),
     );
+  }
+
+  /// 명단에서 선수를 고른다. 자리에 넣기 전까지는 다시 고를 수 있다.
+  void select(LegendPlayer player) {
+    final now = _now;
+    if (now.phase != GamePhase.playing || now.spinning) return;
+    state = AsyncData(now.copyWith(candidate: player));
+  }
+
+  /// 고른 선수를 물린다.
+  void unselect() {
+    final now = _now;
+    if (now.candidate == null) return;
+    state = AsyncData(now.copyWith(clearCandidate: true));
   }
 
   /// 지금 선수를 [slot]에 넣는다. 다섯 자리가 차면 결과를 낸다.
@@ -135,28 +186,70 @@ class Game540Controller extends AsyncNotifier<Game540State> {
         now.copyWith(
           phase: GamePhase.finished,
           lineup: lineup,
-          result: simulate(lineup),
+          spinning: false,
+          clearCandidate: true,
+          result: _rank(simulate(lineup)),
         ),
       );
       return;
     }
 
-    final drawn = _draw.draw(usedPlayerIds: {...lineup.values.map((p) => p.id)});
+    final drawn = _draw.drawCondition(
+      usedPlayerIds: {...lineup.values.map((p) => p.id)},
+    );
     state = AsyncData(
       now.copyWith(
         round: now.round + 1,
         lineup: lineup,
         condition: drawn?.condition,
-        candidate: drawn?.player,
+        pool: drawn?.pool ?? const [],
+        spinning: drawn != null,
+        clearCandidate: true,
       ),
     );
   }
 
   /// 결과 화면에서 다시 도전한다. 다시 뽑기 기회도 되살아난다.
   void restart() {
-    state = const AsyncData(Game540State());
+    state = AsyncData(Game540State(allConditions: _now.allConditions));
     start();
   }
+
+  /// 순위를 매길 기준(무작위 라인업 1,000팀)을 미리 만들어 둔다.
+  ///
+  /// 명단이 그대로라 분포도 그대로다. 한 번만 만들고 계속 쓴다.
+  void _warmUpRanking() {
+    _distributionJob ??=
+        WinDistribution.sampleSpread(
+          RoundDraw(byCondition: _draw.byCondition, random: Random(54)),
+        ).then((distribution) {
+          _distribution = distribution;
+          return distribution;
+        });
+  }
+
+  /// 무작위 라인업 1,000팀과 견줘 순위를 매긴다.
+  LineupResult _rank(LineupResult result) {
+    final ready = _distribution;
+    if (ready != null) return _withRank(result, ready);
+    // 아직 기준이 안 만들어졌으면, 다 되는 대로 결과에 순위만 얹는다.
+    _distributionJob?.then((distribution) {
+      final now = _now;
+      if (now.phase != GamePhase.finished || now.result == null) return;
+      state = AsyncData(
+        now.copyWith(result: _withRank(now.result!, distribution)),
+      );
+    });
+    return result;
+  }
+
+  LineupResult _withRank(LineupResult result, WinDistribution distribution) =>
+      distribution.size == 0
+      ? result
+      : result.withRank(
+          rank: distribution.rankOf(result.wins),
+          rankPool: distribution.size,
+        );
 
   Set<String> _placedIds(Game540State now) => {
     ...now.lineup.values.map((p) => p.id),

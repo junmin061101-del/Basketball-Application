@@ -121,6 +121,62 @@ void main() {
     test('다섯 자리가 다 차기 전에는 0승', () {
       expect(simulate({LineupSlot.pg: player()}).wins, 0);
     });
+
+    test('결과에 다섯 명의 경기당 기록 합계가 담긴다', () {
+      final result = simulate(
+        lineupOf([
+          for (var i = 0; i < 5; i++)
+            player(id: '$i', ppg: 10, rpg: 4, apg: 3, spg: 1, bpg: 0.5),
+        ]),
+      );
+      expect(result.ppg, closeTo(50, 0.001));
+      expect(result.rpg, closeTo(20, 0.001));
+      expect(result.apg, closeTo(15, 0.001));
+      expect(result.spg, closeTo(5, 0.001));
+      expect(result.bpg, closeTo(2.5, 0.001));
+    });
+  });
+
+  group('순위', () {
+    test('더 많이 이길수록 앞 순위, 상위 %도 작아진다', () {
+      const distribution = WinDistribution([10, 14, 20, 20, 31, 44]);
+      expect(distribution.rankOf(50), 1);
+      expect(distribution.rankOf(20), 3);
+      expect(distribution.rankOf(0), 7);
+    });
+
+    test('무작위 라인업을 뽑아 분포를 만든다', () {
+      final draw = RoundDraw(
+        byCondition: {
+          for (var team = 0; team < 6; team++)
+            RoundCondition(teamId: 'team$team', era: 2010): [
+              for (var i = 0; i < 4; i++)
+                player(id: 'p$team$i', ppg: 5.0 + i * 4),
+            ],
+        },
+        random: Random(7),
+      );
+      final distribution = WinDistribution.sample(draw, size: 50);
+      expect(distribution.size, 50);
+      expect(distribution.wins, isNot(contains(lessThan(0))));
+      // 오름차순으로 정렬돼 있어야 순위를 셀 수 있다.
+      for (var i = 1; i < distribution.wins.length; i++) {
+        expect(distribution.wins[i], greaterThanOrEqualTo(distribution.wins[i - 1]));
+      }
+    });
+
+    test('순위를 매기면 상위 %가 함께 나온다', () {
+      const base = LineupResult(
+        wins: 30,
+        powerScore: 0,
+        fitScore: 0,
+        synergyScore: 0,
+      );
+      expect(base.topPercent, isNull);
+      final ranked = base.withRank(rank: 25, rankPool: 1000);
+      expect(ranked.wins, 30);
+      expect(ranked.topPercent, closeTo(2.5, 0.001));
+    });
   });
 
   group('라운드 뽑기', () {
@@ -138,6 +194,27 @@ void main() {
         final drawn = draw.draw();
         expect(pool.keys, contains(drawn!.condition));
         expect(pool[drawn.condition]!.map((p) => p.id), contains(drawn.player.id));
+      }
+    });
+
+    test('조건을 뽑으면 그 조건에서 고를 수 있는 선수가 함께 온다', () {
+      final draw = RoundDraw(byCondition: pool, random: Random(3));
+      final drawn = draw.drawCondition(usedPlayerIds: {'a'});
+      expect(drawn, isNotNull);
+      expect(drawn!.pool.map((p) => p.id), isNot(contains('a')));
+      expect(drawn.pool, isNotEmpty);
+    });
+
+    test('고를 선수가 한 명도 없는 조합은 뽑지 않는다', () {
+      final draw = RoundDraw(
+        byCondition: {
+          const RoundCondition(teamId: 'db', era: 1990): [player(id: 'c')],
+          const RoundCondition(teamId: 'sk', era: 2010): [player(id: 'd')],
+        },
+        random: Random(4),
+      );
+      for (var i = 0; i < 20; i++) {
+        expect(draw.drawCondition(usedPlayerIds: {'c'})!.condition.teamId, 'sk');
       }
     });
 

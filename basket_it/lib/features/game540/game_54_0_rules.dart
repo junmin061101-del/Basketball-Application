@@ -85,11 +85,19 @@ LineupResult simulate(Map<LineupSlot, LegendPlayer> lineup) {
   final ratio = 0.05 + 0.95 * pow(total, 1.5);
   final wins = (kbl54Games * ratio).round().clamp(0, kbl54Games);
 
+  double sum(double Function(LegendPlayer) of) =>
+      players.map(of).reduce((a, b) => a + b);
+
   return LineupResult(
     wins: wins,
     powerScore: power * 100,
     fitScore: fit * 100,
     synergyScore: synergy * 100,
+    ppg: sum((p) => p.ppg),
+    rpg: sum((p) => p.rpg),
+    apg: sum((p) => p.apg),
+    spg: sum((p) => p.spg),
+    bpg: sum((p) => p.bpg),
   );
 }
 
@@ -107,24 +115,120 @@ class RoundDraw {
   /// 뽑을 것이 있는지.
   bool get isEmpty => byCondition.isEmpty;
 
-  ({RoundCondition condition, LegendPlayer player})? draw({
+  /// 이번 라운드의 조건 하나와, 그 조건에서 아직 고를 수 있는 선수들을 준다.
+  ({RoundCondition condition, List<LegendPlayer> pool})? drawCondition({
     Set<RoundCondition> usedConditions = const {},
     Set<String> usedPlayerIds = const {},
   }) {
     final pool = byCondition.entries
         .where((e) => !usedConditions.contains(e.key))
         .toList();
-    final from = pool.isEmpty ? byCondition.entries.toList() : pool;
-    if (from.isEmpty) return null;
-
-    final entry = from[random.nextInt(from.length)];
-    final candidates = entry.value
-        .where((p) => !usedPlayerIds.contains(p.id))
+    final from = (pool.isEmpty ? byCondition.entries.toList() : pool)
+        .map(
+          (e) => (
+            condition: e.key,
+            pool: e.value
+                .where((p) => !usedPlayerIds.contains(p.id))
+                .toList(growable: false),
+          ),
+        )
+        .where((e) => e.pool.isNotEmpty)
         .toList();
-    if (candidates.isEmpty) return null;
-    return (
-      condition: entry.key,
-      player: candidates[random.nextInt(candidates.length)],
+    if (from.isEmpty) return null;
+    return from[random.nextInt(from.length)];
+  }
+
+  ({RoundCondition condition, LegendPlayer player})? draw({
+    Set<RoundCondition> usedConditions = const {},
+    Set<String> usedPlayerIds = const {},
+  }) {
+    final drawn = drawCondition(
+      usedConditions: usedConditions,
+      usedPlayerIds: usedPlayerIds,
     );
+    if (drawn == null) return null;
+    return (
+      condition: drawn.condition,
+      player: drawn.pool[random.nextInt(drawn.pool.length)],
+    );
+  }
+}
+
+/// 아무렇게나 만든 라인업 [size]팀의 승수 분포.
+///
+/// 결과 화면의 "○○팀 중 몇 위"는 여기서 나온다. 기준이 될 다른 사람의 기록이
+/// 없으니, 같은 규칙으로 무작위 라인업을 만들어 그 성적과 견준다.
+class WinDistribution {
+  /// 오름차순으로 정렬한 승수.
+  final List<int> wins;
+
+  const WinDistribution(this.wins);
+
+  int get size => wins.length;
+
+  /// 같은 명단에서 무작위 라인업 [size]팀을 만들어 승수를 모은다.
+  factory WinDistribution.sample(
+    RoundDraw draw, {
+    int size = 1000,
+    Random? random,
+  }) {
+    final rng = random ?? Random(54);
+    final slots = LineupSlot.values;
+    final collected = <int>[];
+    for (var i = 0; i < size; i++) {
+      final lineup = <LineupSlot, LegendPlayer>{};
+      final used = <String>{};
+      final conditions = <RoundCondition>{};
+      final order = [...slots]..shuffle(rng);
+      for (final slot in order) {
+        final drawn = draw.draw(
+          usedConditions: conditions,
+          usedPlayerIds: used,
+        );
+        if (drawn == null) break;
+        conditions.add(drawn.condition);
+        used.add(drawn.player.id);
+        lineup[slot] = drawn.player;
+      }
+      if (lineup.length == slots.length) collected.add(simulate(lineup).wins);
+    }
+    collected.sort();
+    return WinDistribution(collected);
+  }
+
+  /// 같은 표본을 몇 번에 나눠 만든다.
+  ///
+  /// 1,000팀을 한 번에 돌리면 0.7초쯤 걸려 화면이 멎는다. 게임을 시작할 때
+  /// 조금씩 미리 만들어 두면, 결과를 낼 때는 이미 준비돼 있다.
+  static Future<WinDistribution> sampleSpread(
+    RoundDraw draw, {
+    int size = 1000,
+    int chunk = 25,
+    Random? random,
+  }) async {
+    final rng = random ?? Random(54);
+    final collected = <int>[];
+    for (var done = 0; done < size; done += chunk) {
+      collected.addAll(
+        WinDistribution.sample(
+          draw,
+          size: min(chunk, size - done),
+          random: rng,
+        ).wins,
+      );
+      await Future<void>.delayed(Duration.zero);
+    }
+    collected.sort();
+    return WinDistribution(collected);
+  }
+
+  /// [wins]승이 몇 위인가. 더 많이 이긴 라인업 수 + 1위다.
+  int rankOf(int target) {
+    var better = 0;
+    for (var i = wins.length - 1; i >= 0; i--) {
+      if (wins[i] <= target) break;
+      better++;
+    }
+    return better + 1;
   }
 }
