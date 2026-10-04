@@ -110,7 +110,6 @@ class _RankingList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final rankingContext = RankingContext.of(stats);
     final rows = [
       for (final row in rankPlayers(stats, category))
         if (playerById.containsKey(row.stats.playerId)) row,
@@ -123,7 +122,7 @@ class _RankingList extends StatelessWidget {
         Text(
           [
             if (season.isNotEmpty) '$season 시즌',
-            rankingContext.noteFor(category),
+            rankingNote(category),
           ].join(' · '),
           style: Theme.of(context).textTheme.bodySmall,
         ),

@@ -42,71 +42,70 @@ RankingCategory category(String label) =>
     rankingCategories.firstWhere((c) => c.label == label);
 
 void main() {
-  test('네이버 스포츠와 같은 20개 부문', () {
+  test('네이버 스포츠 KBL 선수 기록과 같은 부문, 같은 순서', () {
     expect(rankingCategories.map((c) => c.label), [
       '득점',
       '리바운드',
       '어시스트',
       '스틸',
-      '블록',
-      '3점슛 성공',
-      '야투율',
-      '3점슛 성공률',
-      '자유투 성공률',
+      '블록슛',
       '야투 성공',
+      '야투 성공률',
+      '3점슛 성공',
+      '3점슛 성공률',
       '자유투 성공',
+      '자유투 성공률',
       '공격 리바운드',
       '수비 리바운드',
+      '턴오버',
+      '파울',
+      '출전 시간',
+      '출전 경기',
       '더블더블',
       '트리플더블',
       '한 경기 최다 득점',
-      '출전 시간',
-      '출전 경기',
-      '턴오버',
-      '파울',
     ]);
   });
 
-  test('경기당 기록은 가장 많이 뛴 선수의 70% 미만 출전자를 뺀다', () {
+  test('출전 경기 수로 거르지 않는다 — 한 경기만 뛴 선수도 줄 세운다', () {
+    // 네이버 스포츠 KBL 선수 기록은 1경기 출전 선수까지 모두 보여준다.
     final rows = rankPlayers([
-      stat('full', games: 80, points: 25),
-      stat('edge', games: 56, points: 20),
-      // 두 경기 평균 40점은 1위가 되면 안 된다
-      stat('cameo', games: 2, points: 40),
+      stat('full', games: 54, points: 25),
+      stat('cameo', games: 1, points: 40),
+      stat('half', games: 27, points: 20),
     ], category('득점'));
-    expect(rows.map((r) => r.stats.playerId), ['full', 'edge']);
+    expect(rows.map((r) => r.stats.playerId), ['cameo', 'full', 'half']);
   });
 
-  test('성공률은 한두 번 던져 다 넣은 선수를 빼고 누적 성공 개수로 거른다', () {
+  test('성공률도 시도 횟수로 거르지 않는다', () {
     final rows = rankPlayers([
-      // 82경기 × 4.0개 = 328개 ≥ 300개
-      stat('volume', games: 82, fgm: 4.0, fga: 8.0),
-      // 10경기 × 1개 = 10개, 100%
-      stat('perfect', games: 10, fgm: 1.0, fga: 1.0),
-    ], category('야투율'));
-    expect(rows.map((r) => r.stats.playerId), ['volume']);
-    expect(rows.single.value, closeTo(50, 0.001));
+      stat('volume', games: 54, fgm: 8.0, fga: 15.0),
+      stat('perfect', games: 1, fgm: 1.0, fga: 1.0),
+    ], category('야투 성공률'));
+    expect(rows.map((r) => r.stats.playerId), ['perfect', 'volume']);
   });
 
-  test('시즌 중에는 성공 개수 기준을 치른 경기 수에 비례해 낮춘다', () {
-    final context = RankingContext.of([stat('a', games: 41)]);
-    // 300 × 41/82 = 150
-    expect(context.minMade(RankingQualifier.fieldGoal), 150);
-    expect(context.minGames, 29);
-  });
-
-  test('화면에 보이는 값이 같으면 공동 순위', () {
+  test('값이 정확히 같을 때만 공동 순위, 다음 순위는 건너뛴다', () {
     final rows = rankPlayers([
-      stat('a', blocks: 1.94),
-      stat('b', blocks: 1.86),
-      stat('c', blocks: 1.7),
-    ], category('블록'));
-    expect(rows.map((r) => r.rank), [1, 1, 3]);
+      stat('a', blocks: 1.9),
+      stat('b', blocks: 1.9),
+      stat('c', blocks: 1.86),
+      stat('d', blocks: 1.7),
+    ], category('블록슛'));
+    expect(rows.map((r) => r.rank), [1, 1, 3, 4]);
   });
 
-  test('누적 기록은 출전 수 제한 없이 줄 세운다', () {
+  test('한 경기도 못 뛴 선수는 빼고 줄 세운다', () {
     final rows = rankPlayers([
-      stat('a', games: 80, doubleDoubles: 50),
+      stat('played', games: 3, points: 10),
+      stat('none', games: 0, points: 0),
+    ], category('득점'));
+    expect(rows.map((r) => r.stats.playerId), ['played']);
+  });
+
+  test('누적 기록도 그대로 줄 세운다', () {
+    final rows = rankPlayers([
+      stat('a', games: 54, doubleDoubles: 50),
       stat('b', games: 10, doubleDoubles: 8),
     ], category('더블더블'));
     expect(rows.map((r) => r.stats.playerId), ['a', 'b']);
