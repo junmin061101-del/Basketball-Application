@@ -14,7 +14,7 @@ void main() {
     return container;
   }
 
-  test('룰렛이 멈춰야 선수 명단이 열리고, 다섯 라운드를 돌면 결과가 나온다', () async {
+  test('눌러야 돌고 멈춰야 명단이 열린다, 다섯 라운드를 돌면 결과가 나온다', () async {
     final container = await openGame();
     final controller = container.read(game540Provider.notifier);
     Game540State now() => container.read(game540Provider).value!;
@@ -23,8 +23,13 @@ void main() {
     final picked = <String>[];
     for (var round = 1; round <= totalRounds; round++) {
       expect(now().round, round);
-      // 도는 중에는 고를 수 없다.
-      expect(now().spinning, isTrue);
+      // 돌리기 전에도, 도는 중에도 고를 수 없다.
+      expect(now().roulette, RouletteState.ready);
+      controller.select(now().pool.first);
+      expect(now().candidate, isNull);
+
+      controller.spin();
+      expect(now().roulette, RouletteState.spinning);
       controller.select(now().pool.first);
       expect(now().candidate, isNull);
 
@@ -54,12 +59,21 @@ void main() {
     Game540State now() => container.read(game540Provider).value!;
 
     controller.start();
+    // 돌리기 전에는 다시 돌릴 것도 없다.
+    controller.reroll();
+    expect(now().rerollUsed, isFalse);
+
+    controller.spin();
     controller.settle();
     final first = now().condition;
 
     controller.reroll();
     expect(now().rerollUsed, isTrue);
-    expect(now().spinning, isTrue, reason: '다시 돌릴 때도 룰렛이 돈다');
+    expect(
+      now().roulette,
+      RouletteState.spinning,
+      reason: '다시 돌리기를 누르면 그 자리에서 룰렛이 돈다',
+    );
     expect(now().condition, isNot(first));
     controller.settle();
 
@@ -75,6 +89,7 @@ void main() {
 
     controller.start();
     for (var round = 1; round <= totalRounds; round++) {
+      controller.spin();
       controller.settle();
       controller.select(now().pool.first);
       controller.place(now().emptySlots.first);

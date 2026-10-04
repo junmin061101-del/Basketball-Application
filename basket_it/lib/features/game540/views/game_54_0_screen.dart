@@ -149,7 +149,7 @@ class _RuleCard extends StatelessWidget {
   const _RuleCard();
 
   static const _rules = [
-    ('1', '라운드마다 룰렛이 돌아 구단과 시대가 정해집니다.'),
+    ('1', '라운드마다 룰렛을 직접 돌려 구단과 시대를 뽑습니다.'),
     ('2', '그 시절 그 팀에서 뛴 선수 명단에서 원하는 선수를 한 명 고릅니다.'),
     ('3', '고른 선수를 PG·SG·SF·PF·C 중 빈 자리에 넣습니다. 한 번 넣으면 못 바꿉니다.'),
     ('4', '마음에 안 드는 룰렛 결과는 게임당 한 번 다시 돌릴 수 있습니다.'),
@@ -248,7 +248,8 @@ class _PlayView extends ConsumerWidget {
                 condition: condition,
                 all: game.allConditions,
                 teamById: teamById,
-                spinning: game.spinning,
+                roulette: game.roulette,
+                onSpin: controller.spin,
                 onSettled: controller.settle,
                 rerollUsed: game.rerollUsed,
                 onReroll: controller.reroll,
@@ -257,9 +258,14 @@ class _PlayView extends ConsumerWidget {
           ),
         ),
         Expanded(
-          child: game.spinning
-              ? const _SpinningHint()
-              : game.candidate == null
+          child: switch (game.roulette) {
+            RouletteState.ready => const _WaitingList(
+              message: "'돌리기'를 눌러 구단과 시대를 뽑으세요",
+            ),
+            RouletteState.spinning => const _WaitingList(
+              message: '어느 팀, 어느 시대가 걸릴까요?',
+            ),
+            RouletteState.settled => game.candidate == null
               ? _PlayerPicker(pool: game.pool, onPick: controller.select)
               : _PlaceView(
                   player: game.candidate!,
@@ -267,15 +273,18 @@ class _PlayView extends ConsumerWidget {
                   onPlace: controller.place,
                   onBack: controller.unselect,
                 ),
+          },
         ),
       ],
     );
   }
 }
 
-/// 룰렛이 도는 동안 명단 자리를 지켜 둔다. 멈추면 그대로 선수가 채워진다.
-class _SpinningHint extends StatelessWidget {
-  const _SpinningHint();
+/// 룰렛을 돌리기 전·도는 동안 명단 자리를 지켜 둔다. 멈추면 선수가 채워진다.
+class _WaitingList extends StatelessWidget {
+  final String message;
+
+  const _WaitingList({required this.message});
 
   @override
   Widget build(BuildContext context) {
@@ -283,10 +292,10 @@ class _SpinningHint extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(20, 18, 20, 24),
       physics: const NeverScrollableScrollPhysics(),
       children: [
-        const Center(
+        Center(
           child: Text(
-            '어느 팀, 어느 시대가 걸릴까요?',
-            style: TextStyle(
+            message,
+            style: const TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w700,
               color: AppColors.textTertiary,
@@ -399,7 +408,8 @@ class _Roulette extends StatefulWidget {
   final RoundCondition condition;
   final List<RoundCondition> all;
   final Map<String, Team> teamById;
-  final bool spinning;
+  final RouletteState roulette;
+  final VoidCallback onSpin;
   final VoidCallback onSettled;
   final bool rerollUsed;
   final VoidCallback onReroll;
@@ -409,7 +419,8 @@ class _Roulette extends StatefulWidget {
     required this.condition,
     required this.all,
     required this.teamById,
-    required this.spinning,
+    required this.roulette,
+    required this.onSpin,
     required this.onSettled,
     required this.rerollUsed,
     required this.onReroll,
@@ -430,14 +441,15 @@ class _RouletteState extends State<_Roulette> {
   @override
   void initState() {
     super.initState();
-    if (widget.spinning) _spin();
+    if (widget.roulette == RouletteState.spinning) _spin();
   }
 
   @override
   void didUpdateWidget(covariant _Roulette old) {
     super.didUpdateWidget(old);
-    if (widget.spinning && !old.spinning) _spin();
-    if (!widget.spinning) _shown = widget.condition;
+    final spinning = widget.roulette == RouletteState.spinning;
+    if (spinning && old.roulette != RouletteState.spinning) _spin();
+    if (!spinning) _shown = widget.condition;
   }
 
   @override
@@ -473,11 +485,12 @@ class _RouletteState extends State<_Roulette> {
 
   @override
   Widget build(BuildContext context) {
-    final spinning = widget.spinning;
-    final team = widget.teamById[_shown.teamId];
-    final teamName = team == null
-        ? _shown.teamId.toUpperCase()
-        : '${team.city} ${team.name}';
+    final spinning = widget.roulette == RouletteState.spinning;
+    final ready = widget.roulette == RouletteState.ready;
+    final team = ready ? null : widget.teamById[_shown.teamId];
+    final teamName = ready
+        ? '구단 · 시대'
+        : (team == null ? _shown.teamId.toUpperCase() : '${team.city} ${team.name}');
 
     return AnimatedContainer(
       duration: const Duration(milliseconds: 260),
@@ -491,9 +504,27 @@ class _RouletteState extends State<_Roulette> {
           SizedBox(
             width: 44,
             height: 44,
-            child: team == null
-                ? null
-                : Center(child: _TeamLogo(team: team, size: 40)),
+            child: Center(
+              child: ready
+                  ? Container(
+                      width: 40,
+                      height: 40,
+                      alignment: Alignment.center,
+                      decoration: const BoxDecoration(
+                        color: AppColors.primarySoft,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Text(
+                        '?',
+                        style: TextStyle(
+                          fontSize: 19,
+                          fontWeight: FontWeight.w900,
+                          color: AppColors.primary,
+                        ),
+                      ),
+                    )
+                  : (team == null ? null : _TeamLogo(team: team, size: 40)),
+            ),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -511,30 +542,64 @@ class _RouletteState extends State<_Roulette> {
                   ),
                 ),
                 const SizedBox(height: 5),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 3,
-                  ),
-                  decoration: BoxDecoration(
-                    color: spinning
-                        ? Colors.white.withValues(alpha: 0.16)
-                        : AppColors.primarySoft,
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Text(
-                    _shown.eraLabel,
-                    style: TextStyle(
-                      fontSize: 11.5,
-                      fontWeight: FontWeight.w900,
-                      color: spinning ? Colors.white : AppColors.primary,
-                    ),
-                  ),
-                ),
+                ready
+                    ? const Text(
+                        '룰렛을 돌려 보세요',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          color: AppColors.textTertiary,
+                        ),
+                      )
+                    : Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 3,
+                        ),
+                        decoration: BoxDecoration(
+                          color: spinning
+                              ? Colors.white.withValues(alpha: 0.16)
+                              : AppColors.primarySoft,
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          _shown.eraLabel,
+                          style: TextStyle(
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w900,
+                            color: spinning ? Colors.white : AppColors.primary,
+                          ),
+                        ),
+                      ),
               ],
             ),
           ),
-          if (spinning)
+          if (ready)
+            Padding(
+              padding: const EdgeInsets.only(left: 8, right: 4),
+              child: SizedBox(
+                height: 38,
+                child: ElevatedButton(
+                  onPressed: widget.onSpin,
+                  style: ElevatedButton.styleFrom(
+                    // 기본 버튼은 가로를 꽉 채우게 돼 있다(Size.fromHeight).
+                    // 한 줄 안에 들어가야 해서 여기서만 폭을 줄인다.
+                    minimumSize: const Size(78, 38),
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    textStyle: const TextStyle(
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  child: const Text('돌리기'),
+                ),
+              ),
+            )
+          else if (spinning)
             const Padding(
               padding: EdgeInsets.only(right: 10),
               child: Text(

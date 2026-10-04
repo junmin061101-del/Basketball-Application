@@ -10,6 +10,18 @@ import 'models/game_54_0.dart';
 /// 게임의 세 단계: 설명 → 다섯 라운드 → 결과.
 enum GamePhase { intro, playing, finished }
 
+/// 룰렛의 상태. 돌리는 건 사람이 누를 때다.
+enum RouletteState {
+  /// 아직 안 돌렸다. 구단·시대는 정해져 있지만 보여주지 않는다.
+  ready,
+
+  /// 도는 중.
+  spinning,
+
+  /// 멈췄다. 이제 선수 명단을 고른다.
+  settled,
+}
+
 /// 총 라운드 수. 자리가 다섯이라 다섯 번 뽑는다.
 const totalRounds = 5;
 
@@ -26,8 +38,9 @@ class Game540State {
   /// 그 조건에서 고를 수 있는 선수들(이미 뽑은 선수는 빠진다).
   final List<LegendPlayer> pool;
 
-  /// 룰렛이 도는 중인가. 다 돌면 화면이 [settle]을 불러 명단을 연다.
-  final bool spinning;
+  /// 룰렛 상태. 사람이 누르면 돌고, 다 돌면 화면이 [Game540Controller.settle]을
+  /// 불러 명단을 연다.
+  final RouletteState roulette;
 
   /// 고른 선수. 자리에 넣기 전까지는 바꿀 수 있다.
   final LegendPlayer? candidate;
@@ -48,7 +61,7 @@ class Game540State {
     this.round = 1,
     this.condition,
     this.pool = const [],
-    this.spinning = false,
+    this.roulette = RouletteState.ready,
     this.candidate,
     this.lineup = const {},
     this.rerollUsed = false,
@@ -61,7 +74,7 @@ class Game540State {
     int? round,
     RoundCondition? condition,
     List<LegendPlayer>? pool,
-    bool? spinning,
+    RouletteState? roulette,
     LegendPlayer? candidate,
     bool clearCandidate = false,
     Map<LineupSlot, LegendPlayer>? lineup,
@@ -72,7 +85,7 @@ class Game540State {
     round: round ?? this.round,
     condition: condition ?? this.condition,
     pool: pool ?? this.pool,
-    spinning: spinning ?? this.spinning,
+    roulette: roulette ?? this.roulette,
     candidate: clearCandidate ? null : (candidate ?? this.candidate),
     lineup: lineup ?? this.lineup,
     rerollUsed: rerollUsed ?? this.rerollUsed,
@@ -124,25 +137,31 @@ class Game540Controller extends AsyncNotifier<Game540State> {
         round: 1,
         condition: drawn.condition,
         pool: drawn.pool,
-        spinning: true,
         allConditions: _now.allConditions,
       ),
     );
   }
 
+  /// 사람이 룰렛을 돌린다. 구단·시대는 이때 공개된다.
+  void spin() {
+    final now = _now;
+    if (now.phase != GamePhase.playing) return;
+    if (now.roulette != RouletteState.ready) return;
+    state = AsyncData(now.copyWith(roulette: RouletteState.spinning));
+  }
+
   /// 룰렛이 멈췄다. 이제 선수 명단을 보여준다.
   void settle() {
     final now = _now;
-    if (!now.spinning) return;
-    state = AsyncData(now.copyWith(spinning: false));
+    if (now.roulette != RouletteState.spinning) return;
+    state = AsyncData(now.copyWith(roulette: RouletteState.settled));
   }
 
   /// 마음에 안 드는 조건을 한 번 바꾼다(구단·시대가 함께 바뀐다).
   void reroll() {
     final now = _now;
-    if (now.phase != GamePhase.playing || now.rerollUsed || now.spinning) {
-      return;
-    }
+    if (now.phase != GamePhase.playing || now.rerollUsed) return;
+    if (now.roulette != RouletteState.settled) return;
     final drawn = _draw.drawCondition(
       usedConditions: {if (now.condition != null) now.condition!},
       usedPlayerIds: _placedIds(now),
@@ -152,7 +171,7 @@ class Game540Controller extends AsyncNotifier<Game540State> {
       now.copyWith(
         condition: drawn.condition,
         pool: drawn.pool,
-        spinning: true,
+        roulette: RouletteState.spinning,
         clearCandidate: true,
         rerollUsed: true,
       ),
@@ -162,7 +181,8 @@ class Game540Controller extends AsyncNotifier<Game540State> {
   /// 명단에서 선수를 고른다. 자리에 넣기 전까지는 다시 고를 수 있다.
   void select(LegendPlayer player) {
     final now = _now;
-    if (now.phase != GamePhase.playing || now.spinning) return;
+    if (now.phase != GamePhase.playing) return;
+    if (now.roulette != RouletteState.settled) return;
     state = AsyncData(now.copyWith(candidate: player));
   }
 
@@ -186,7 +206,6 @@ class Game540Controller extends AsyncNotifier<Game540State> {
         now.copyWith(
           phase: GamePhase.finished,
           lineup: lineup,
-          spinning: false,
           clearCandidate: true,
           result: _rank(simulate(lineup)),
         ),
@@ -203,7 +222,7 @@ class Game540Controller extends AsyncNotifier<Game540State> {
         lineup: lineup,
         condition: drawn?.condition,
         pool: drawn?.pool ?? const [],
-        spinning: drawn != null,
+        roulette: RouletteState.ready,
         clearCandidate: true,
       ),
     );
