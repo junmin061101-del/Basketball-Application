@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/theme/app_colors.dart';
-import '../../core/utils/name_mask.dart';
 import '../../data/models/community_post.dart';
 import '../../data/models/moderation.dart';
 import '../../providers/community_providers.dart';
@@ -10,6 +9,7 @@ import '../../providers/moderation_providers.dart';
 import '../../providers/prediction_providers.dart';
 import 'community_tab.dart' show formatTimeAgo;
 import 'report_sheet.dart';
+import '../../providers/profile_providers.dart';
 
 /// 게시글 상세: 본문 + 좋아요 + 댓글.
 class PostDetailScreen extends ConsumerStatefulWidget {
@@ -37,6 +37,7 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
     if (text.isEmpty || user == null || _sending) return;
     setState(() => _sending = true);
     try {
+      final name = await readDisplayName(ref);
       await ref
           .read(communityRepositoryProvider)
           .addComment(
@@ -44,7 +45,7 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
               id: '',
               postId: widget.postId,
               uid: user.uid,
-              displayName: maskDisplayName(user.displayName),
+              displayName: name,
               text: text,
             ),
           );
@@ -180,7 +181,7 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      '${post.category.label} · ${maskDisplayName(post.displayName)} · ${formatTimeAgo(post.createdAt)}',
+                      '${post.category.label} · ${post.displayName} · ${formatTimeAgo(post.createdAt)}',
                       style: Theme.of(context).textTheme.bodySmall,
                     ),
                     const SizedBox(height: 18),
@@ -353,7 +354,7 @@ class _CommentTile extends StatelessWidget {
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
-                  maskDisplayName(comment.displayName).substring(0, 1),
+                  comment.displayName.substring(0, 1),
                   style: const TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w800,
@@ -363,7 +364,7 @@ class _CommentTile extends StatelessWidget {
               ),
               const SizedBox(width: 8),
               Text(
-                maskDisplayName(comment.displayName),
+                comment.displayName,
                 style: const TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w800,

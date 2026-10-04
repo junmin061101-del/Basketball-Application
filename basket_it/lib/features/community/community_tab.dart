@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/theme/app_colors.dart';
 import '../common/page_header.dart';
-import '../../core/utils/name_mask.dart';
 import '../../data/models/community_post.dart';
 import '../../data/models/moderation.dart';
 import '../../providers/community_providers.dart';
@@ -241,7 +240,7 @@ class _PostRow extends ConsumerWidget {
                 Expanded(
                   child: Text(
                     '${formatTimeAgo(post.createdAt)} | '
-                    '${maskDisplayName(post.displayName)}',
+                    '${post.displayName}',
                     overflow: TextOverflow.ellipsis,
                     style: _metaStyle,
                   ),

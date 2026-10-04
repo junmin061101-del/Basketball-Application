@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/theme/app_colors.dart';
-import '../../core/utils/name_mask.dart';
 import '../../data/models/game.dart';
 import '../../data/models/moderation.dart';
 import '../../data/models/prediction.dart';
@@ -11,6 +10,7 @@ import '../../providers/moderation_providers.dart';
 import '../../providers/prediction_providers.dart';
 import '../community/report_sheet.dart';
 import 'prediction_game_card.dart';
+import '../../providers/profile_providers.dart';
 
 /// 경기별 승부예측 상세: 투표 카드 + 실시간 토론.
 class PredictionDetailScreen extends ConsumerStatefulWidget {
@@ -47,6 +47,7 @@ class _PredictionDetailScreenState
     if (text.isEmpty || user == null || _sending) return;
     setState(() => _sending = true);
     try {
+      final name = await readDisplayName(ref);
       await ref
           .read(predictionRepositoryProvider)
           .addComment(
@@ -54,8 +55,8 @@ class _PredictionDetailScreenState
               id: '',
               gameId: widget.game.id,
               uid: user.uid,
-              // 공용 컬렉션에 원본 이름이 남지 않도록 저장 시점에 마스킹한다.
-              displayName: maskDisplayName(user.displayName),
+              // 정해 둔 닉네임, 없으면 가린 이름.
+              displayName: name,
               text: text,
             ),
           );
@@ -167,7 +168,7 @@ class _PredictionDetailScreenState
                       decoration: InputDecoration(
                         hintText: user == null
                             ? '로그인 후 참여할 수 있어요'
-                            : '${maskDisplayName(user.displayName)}(으)로 의견 남기기',
+                            : '${ref.watch(displayNameProvider)}(으)로 의견 남기기',
                         counterText: '',
                         isDense: true,
                         fillColor: AppColors.background,
@@ -228,7 +229,7 @@ class _CommentTile extends StatelessWidget {
                 radius: 12,
                 backgroundColor: AppColors.surfaceElevated,
                 child: Text(
-                  maskDisplayName(comment.displayName).substring(0, 1),
+                  comment.displayName.substring(0, 1),
                   style: const TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w800,
@@ -238,7 +239,7 @@ class _CommentTile extends StatelessWidget {
               ),
               const SizedBox(width: 8),
               Text(
-                maskDisplayName(comment.displayName),
+                comment.displayName,
                 style: const TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w800,

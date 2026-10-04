@@ -7,7 +7,9 @@ import '../../data/models/app_user.dart';
 import '../../data/repositories/credential_store.dart';
 import '../../providers/auth_providers.dart';
 import '../../providers/onboarding_providers.dart';
+import '../../providers/profile_providers.dart';
 import '../main/main_shell.dart';
+import 'nickname_screen.dart';
 import 'signup_screen.dart';
 
 /// 온보딩 - 로그인 화면.
@@ -75,7 +77,24 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     ref.read(followedTeamIdsProvider.notifier).state = teamIds;
     ref.read(followedPlayerIdsProvider.notifier).state = playerIds;
 
+    // 처음 들어온 사람에게는 닉네임을 한 번 묻는다.
+    final nickname = await ref
+        .read(userProfileRepositoryProvider)
+        .loadNickname(user.uid);
+
     if (!mounted) return;
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(
+        // 로그인 화면은 이 길로 사라지므로, 다음 화면의 context로 넘어간다.
+        builder: (routeContext) => nickname == null
+            ? NicknameScreen(onDone: () => _openMain(routeContext))
+            : const MainShell(),
+      ),
+      (route) => false,
+    );
+  }
+
+  static void _openMain(BuildContext context) {
     Navigator.of(context).pushAndRemoveUntil(
       MaterialPageRoute(builder: (_) => const MainShell()),
       (route) => false,

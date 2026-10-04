@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/theme/app_colors.dart';
-import '../../core/utils/name_mask.dart';
 import '../../data/models/community_post.dart';
 import '../../providers/community_providers.dart';
 import '../../providers/prediction_providers.dart';
+import '../../providers/profile_providers.dart';
 
 /// 커뮤니티 글쓰기 화면.
 class WritePostScreen extends ConsumerStatefulWidget {
@@ -38,14 +38,15 @@ class _WritePostScreenState extends ConsumerState<WritePostScreen> {
 
     setState(() => _submitting = true);
     try {
+      final name = await readDisplayName(ref);
       await ref
           .read(communityRepositoryProvider)
           .createPost(
             CommunityPost(
               id: '',
               uid: user.uid,
-              // 공용 컬렉션에 원본 이름이 남지 않도록 저장 시점에 마스킹한다.
-              displayName: maskDisplayName(user.displayName),
+              // 정해 둔 닉네임, 없으면 가린 이름(원본은 공용 컬렉션에 남기지 않는다).
+              displayName: name,
               category: _category,
               title: title,
               body: _bodyController.text.trim(),

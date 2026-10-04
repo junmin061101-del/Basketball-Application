@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/theme/app_colors.dart';
+import '../../core/utils/nickname.dart';
 import '../../providers/account_actions.dart';
 import '../../providers/auth_providers.dart';
+import '../../providers/profile_providers.dart';
 import '../../providers/push_settings.dart';
 import '../../services/live_score_push.dart';
 import '../legal/policy_detail_screen.dart';
@@ -24,6 +27,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   Widget build(BuildContext context) {
     final user = ref.watch(authStateProvider).valueOrNull;
     final isGuest = user?.isAnonymous ?? true;
+    final nickname = ref.watch(nicknameProvider).valueOrNull;
 
     return Scaffold(
       appBar: AppBar(title: const Text('설정')),
@@ -39,6 +43,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   subtitle: isGuest
                       ? '기기를 바꾸면 팔로우·예측 기록이 이어지지 않아요'
                       : '이메일로 로그인했어요',
+                ),
+                const Divider(height: 1, color: AppColors.border),
+                _ValueRow(
+                  label: '닉네임',
+                  value: nickname ?? '아직 정하지 않았어요',
+                  dim: nickname == null,
+                  onTap: _editNickname,
                 ),
               ],
             ),
@@ -65,11 +76,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               children: [
                 _MenuRow(label: '로그아웃', onTap: _confirmSignOut),
                 const Divider(height: 1, color: AppColors.border),
-                _MenuRow(
-                  label: '회원 탈퇴',
-                  danger: true,
-                  onTap: _confirmDelete,
-                ),
+                _MenuRow(label: '회원 탈퇴', danger: true, onTap: _confirmDelete),
               ],
             ),
             const SizedBox(height: 24),
@@ -94,11 +101,31 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
   }
 
+  /// 닉네임 바꾸기. 커뮤니티·예측에 보이는 이름이라 규칙을 그대로 검사한다.
+  Future<void> _editNickname() async {
+    final current = ref.read(nicknameProvider).valueOrNull ?? '';
+    final controller = TextEditingController(text: current);
+    final name = await showDialog<String>(
+      context: context,
+      builder: (context) => _NicknameDialog(controller: controller),
+    );
+    controller.dispose();
+    if (name == null || name == current) return;
+    try {
+      await ref.read(nicknameProvider.notifier).save(name);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('닉네임을 $name(으)로 바꿨어요')));
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('닉네임을 바꾸지 못했어요: $e')));
+    }
+  }
+
   void _openPolicy(PolicyDocument document) {
     Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => PolicyDetailScreen(document: document),
-      ),
+      MaterialPageRoute(builder: (_) => PolicyDetailScreen(document: document)),
     );
   }
 
@@ -168,9 +195,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() => _working = false);
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('$e')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
     }
   }
 }
@@ -274,6 +299,142 @@ class _AccountRow extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// 값을 보여주면서 누르면 바꿀 수 있는 줄(닉네임).
+class _ValueRow extends StatelessWidget {
+  final String label;
+  final String value;
+  final bool dim;
+  final VoidCallback onTap;
+
+  const _ValueRow({
+    required this.label,
+    required this.value,
+    required this.dim,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        child: Row(
+          children: [
+            Text(
+              label,
+              style: const TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w700,
+                color: AppColors.textPrimary,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                value,
+                textAlign: TextAlign.right,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 14.5,
+                  fontWeight: FontWeight.w700,
+                  color: dim ? AppColors.textTertiary : AppColors.primary,
+                ),
+              ),
+            ),
+            const SizedBox(width: 4),
+            const Icon(
+              Icons.chevron_right,
+              size: 20,
+              color: AppColors.textTertiary,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// 닉네임 입력 대화상자. 규칙에 맞아야 저장 버튼이 열린다.
+class _NicknameDialog extends StatefulWidget {
+  final TextEditingController controller;
+
+  const _NicknameDialog({required this.controller});
+
+  @override
+  State<_NicknameDialog> createState() => _NicknameDialogState();
+}
+
+class _NicknameDialogState extends State<_NicknameDialog> {
+  String? _error;
+
+  void _submit() {
+    final name = normalizeNickname(widget.controller.text);
+    final error = nicknameError(name);
+    if (error != null) {
+      setState(() => _error = error);
+      return;
+    }
+    Navigator.of(context).pop(name);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('닉네임 바꾸기'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          TextField(
+            controller: widget.controller,
+            autofocus: true,
+            maxLength: nicknameMaxLength,
+            textInputAction: TextInputAction.done,
+            onChanged: (_) {
+              if (_error != null) setState(() => _error = null);
+            },
+            onSubmitted: (_) => _submit(),
+            inputFormatters: [FilteringTextInputFormatter.deny(RegExp(r'\s'))],
+            decoration: InputDecoration(
+              hintText: '닉네임',
+              errorText: _error,
+              counterText: '',
+            ),
+          ),
+          const SizedBox(height: 6),
+          const Text(
+            '한글·영문·숫자·밑줄 $nicknameMinLength~$nicknameMaxLength자.\n'
+            '바꾸기 전에 쓴 글의 이름은 그대로 남아요.',
+            style: TextStyle(
+              fontSize: 12,
+              height: 1.5,
+              color: AppColors.textTertiary,
+            ),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('취소'),
+        ),
+        TextButton(
+          onPressed: _submit,
+          child: const Text(
+            '저장',
+            style: TextStyle(
+              fontWeight: FontWeight.w800,
+              color: AppColors.primary,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/theme/app_colors.dart';
-import '../../core/utils/name_mask.dart';
 import '../../data/models/prediction.dart';
 import '../../providers/prediction_providers.dart';
 
@@ -124,7 +123,7 @@ class _MyRankCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final name = maskDisplayName(entry.displayName);
+    final name = entry.displayName;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       decoration: BoxDecoration(
@@ -213,7 +212,7 @@ class _TopRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final name = maskDisplayName(entry.displayName);
+    final name = entry.displayName;
     return Container(
       color: isMe ? AppColors.primary.withValues(alpha: 0.05) : null,
       padding: const EdgeInsets.symmetric(vertical: 12),
@@ -281,7 +280,7 @@ class _RankRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final name = maskDisplayName(entry.displayName);
+    final name = entry.displayName;
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 12),
       decoration: BoxDecoration(

@@ -3,13 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/theme/app_colors.dart';
 import '../../core/utils/game_time.dart';
-import '../../core/utils/name_mask.dart';
 import '../../data/models/game.dart';
 import '../../data/models/prediction.dart';
 import '../../data/models/team.dart';
 import '../../providers/prediction_providers.dart';
 import '../../shared/widgets/team_logo_placeholder.dart';
 import 'prediction_detail_screen.dart';
+import '../../providers/profile_providers.dart';
 
 /// 경기 하나의 승부예측 카드: 팀 선택 버튼 + 실시간 비율 + 마감 상태 + 토론 진입.
 class PredictionGameCard extends ConsumerWidget {
@@ -159,14 +159,15 @@ class PredictionGameCard extends ConsumerWidget {
   Future<void> _vote(WidgetRef ref, dynamic user, TeamSide side) async {
     if (user == null) return;
     if (!game.isPredictionOpen()) return;
+    final name = await readDisplayName(ref);
     await ref
         .read(predictionRepositoryProvider)
         .submitVote(
           PredictionVote(
             gameId: game.id,
             uid: user.uid as String,
-            // 공용 컬렉션에 원본 이름이 남지 않도록 저장 시점에 마스킹한다.
-            displayName: maskDisplayName(user.displayName as String),
+            // 정해 둔 닉네임, 없으면 가린 이름.
+            displayName: name,
             pick: side,
             gameDate: game.date,
           ),
