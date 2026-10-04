@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../providers/main_tab_provider.dart';
 import '../common/page_header.dart';
+import '../legal/legal_footer.dart';
 
 import '../../core/theme/app_colors.dart';
 import 'standings_screen.dart';
@@ -74,6 +75,7 @@ class ExploreTab extends StatelessWidget {
                 ),
                 const SizedBox(height: 18),
                 const _PredictionBanner(),
+                const LegalFooter(),
               ],
             ),
           ),

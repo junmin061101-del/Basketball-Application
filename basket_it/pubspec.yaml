@@ -82,6 +82,8 @@ flutter:
   # KBL 구단 공식 아이콘(KBL 홈페이지 SVG를 PNG로 옮긴 것)
   assets:
     - assets/logos/kbl/
+    # 이용약관·개인정보처리방침. 앱이 읽어 화면에 그린다(문서가 곧 원본이다).
+    - assets/legal/
 
   # To add assets to your application, add an assets section, like this:
   # assets:

@@ -10,6 +10,7 @@ import '../../providers/news_providers.dart';
 import '../../providers/onboarding_providers.dart';
 import '../../providers/repository_providers.dart';
 import '../common/league_switch.dart';
+import '../legal/legal_footer.dart';
 import '../common/page_header.dart';
 import '../player/player_detail_screen.dart';
 import 'widgets/my_team_card.dart';
@@ -48,6 +49,7 @@ class HomeTab extends ConsumerWidget {
                   _SectionTitle(league == League.kbl ? 'KBL 뉴스' : 'NBA 뉴스'),
                   const SizedBox(height: 12),
                   const _NewsSection(),
+                  const LegalFooter(),
                 ],
               ),
             ),
