@@ -136,7 +136,7 @@ class _IntroView extends StatelessWidget {
         ),
         const SizedBox(height: 14),
         const Text(
-          '선수와 기록은 모두 KBL 공식 기록(1997년 원년부터)입니다.',
+          '지금 KBL에서 뛰는 선수와 KBL 공식 기록으로 만듭니다.',
           textAlign: TextAlign.center,
           style: TextStyle(fontSize: 11.5, color: AppColors.textTertiary),
         ),
@@ -149,8 +149,8 @@ class _RuleCard extends StatelessWidget {
   const _RuleCard();
 
   static const _rules = [
-    ('1', '라운드마다 룰렛을 직접 돌려 구단과 시대를 뽑습니다.'),
-    ('2', '그 시절 그 팀에서 뛴 선수 명단에서 원하는 선수를 한 명 고릅니다.'),
+    ('1', '라운드마다 룰렛을 직접 돌려 KBL 10개 구단 중 하나를 뽑습니다.'),
+    ('2', '그 구단 선수 명단에서 원하는 선수를 한 명 고릅니다.'),
     ('3', '고른 선수를 PG·SG·SF·PF·C 중 빈 자리에 넣습니다. 한 번 넣으면 못 바꿉니다.'),
     ('4', '마음에 안 드는 룰렛 결과는 게임당 한 번 다시 돌릴 수 있습니다.'),
     ('5', '다섯 자리가 차면 54경기 중 몇 승인지와 순위가 나옵니다.'),
@@ -242,9 +242,7 @@ class _PlayView extends ConsumerWidget {
               _RoundBar(round: game.round),
               const SizedBox(height: 14),
               _Roulette(
-                key: ValueKey(
-                  '${game.round}:${condition.teamId}:${condition.era}',
-                ),
+                key: ValueKey('${game.round}:${condition.teamId}'),
                 condition: condition,
                 all: game.allConditions,
                 teamById: teamById,
@@ -265,14 +263,15 @@ class _PlayView extends ConsumerWidget {
             RouletteState.spinning => const _WaitingList(
               message: '어느 팀, 어느 시대가 걸릴까요?',
             ),
-            RouletteState.settled => game.candidate == null
-              ? _PlayerPicker(pool: game.pool, onPick: controller.select)
-              : _PlaceView(
-                  player: game.candidate!,
-                  lineup: game.lineup,
-                  onPlace: controller.place,
-                  onBack: controller.unselect,
-                ),
+            RouletteState.settled =>
+              game.candidate == null
+                  ? _PlayerPicker(pool: game.pool, onPick: controller.select)
+                  : _PlaceView(
+                      player: game.candidate!,
+                      lineup: game.lineup,
+                      onPlace: controller.place,
+                      onBack: controller.unselect,
+                    ),
           },
         ),
       ],
@@ -487,11 +486,8 @@ class _RouletteState extends State<_Roulette> {
   Widget build(BuildContext context) {
     final spinning = widget.roulette == RouletteState.spinning;
     final ready = widget.roulette == RouletteState.ready;
-    // 그때 그 이름 그대로 보여준다. 이름이 지금과 같은 구단만 로고를 쓴다
-    // (고양 소노 로고를 "대구 동양" 옆에 둘 수는 없다).
     final team = widget.teamById[_shown.teamId];
-    final sameTeamToday = team != null && teamKeyOf(team.fullName) == _shown.teamKey;
-    final teamName = ready ? '구단 · 시대' : _shown.teamName;
+    final teamName = ready ? '어느 구단?' : _shown.teamName;
 
     return AnimatedContainer(
       duration: const Duration(milliseconds: 260),
@@ -507,10 +503,10 @@ class _RouletteState extends State<_Roulette> {
             height: 44,
             child: Center(
               child: ready
-                  ? const _Mark(text: '?', dark: false)
-                  : (sameTeamToday
-                        ? _TeamLogo(team: team, size: 40)
-                        : _Mark(text: _clubInitial(_shown.teamName), dark: spinning)),
+                  ? const _Mark(text: '?')
+                  : (team == null
+                        ? _Mark(text: _clubInitial(_shown.teamName))
+                        : _TeamLogo(team: team, size: 40)),
             ),
           ),
           const SizedBox(width: 12),
@@ -539,24 +535,15 @@ class _RouletteState extends State<_Roulette> {
                           color: AppColors.textTertiary,
                         ),
                       )
-                    : Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 3,
-                        ),
-                        decoration: BoxDecoration(
+                    : Text(
+                        spinning ? '뽑는 중' : '이 구단에서 한 명 고르세요',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 11.5,
                           color: spinning
-                              ? Colors.white.withValues(alpha: 0.16)
-                              : AppColors.primarySoft,
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Text(
-                          _shown.eraLabel,
-                          style: TextStyle(
-                            fontSize: 11.5,
-                            fontWeight: FontWeight.w900,
-                            color: spinning ? Colors.white : AppColors.primary,
-                          ),
+                              ? Colors.white.withValues(alpha: 0.7)
+                              : AppColors.textTertiary,
                         ),
                       ),
               ],
@@ -619,12 +606,11 @@ class _RouletteState extends State<_Roulette> {
   }
 }
 
-/// 이름이 바뀐 구단은 로고 대신 글자 한 자를 둔다(옛 로고를 지어내지 않는다).
+/// 로고가 없을 때 쓰는 글자 한 자(로고를 지어내지 않는다).
 class _Mark extends StatelessWidget {
   final String text;
-  final bool dark;
 
-  const _Mark({required this.text, required this.dark});
+  const _Mark({required this.text});
 
   @override
   Widget build(BuildContext context) {
@@ -632,23 +618,23 @@ class _Mark extends StatelessWidget {
       width: 40,
       height: 40,
       alignment: Alignment.center,
-      decoration: BoxDecoration(
-        color: dark ? Colors.white.withValues(alpha: 0.14) : AppColors.primarySoft,
+      decoration: const BoxDecoration(
+        color: AppColors.primarySoft,
         shape: BoxShape.circle,
       ),
       child: Text(
         text,
-        style: TextStyle(
+        style: const TextStyle(
           fontSize: 17,
           fontWeight: FontWeight.w900,
-          color: dark ? Colors.white : AppColors.primary,
+          color: AppColors.primary,
         ),
       ),
     );
   }
 }
 
-/// "대구 동양" → "동". 연고지를 뺀 구단 이름의 첫 글자.
+/// "원주 DB" → "D". 연고지를 뺀 구단 이름의 첫 글자.
 String _clubInitial(String teamName) {
   final parts = teamName.split(' ');
   final club = parts.length > 1 ? parts.last : teamName;
@@ -657,8 +643,8 @@ String _clubInitial(String teamName) {
 
 /// 뽑힌 구단·시대의 선수 명단. 검색·포지션·기록순으로 추려 고른다.
 class _PlayerPicker extends StatefulWidget {
-  final List<LegendPlayer> pool;
-  final ValueChanged<LegendPlayer> onPick;
+  final List<GamePlayer> pool;
+  final ValueChanged<GamePlayer> onPick;
 
   const _PlayerPicker({required this.pool, required this.onPick});
 
@@ -681,7 +667,7 @@ enum _SortKey {
 
   const _SortKey(this.label, this.short);
 
-  double of(LegendPlayer p) => switch (this) {
+  double of(GamePlayer p) => switch (this) {
     _SortKey.ppg => p.ppg,
     _SortKey.rpg => p.rpg,
     _SortKey.apg => p.apg,
@@ -842,7 +828,7 @@ class _PlayerPickerState extends State<_PlayerPicker> {
 
 /// 명단 한 줄: 선수와 그 시즌 경기당 기록.
 class _PickerRow extends StatelessWidget {
-  final LegendPlayer player;
+  final GamePlayer player;
   final _SortKey highlight;
   final VoidCallback onTap;
 
@@ -888,7 +874,7 @@ class _PickerRow extends StatelessWidget {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        '${player.line.korean} · ${player.season}',
+                        '${player.line.korean} · 평균 ${player.mpg.toStringAsFixed(1)}분',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
@@ -951,7 +937,10 @@ class _StatCell extends StatelessWidget {
             label,
             maxLines: 1,
             overflow: TextOverflow.clip,
-            style: const TextStyle(fontSize: 8.5, color: AppColors.textTertiary),
+            style: const TextStyle(
+              fontSize: 8.5,
+              color: AppColors.textTertiary,
+            ),
           ),
         ],
       ),
@@ -961,8 +950,8 @@ class _StatCell extends StatelessWidget {
 
 /// 고른 선수를 어디에 세울지 정하는 화면.
 class _PlaceView extends StatelessWidget {
-  final LegendPlayer player;
-  final Map<LineupSlot, LegendPlayer> lineup;
+  final GamePlayer player;
+  final Map<LineupSlot, GamePlayer> lineup;
   final ValueChanged<LineupSlot> onPlace;
   final VoidCallback onBack;
 
@@ -1003,7 +992,7 @@ class _PlaceView extends StatelessWidget {
 
 /// 이번에 등판한 선수.
 class _CandidateCard extends StatelessWidget {
-  final LegendPlayer player;
+  final GamePlayer player;
 
   const _CandidateCard({required this.player});
 
@@ -1034,7 +1023,7 @@ class _CandidateCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  '${player.line.korean} · ${player.season} ${player.teamLabel}',
+                  '${player.line.korean} · ${player.season} ${player.games}경기',
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     fontSize: 12,
@@ -1061,7 +1050,7 @@ class _CandidateCard extends StatelessWidget {
 
 /// 다섯 자리를 코트 모양으로 늘어놓는다. 빈 자리를 누르면 지금 선수가 들어간다.
 class _Court extends StatelessWidget {
-  final Map<LineupSlot, LegendPlayer> lineup;
+  final Map<LineupSlot, GamePlayer> lineup;
   final ValueChanged<LineupSlot> onTap;
 
   const _Court({required this.lineup, required this.onTap});
@@ -1109,7 +1098,7 @@ class _Court extends StatelessWidget {
 
 class _SlotTile extends StatelessWidget {
   final LineupSlot slot;
-  final LegendPlayer? player;
+  final GamePlayer? player;
   final VoidCallback onTap;
 
   const _SlotTile({
@@ -1236,8 +1225,7 @@ class _ResultViewState extends ConsumerState<_ResultView>
           children: [
             _ResultHero(result: result, wins: wins, rolling: rolling),
             const SizedBox(height: 14),
-            if (result.rankPool > 0)
-              _RankCard(result: result, progress: t),
+            if (result.rankPool > 0) _RankCard(result: result, progress: t),
             if (result.rankPool > 0) const SizedBox(height: 14),
             _TeamStatCard(result: result, progress: t),
             const SizedBox(height: 18),
@@ -1278,8 +1266,9 @@ class _ResultViewState extends ConsumerState<_ResultView>
                         child: ElevatedButton(
                           onPressed: rolling
                               ? null
-                              : () =>
-                                    ref.read(game540Provider.notifier).restart(),
+                              : () => ref
+                                    .read(game540Provider.notifier)
+                                    .restart(),
                           child: const Text('다시 도전'),
                         ),
                       ),
@@ -1310,12 +1299,11 @@ class _ResultViewState extends ConsumerState<_ResultView>
       for (final slot in LineupSlot.values)
         if (game.lineup[slot] != null)
           '${slot.label}  ${game.lineup[slot]!.name} '
-              '(${game.lineup[slot]!.season} ${game.lineup[slot]!.teamLabel})',
+              '(${game.lineup[slot]!.teamName})',
     ];
     Clipboard.setData(ClipboardData(text: lines.join('\n')));
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('결과를 복사했어요')));
+    ScaffoldMessenger.of(context)
+        .showSnackBar(const SnackBar(content: Text('결과를 복사했어요')));
   }
 }
 
@@ -1344,9 +1332,7 @@ class _ResultHero extends StatelessWidget {
       child: Column(
         children: [
           Text(
-            rolling
-                ? '시즌을 치르는 중'
-                : (result.isPerfect ? '완벽한 시즌' : '시즌 결과'),
+            rolling ? '시즌을 치르는 중' : (result.isPerfect ? '완벽한 시즌' : '시즌 결과'),
             style: TextStyle(
               fontSize: 12.5,
               fontWeight: FontWeight.w800,
@@ -1400,8 +1386,8 @@ class _RankCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // 꼴찌에서 시작해 제 순위까지 올라온다.
-    final rank =
-        (result.rankPool - (result.rankPool - result.rank) * progress).round();
+    final rank = (result.rankPool - (result.rankPool - result.rank) * progress)
+        .round();
     final percent = (rank / result.rankPool * 100).clamp(0.1, 100.0);
 
     return Container(
@@ -1548,7 +1534,7 @@ class _TeamStatCard extends StatelessWidget {
 
 class _LineupRow extends StatelessWidget {
   final LineupSlot slot;
-  final LegendPlayer player;
+  final GamePlayer player;
   final Team? team;
 
   const _LineupRow({
@@ -1598,7 +1584,7 @@ class _LineupRow extends StatelessWidget {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  '${player.season} ${player.teamLabel}',
+                  player.teamName,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                     fontSize: 11.5,
@@ -1623,7 +1609,7 @@ class _LineupRow extends StatelessWidget {
 /// 사진은 앱에 넣어 둔 것만 쓴다. KBL 서버에서 바로 불러오면 웹에서는 브라우저가
 /// 직접 그리게 되는데, 목록을 넘길 때 앞 선수의 얼굴이 남아 이름과 어긋났다.
 class _PlayerFace extends StatelessWidget {
-  final LegendPlayer player;
+  final GamePlayer player;
   final double size;
 
   const _PlayerFace({required this.player, required this.size});

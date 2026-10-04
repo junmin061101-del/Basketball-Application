@@ -47,6 +47,11 @@ void main() {
 
     final end = now();
     expect(end.phase, GamePhase.finished);
+    expect(
+      end.lineup.values.map((p) => p.teamId).toSet().length,
+      totalRounds,
+      reason: '한 게임에 같은 구단이 두 번 나오지 않는다',
+    );
     expect(end.lineup.length, totalRounds);
     expect(end.lineup.values.map((p) => p.id).toSet(), picked.toSet());
     expect(end.result!.ppg, greaterThan(0));

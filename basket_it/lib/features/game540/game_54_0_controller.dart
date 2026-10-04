@@ -3,7 +3,7 @@ import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'data/kbl_legend_players.dart';
+import 'data/kbl_game_players.dart';
 import 'game_54_0_rules.dart';
 import 'models/game_54_0.dart';
 
@@ -36,17 +36,17 @@ class Game540State {
   final RoundCondition? condition;
 
   /// 그 조건에서 고를 수 있는 선수들(이미 뽑은 선수는 빠진다).
-  final List<LegendPlayer> pool;
+  final List<GamePlayer> pool;
 
   /// 룰렛 상태. 사람이 누르면 돌고, 다 돌면 화면이 [Game540Controller.settle]을
   /// 불러 명단을 연다.
   final RouletteState roulette;
 
   /// 고른 선수. 자리에 넣기 전까지는 바꿀 수 있다.
-  final LegendPlayer? candidate;
+  final GamePlayer? candidate;
 
   /// 자리에 들어간 선수. 한 번 넣으면 못 바꾼다.
-  final Map<LineupSlot, LegendPlayer> lineup;
+  final Map<LineupSlot, GamePlayer> lineup;
 
   /// 조건 다시 뽑기는 한 게임에 한 번.
   final bool rerollUsed;
@@ -73,11 +73,11 @@ class Game540State {
     GamePhase? phase,
     int? round,
     RoundCondition? condition,
-    List<LegendPlayer>? pool,
+    List<GamePlayer>? pool,
     RouletteState? roulette,
-    LegendPlayer? candidate,
+    GamePlayer? candidate,
     bool clearCandidate = false,
-    Map<LineupSlot, LegendPlayer>? lineup,
+    Map<LineupSlot, GamePlayer>? lineup,
     bool? rerollUsed,
     LineupResult? result,
   }) => Game540State(
@@ -98,14 +98,13 @@ class Game540State {
       LineupSlot.values.where((s) => !lineup.containsKey(s)).toList();
 }
 
-final game540Provider =
-    AsyncNotifierProvider<Game540Controller, Game540State>(
-      Game540Controller.new,
-    );
+final game540Provider = AsyncNotifierProvider<Game540Controller, Game540State>(
+  Game540Controller.new,
+);
 
 /// 54-0 게임 진행을 맡는다. 선수 명단을 한 번 읽어 두고 라운드를 굴린다.
 class Game540Controller extends AsyncNotifier<Game540State> {
-  final _repository = LegendPlayerRepository();
+  final _repository = GamePlayerRepository();
   late RoundDraw _draw;
   WinDistribution? _distribution;
   Future<WinDistribution>? _distributionJob;
@@ -163,7 +162,7 @@ class Game540Controller extends AsyncNotifier<Game540State> {
     if (now.phase != GamePhase.playing || now.rerollUsed) return;
     if (now.roulette != RouletteState.settled) return;
     final drawn = _draw.drawCondition(
-      usedConditions: {if (now.condition != null) now.condition!},
+      usedConditions: _usedConditions(now),
       usedPlayerIds: _placedIds(now),
     );
     if (drawn == null) return;
@@ -179,7 +178,7 @@ class Game540Controller extends AsyncNotifier<Game540State> {
   }
 
   /// 명단에서 선수를 고른다. 자리에 넣기 전까지는 다시 고를 수 있다.
-  void select(LegendPlayer player) {
+  void select(GamePlayer player) {
     final now = _now;
     if (now.phase != GamePhase.playing) return;
     if (now.roulette != RouletteState.settled) return;
@@ -213,7 +212,13 @@ class Game540Controller extends AsyncNotifier<Game540State> {
       return;
     }
 
+    // 한 게임에 같은 구단이 두 번 나오지 않는다. 자리에 들어간 선수의 구단이
+    // 곧 지나온 라운드다.
     final drawn = _draw.drawCondition(
+      usedConditions: {
+        for (final player in lineup.values)
+          RoundCondition(teamId: player.teamId, teamName: player.teamName),
+      },
       usedPlayerIds: {...lineup.values.map((p) => p.id)},
     );
     state = AsyncData(
@@ -269,6 +274,13 @@ class Game540Controller extends AsyncNotifier<Game540State> {
           rank: distribution.rankOf(result.wins),
           rankPool: distribution.size,
         );
+
+  /// 이미 지나온 구단(자리에 들어간 선수의 구단과 지금 조건).
+  Set<RoundCondition> _usedConditions(Game540State now) => {
+    for (final player in now.lineup.values)
+      RoundCondition(teamId: player.teamId, teamName: player.teamName),
+    if (now.condition != null) now.condition!,
+  };
 
   Set<String> _placedIds(Game540State now) => {
     ...now.lineup.values.map((p) => p.id),

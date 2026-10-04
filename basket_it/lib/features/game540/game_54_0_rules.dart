@@ -40,39 +40,31 @@ double slotFit(PlayerLine line, LineupSlot slot) {
 
 /// 선수 한 명의 전력(0~1). 경기당 기록으로만 매긴다.
 ///
-/// 리그를 지배한 선수(영향력 42쯤)가 1, 벤치에서 짧게 뛴 선수(12쯤)가 0이다.
-double playerPower(LegendPlayer player) =>
+/// 리그를 지배하는 선수(영향력 42쯤)가 1, 벤치에서 짧게 뛰는 선수(12쯤)가 0이다.
+double playerPower(GamePlayer player) =>
     ((player.impact - 12) / (42 - 12)).clamp(0.0, 1.0);
 
-/// 함께 뛴 사이인가. 같은 구단·같은 시대면 손발이 맞는다고 본다.
-double _pairSynergy(LegendPlayer a, LegendPlayer b) {
-  if (a.teamId == b.teamId && a.era == b.era) return 1.0;
-  if (a.era == b.era) return 0.4;
-  if (a.teamId == b.teamId) return 0.3;
-  return 0.0;
-}
-
-/// 라인업 점수. 전력·자리 적합·호흡과 그것을 합친 값(0~1).
+/// 라인업 점수. 전력·자리 적합과 그것을 합친 값(0~1).
 @immutable
 class LineupScore {
   final double power;
   final double fit;
-  final double synergy;
   final double total;
 
   const LineupScore({
     required this.power,
     required this.fit,
-    required this.synergy,
     required this.total,
   });
 }
 
-/// 라인업을 전력(62%) · 자리 적합(25%) · 호흡(13%)으로 점수 낸다.
-LineupScore lineupScore(Map<LineupSlot, LegendPlayer> lineup) {
+/// 라인업을 전력(70%) · 자리 적합(30%)으로 점수 낸다.
+///
+/// 라운드마다 다른 구단에서 뽑으므로 "같은 팀끼리의 호흡"은 따질 수 없다.
+LineupScore lineupScore(Map<LineupSlot, GamePlayer> lineup) {
   final players = lineup.values.toList();
   if (players.isEmpty) {
-    return const LineupScore(power: 0, fit: 0, synergy: 0, total: 0);
+    return const LineupScore(power: 0, fit: 0, total: 0);
   }
 
   final power =
@@ -82,29 +74,15 @@ LineupScore lineupScore(Map<LineupSlot, LegendPlayer> lineup) {
   lineup.forEach((slot, player) => fitTotal += slotFit(player.line, slot));
   final fit = fitTotal / lineup.length;
 
-  var pairTotal = 0.0;
-  for (var i = 0; i < players.length; i++) {
-    for (var j = i + 1; j < players.length; j++) {
-      pairTotal += _pairSynergy(players[i], players[j]);
-    }
-  }
-  // 손발 맞는 짝 셋이면 만점으로 본다(열 짝 모두는 사실상 불가능하다).
-  final synergy = (pairTotal / 3).clamp(0.0, 1.0);
-
-  return LineupScore(
-    power: power,
-    fit: fit,
-    synergy: synergy,
-    total: power * 0.62 + fit * 0.25 + synergy * 0.13,
-  );
+  return LineupScore(power: power, fit: fit, total: power * 0.7 + fit * 0.3);
 }
 
 /// 54승 0패가 되는 점수.
 ///
-/// 잘 고른 판(명단에서 가장 좋은 선수를 골라 맞는 자리에 세우는 판) 3,000판의
-/// 점수를 재 보고, 그 위쪽 5%가 닿는 값으로 정했다. 스무 판에 한 번쯤 54-0이
-/// 나온다.
-const perfectScore = 0.92;
+/// 명단에서 가장 좋은 선수를 골라 맞는 자리에 세우는 판 3,000판을 돌려 점수
+/// 분포를 재고, 그 위쪽 5%가 닿는 값으로 정했다(실측 5.0%). 잘 고르면 스무
+/// 판에 한 번쯤 54-0이 난다. 명단이 바뀌면 다시 재야 한다.
+const perfectScore = 0.842;
 
 /// 점수를 승률로 바꿀 때의 기울기. 클수록 잘해야 승수가 오른다.
 const _winCurve = 3.0;
@@ -112,15 +90,10 @@ const _winCurve = 3.0;
 /// 완성된 라인업의 승수를 계산한다.
 ///
 /// 아무리 못해도 프로 다섯 명이라 몇 경기는 이기고, 54승은 [perfectScore]에
-/// 닿아야 한다. 잘 고르면 스무 판에 한 번쯤 나온다.
-LineupResult simulate(Map<LineupSlot, LegendPlayer> lineup) {
+/// 닿아야 한다.
+LineupResult simulate(Map<LineupSlot, GamePlayer> lineup) {
   if (lineup.length < LineupSlot.values.length) {
-    return const LineupResult(
-      wins: 0,
-      powerScore: 0,
-      fitScore: 0,
-      synergyScore: 0,
-    );
+    return const LineupResult(wins: 0, powerScore: 0, fitScore: 0);
   }
 
   final score = lineupScore(lineup);
@@ -129,14 +102,13 @@ LineupResult simulate(Map<LineupSlot, LegendPlayer> lineup) {
   final wins = (kbl54Games * ratio).round().clamp(0, kbl54Games);
 
   final players = lineup.values.toList();
-  double sum(double Function(LegendPlayer) of) =>
+  double sum(double Function(GamePlayer) of) =>
       players.map(of).reduce((a, b) => a + b);
 
   return LineupResult(
     wins: wins,
     powerScore: score.power * 100,
     fitScore: score.fit * 100,
-    synergyScore: score.synergy * 100,
     ppg: sum((p) => p.ppg),
     rpg: sum((p) => p.rpg),
     apg: sum((p) => p.apg),
@@ -145,12 +117,11 @@ LineupResult simulate(Map<LineupSlot, LegendPlayer> lineup) {
   );
 }
 
-/// 라운드 조건과 그 조건에 맞는 선수를 뽑는다.
+/// 라운드 조건(어느 구단)과 그 구단에서 고를 선수를 뽑는다.
 ///
-/// 선수가 한 명도 없는 조합(1990년대 수원 KT는 창단 전이다)은 아예 뽑지 않고,
-/// 이미 라인업에 들어간 선수와 이번 게임에서 이미 나온 조건도 피한다.
+/// 이미 나온 구단과 이미 라인업에 들어간 선수는 피한다.
 class RoundDraw {
-  final Map<RoundCondition, List<LegendPlayer>> byCondition;
+  final Map<RoundCondition, List<GamePlayer>> byCondition;
   final Random random;
 
   RoundDraw({required this.byCondition, Random? random})
@@ -159,8 +130,8 @@ class RoundDraw {
   /// 뽑을 것이 있는지.
   bool get isEmpty => byCondition.isEmpty;
 
-  /// 이번 라운드의 조건 하나와, 그 조건에서 아직 고를 수 있는 선수들을 준다.
-  ({RoundCondition condition, List<LegendPlayer> pool})? drawCondition({
+  /// 이번 라운드의 구단 하나와, 거기서 아직 고를 수 있는 선수들을 준다.
+  ({RoundCondition condition, List<GamePlayer> pool})? drawCondition({
     Set<RoundCondition> usedConditions = const {},
     Set<String> usedPlayerIds = const {},
   }) {
@@ -182,7 +153,7 @@ class RoundDraw {
     return from[random.nextInt(from.length)];
   }
 
-  ({RoundCondition condition, LegendPlayer player})? draw({
+  ({RoundCondition condition, GamePlayer player})? draw({
     Set<RoundCondition> usedConditions = const {},
     Set<String> usedPlayerIds = const {},
   }) {
@@ -215,7 +186,6 @@ class WinDistribution {
 
   int get size => wins.length;
 
-  /// 같은 명단에서 무작위 라인업 [size]팀을 만들어 승수를 모은다.
   factory WinDistribution.sample(
     RoundDraw draw, {
     int size = 1000,
@@ -225,7 +195,7 @@ class WinDistribution {
     final slots = LineupSlot.values;
     final collected = <int>[];
     for (var i = 0; i < size; i++) {
-      final lineup = <LineupSlot, LegendPlayer>{};
+      final lineup = <LineupSlot, GamePlayer>{};
       final used = <String>{};
       final conditions = <RoundCondition>{};
       while (lineup.length < slots.length) {
@@ -254,8 +224,8 @@ class WinDistribution {
 
   /// 같은 표본을 몇 번에 나눠 만든다.
   ///
-  /// 1,000팀을 한 번에 돌리면 0.7초쯤 걸려 화면이 멎는다. 게임을 시작할 때
-  /// 조금씩 미리 만들어 두면, 결과를 낼 때는 이미 준비돼 있다.
+  /// 한 번에 돌리면 화면이 잠깐 멎는다. 게임을 시작할 때 조금씩 미리 만들어
+  /// 두면, 결과를 낼 때는 이미 준비돼 있다.
   static Future<WinDistribution> sampleSpread(
     RoundDraw draw, {
     int size = 1000,
@@ -278,7 +248,7 @@ class WinDistribution {
     return WinDistribution(collected);
   }
 
-  /// [wins]승이 몇 위인가. 더 많이 이긴 라인업 수 + 1위다.
+  /// [target]승이 몇 위인가. 더 많이 이긴 라인업 수 + 1위다.
   int rankOf(int target) {
     var better = 0;
     for (var i = wins.length - 1; i >= 0; i--) {

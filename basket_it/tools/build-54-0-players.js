@@ -4,17 +4,18 @@
 /**
  * 미니게임 "54-0"에 쓸 선수 명단을 만든다.
  *
- * KBL 공식 API에는 1997년 원년부터 시즌마다 선수별 기록이 남아 있다. 그걸 그대로
- * 받아 [구단 · 시대]로 묶어 둔다. 선수도 기록도 지어내지 않는다.
- *
  *   node tools/build-54-0-players.js assets/game/kbl_players_54_0.json
  *   python3 tools/build-54-0-photos.py assets/game/kbl_players_54_0.json
  *
  * 두 번째 줄까지 돌려야 한다. 이 스크립트는 사진 여부(hasPhoto)를 지우므로,
- * 선수 명단을 새로 만들면 사진 스크립트를 이어서 돌린다.
+ * 명단을 새로 만들면 사진 스크립트를 이어서 돌린다.
  *
- * 팀 코드(tcode)는 시즌마다 달라져서 쓸 수 없고, 팀 이름으로 지금 구단을 찾는다.
- * KBL 구단은 이름을 여러 번 바꿨지만 연고와 운영 주체가 이어지는 하나의 구단이다.
+ * 지금 KBL 10개 구단과 지금 뛰는 선수만 담는다. 옛날 선수는 이름을 알아보는
+ * 사람이 적어서 게임이 되지 않는다.
+ *
+ * 기록은 "제대로 치른 가장 최근 시즌"의 경기당 평균을 쓴다. 시즌 초에는 한두
+ * 경기 기록뿐이라 그걸로 선수를 평가할 수 없기 때문이다. 소속 팀은 이번 시즌
+ * 기록이 있으면 그쪽(이적 반영), 없으면 기록을 가져온 시즌의 팀으로 한다.
  */
 
 const fs = require('fs/promises');
@@ -28,50 +29,30 @@ const HEADERS = {
   'X-Requested-With': 'XMLHttpRequest',
 };
 
-/**
- * 역대 팀 이름 → 지금 구단 id.
- *
- * 왼쪽이 이름에 들어 있으면 그 구단으로 본다(긴 이름을 먼저 본다).
- * 상무(국군체육부대)는 정식 구단이 아니어서 넣지 않는다.
- */
-const TEAM_LINEAGE = [
-  ['현대모비스', 'mobis'],
-  ['모비스', 'mobis'],
-  ['기아', 'mobis'], // 부산 기아 엔터프라이즈 → 울산 모비스
+/** 지금 구단 이름 → 앱 팀 id(lib/data/team_logo_assets.dart와 같은 id). */
+const TEAMS = [
   ['한국가스공사', 'kogas'],
-  ['가스공사', 'kogas'],
-  ['전자랜드', 'kogas'], // 인천 전자랜드 → 대구 한국가스공사
-  ['빅스', 'kogas'], // 인천 신세기/SK 빅스
-  ['대우', 'kogas'], // 인천 대우 제우스
+  ['현대모비스', 'mobis'],
   ['정관장', 'kgc'],
-  ['인삼공사', 'kgc'],
-  ['KT&G', 'kgc'],
-  ['SBS', 'kgc'], // 안양 SBS 스타즈 → 안양 KT&G
-  ['KTF', 'kt'],
-  ['코리아텐더', 'kt'], // 여수 코리아텐더 → 부산 KTF
-  ['KT', 'kt'],
-  ['KCC', 'kcc'],
-  ['현대', 'kcc'], // 대전 현대 다이냇 → 전주 KCC ("현대모비스"를 먼저 걸러 둔다)
-  ['삼보', 'db'], // 원주 TG삼보
-  ['동부', 'db'],
-  ['나래', 'db'], // 원주 나래 블루버드
-  ['DB', 'db'],
   ['소노', 'sono'],
-  ['캐롯', 'sono'],
-  ['오리온', 'sono'], // 대구 동양 → 고양 오리온 → 캐롯 → 소노
-  ['동양', 'sono'],
   ['삼성', 'samsung'],
+  ['KCC', 'kcc'],
+  ['KT', 'kt'],
+  ['DB', 'db'],
   ['SK', 'sk'],
   ['LG', 'lg'],
 ];
 
-/** 뛴 기록이 너무 적은 선수는 넣지 않는다(게임이 심심해진다). */
+/** 벤치에서 잠깐 뛴 선수는 넣지 않는다(게임이 심심해진다). */
 const MIN_GAMES = 10;
 const MIN_MINUTES_PER_GAME = 10;
 
+/** 기록을 가져올 시즌인지 가르는 기준. 이보다 적게 치렀으면 시즌 초다. */
+const SEASON_READY_GAMES = 20;
+
 function teamIdOf(name) {
   const s = String(name ?? '');
-  for (const [keyword, id] of TEAM_LINEAGE) {
+  for (const [keyword, id] of TEAMS) {
     if (s.includes(keyword)) return id;
   }
   return null;
@@ -92,12 +73,6 @@ function positionOf(pos) {
   }
 }
 
-/** 시즌 이름("2005-2006") → 시작 연도. */
-function startYear(seasonName) {
-  const m = String(seasonName ?? '').match(/^(\d{4})/);
-  return m ? Number(m[1]) : null;
-}
-
 async function kblGet(pathname, params = {}) {
   const query = new URLSearchParams(params).toString();
   const res = await fetch(`${API}${pathname}${query ? `?${query}` : ''}`, {
@@ -108,11 +83,8 @@ async function kblGet(pathname, params = {}) {
   return res.json();
 }
 
-/** 한 시즌의 선수 기록 → 게임용 줄. */
-function toEntries(rows, season) {
-  const year = startYear(season.seasonName);
-  if (year == null) return [];
-  const era = Math.floor(year / 10) * 10;
+/** 시즌 한 해의 선수 기록 → 게임용 줄. 기준에 못 미치는 선수는 뺀다. */
+function toEntries(rows, seasonName) {
   const entries = [];
   for (const row of Array.isArray(rows) ? rows : []) {
     const player = row.player ?? {};
@@ -123,18 +95,16 @@ function toEntries(rows, season) {
     if (!teamId || !position || games < MIN_GAMES) continue;
 
     const minutes = (Number(r.playMin) || 0) + (Number(r.playSec) || 0) / 60;
-    const perGame = (value) => Math.round(((Number(value) || 0) / games) * 10) / 10;
     if (minutes / games < MIN_MINUTES_PER_GAME) continue;
+    const perGame = (value) => Math.round(((Number(value) || 0) / games) * 10) / 10;
 
     entries.push({
       id: String(player.pcode),
       name: String(player.pname ?? '').trim(),
       position,
       teamId,
-      era,
-      season: String(season.seasonName),
-      // 그때 그 팀 이름("부산기아"). 화면에 작게 적어 둔다.
       teamName: String(player.tname ?? '').trim(),
+      season: String(seasonName),
       games,
       starts: Number(row.startCount) || 0,
       mpg: perGame(minutes),
@@ -148,18 +118,11 @@ function toEntries(rows, season) {
   return entries;
 }
 
-/** 같은 선수가 한 시대·한 구단에 여러 시즌 있으면 가장 많이 뛴 시즌만 남긴다. */
-function pickBestSeasons(entries) {
-  const best = new Map();
-  for (const entry of entries) {
-    const key = `${entry.id}:${entry.teamId}:${entry.era}`;
-    const kept = best.get(key);
-    if (!kept || entry.games * entry.mpg > kept.games * kept.mpg) {
-      best.set(key, entry);
-    }
-  }
-  return [...best.values()].sort(
-    (a, b) => a.era - b.era || a.teamId.localeCompare(b.teamId) || b.ppg - a.ppg,
+/** 치른 경기가 가장 많은 선수의 경기 수. 시즌을 제대로 치렀는지 본다. */
+function playedGames(rows) {
+  return (Array.isArray(rows) ? rows : []).reduce(
+    (most, row) => Math.max(most, Number(row.gameCount) || 0),
+    0,
   );
 }
 
@@ -170,31 +133,49 @@ async function main() {
     process.exit(1);
   }
 
-  const seasons = await kblGet('/season/list', {
-    seasonCategory: 'R',
-    gameCode: '01',
-    seasonGrade: 1,
-  });
-  const started = seasons
-    .filter((s) => String(s.gamedateStart) <= new Date().toISOString().slice(0, 10).replace(/-/g, ''))
-    .sort((a, b) => String(a.gamedateStart).localeCompare(String(b.gamedateStart)));
-  console.log(`시즌 ${started.length}개`);
+  const seasons = (
+    await kblGet('/season/list', {
+      seasonCategory: 'R',
+      gameCode: '01',
+      seasonGrade: 1,
+    })
+  ).sort((a, b) => String(b.gamedateStart).localeCompare(String(a.gamedateStart)));
 
-  const all = [];
-  for (const season of started) {
-    try {
-      const rows = await kblGet(`/leagues/${season.glkey}/stats/players`);
-      const entries = toEntries(rows, season);
-      all.push(...entries);
-      console.log(`  ${season.seasonName}: ${entries.length}명`);
-    } catch (error) {
-      console.warn(`  ${season.seasonName}: 실패 (${error.message})`);
+  // 이번 시즌(소속 팀)과, 기록을 가져올 시즌을 찾는다.
+  const current = seasons[0];
+  const currentRows = await kblGet(`/leagues/${current.glkey}/stats/players`);
+  let statSeason = current;
+  let statRows = currentRows;
+  for (const season of seasons) {
+    const rows =
+      season.glkey === current.glkey
+        ? currentRows
+        : await kblGet(`/leagues/${season.glkey}/stats/players`);
+    if (playedGames(rows) >= SEASON_READY_GAMES) {
+      statSeason = season;
+      statRows = rows;
+      break;
     }
   }
+  console.log(`이번 시즌 ${current.seasonName} / 기록 ${statSeason.seasonName}`);
 
-  const players = pickBestSeasons(all);
-  const byEra = {};
-  for (const p of players) byEra[p.era] = (byEra[p.era] ?? 0) + 1;
+  // 이적한 선수는 이번 시즌 팀으로 바꾼다.
+  const teamNow = new Map();
+  for (const row of currentRows) {
+    const id = String(row.player?.pcode ?? '');
+    const name = String(row.player?.tname ?? '').trim();
+    if (id && teamIdOf(name)) teamNow.set(id, name);
+  }
+
+  const players = toEntries(statRows, statSeason.seasonName).map((player) => {
+    const now = teamNow.get(player.id);
+    if (!now || now === player.teamName) return player;
+    return { ...player, teamName: now, teamId: teamIdOf(now) };
+  });
+  players.sort((a, b) => a.teamId.localeCompare(b.teamId) || b.ppg - a.ppg);
+
+  const byTeam = {};
+  for (const p of players) byTeam[p.teamName] = (byTeam[p.teamName] ?? 0) + 1;
 
   await fs.mkdir(path.dirname(out), { recursive: true });
   await fs.writeFile(
@@ -202,10 +183,11 @@ async function main() {
     JSON.stringify({
       generated_at: new Date().toISOString(),
       source: 'KBL 공식 기록 (api.kbl.or.kr)',
+      season: statSeason.seasonName,
       players,
     }),
   );
-  console.log(`${out}: ${players.length}명`, byEra);
+  console.log(`${out}: ${players.length}명`, byTeam);
 }
 
 if (require.main === module) {
@@ -215,4 +197,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { TEAM_LINEAGE, pickBestSeasons, positionOf, teamIdOf, toEntries };
+module.exports = { TEAMS, positionOf, teamIdOf, toEntries };
