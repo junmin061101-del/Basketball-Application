@@ -184,22 +184,9 @@ async function main() {
     console.error('사용법: node tools/archive-boxscores.js <보관소 디렉터리> <배포 디렉터리>');
     process.exit(1);
   }
-  const nba = require('./fetch-nba');
+  // NBA는 앱에서 내렸다(기록 API를 더 쓸 수 없다). KBL만 보관한다.
   const kbl = require('./fetch-kbl');
-  const { loadPlayerNames } = require('./nba-ko');
-  // NBA 박스스코어 이름은 ESPN 영문이다. 앱 선수 명단에 없는 지난 선수도
-  // 한국어로 보이도록 사전에 있는 이름은 바꿔 둔다.
-  const koNames = loadPlayerNames();
 
-  await archiveLeague({
-    league: 'nba',
-    archiveRoot,
-    distRoot,
-    fetchBoxScore: nba.fetchBoxScore,
-    concurrency: nba.CONCURRENCY,
-    limit: Number(process.env.ARCHIVE_LIMIT_NBA ?? 400),
-    rename: (line) => koNames.get(line.playerId) ?? line.name,
-  });
   await archiveLeague({
     league: 'kbl',
     archiveRoot,

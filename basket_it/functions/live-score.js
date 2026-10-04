@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * 팔로우한 팀의 실시간 경기를 잠금화면으로 보내는 로직.
+ * 팔로우한 팀의 실시간 경기(KBL)를 잠금화면으로 보내는 로직.
  *
  * 1분마다 도는 함수(index.js의 pushLiveScores)가 진행 중인 경기를 확인해,
  * 점수·쿼터·시간이 바뀌었으면 그 팀을 팔로우한 기기에 FCM으로 보낸다.
@@ -17,7 +17,6 @@
 const crypto = require('crypto');
 
 const PAGES_BASE = 'https://junmin061101-del.github.io/Basketball-Application';
-const ESPN_SCOREBOARD = 'https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard';
 const KBL_API = 'https://api.kbl.or.kr';
 
 /** iOS 위젯 확장의 ActivityAttributes 이름. 플러그인과 위젯이 같은 이름을 쓴다. */
@@ -71,44 +70,6 @@ function quarterLabel(period) {
   if (p <= 0) return '';
   if (p <= 4) return `${p}쿼터`;
   return p === 5 ? '연장' : `${p - 4}차 연장`;
-}
-
-/** ESPN 경기 상태 → [status, 쿼터 표기, 남은 시간]. */
-function nbaStatus(status) {
-  const type = status?.type ?? {};
-  if (type.state === 'post') return ['final', '경기 종료', ''];
-  if (type.state !== 'in') return ['scheduled', '', ''];
-  const detail = String(type.shortDetail ?? type.detail ?? '');
-  if (/half/i.test(detail)) return ['live', '하프타임', ''];
-  const base = quarterLabel(status.period);
-  // "End of 3rd Quarter"처럼 쿼터 사이 쉬는 시간.
-  if (/^end/i.test(detail)) return ['live', `${base} 종료`, ''];
-  return ['live', base, String(status.displayClock ?? '')];
-}
-
-/** ESPN 스코어보드 → 경기 목록. [teamsById]는 Pages의 nba/teams.json(한국어 이름·로고). */
-function parseEspnGames(body, teamsById = {}) {
-  const games = [];
-  for (const event of body?.events ?? []) {
-    const competition = event.competitions?.[0];
-    const home = competition?.competitors?.find((c) => c.homeAway === 'home');
-    const away = competition?.competitors?.find((c) => c.homeAway === 'away');
-    if (!home || !away) continue;
-    const [status, period, clock] = nbaStatus(competition.status ?? event.status);
-    const side = (c) => {
-      const team = teamsById[c.team?.id] ?? {};
-      return {
-        teamId: String(c.team?.id ?? ''),
-        name: team.shortName ?? c.team?.shortDisplayName ?? c.team?.abbreviation ?? '',
-        logo: team.logo ?? c.team?.logo ?? '',
-        score: Number(c.score) || 0,
-      };
-    };
-    const h = side(home);
-    const a = side(away);
-    games.push(makeGame('nba', event.id, h, a, status, period, clock));
-  }
-  return games;
 }
 
 /** KBL 일정 한 건 → 경기. KBL 10개 구단끼리가 아니면 null. */
@@ -329,21 +290,10 @@ function kstDate(nowMs) {
 }
 
 /**
- * 지금 NBA·KBL 경기(오늘 스코어보드). 한 리그가 실패해도 다른 리그는 살린다.
- * NBA 팀 이름·로고는 수집기가 올려둔 Pages의 한국어 teams.json을 쓴다.
+ * 지금 KBL 경기(오늘 일정). 앱에서 NBA를 내려 ESPN은 더 부르지 않는다.
  */
 async function fetchGames(fetchImpl, nowMs) {
   const games = [];
-  try {
-    const [board, teams] = await Promise.all([
-      getJson(fetchImpl, ESPN_SCOREBOARD),
-      getJson(fetchImpl, `${PAGES_BASE}/nba/teams.json`).catch(() => ({ teams: [] })),
-    ]);
-    const teamsById = Object.fromEntries((teams.teams ?? []).map((t) => [t.id, t]));
-    games.push(...parseEspnGames(board, teamsById));
-  } catch (error) {
-    console.warn(`NBA 스코어보드 실패: ${error.message}`);
-  }
   try {
     const day = kstDate(nowMs);
     const [list, teams] = await Promise.all([
@@ -449,8 +399,6 @@ module.exports = {
   contentState,
   kblClock,
   kstDate,
-  nbaStatus,
-  parseEspnGames,
   parseKblGame,
   planUpdates,
   pushOnce,
