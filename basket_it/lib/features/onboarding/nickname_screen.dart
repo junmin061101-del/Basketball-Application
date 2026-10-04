@@ -8,7 +8,7 @@ import '../../providers/profile_providers.dart';
 
 /// 온보딩 - 닉네임 정하기.
 ///
-/// 처음 들어온 사람에게 한 번 묻는다. 커뮤니티 글과 예측 토론에 이 이름이
+/// 처음 들어온 사람에게 한 번 묻는다. 커뮤니티 글과 예측 랭킹에 이 이름이
 /// 그대로 보인다. 나중에 설정에서 바꿀 수 있어서 여기서는 건너뛸 수 있다.
 class NicknameScreen extends ConsumerStatefulWidget {
   /// 닉네임을 정했거나 건너뛴 뒤에 할 일(메인으로 들어간다).
@@ -69,7 +69,7 @@ class _NicknameScreenState extends ConsumerState<NicknameScreen> {
               ),
               const SizedBox(height: 10),
               const Text(
-                '커뮤니티 글과 예측 토론에 이 이름이 보여요.\n나중에 설정에서 바꿀 수 있어요.',
+                '커뮤니티 글과 예측 랭킹에 이 이름이 보여요.\n나중에 설정에서 바꿀 수 있어요.',
                 style: TextStyle(
                   fontSize: 13.5,
                   height: 1.55,
