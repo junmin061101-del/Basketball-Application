@@ -84,6 +84,8 @@ flutter:
     - assets/logos/kbl/
     # 이용약관·개인정보처리방침. 앱이 읽어 화면에 그린다(문서가 곧 원본이다).
     - assets/legal/
+    # 54-0 미니게임이 쓰는 역대 KBL 선수 명단(tools/build-54-0-players.js가 만든다)
+    - assets/game/
 
   # To add assets to your application, add an assets section, like this:
   # assets:

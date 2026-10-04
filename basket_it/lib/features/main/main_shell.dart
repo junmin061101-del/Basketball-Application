@@ -9,11 +9,13 @@ import '../../providers/push_settings.dart';
 import '../../services/live_score_push.dart';
 import '../community/community_tab.dart';
 import '../explore/explore_tab.dart';
+import '../game540/views/game_54_0_screen.dart';
 import '../games/games_tab.dart';
 import '../home/home_tab.dart';
 import '../prediction/prediction_tab.dart';
 
-/// 로그인 이후 항상 고정으로 보여지는 하단 탭 5개(홈/게임/예측/커뮤니티/탐색) 뼈대.
+/// 로그인 이후 항상 고정으로 보여지는 하단 탭 6개
+/// (홈/경기/예측/커뮤니티/탐색/54-0) 뼈대.
 class MainShell extends ConsumerStatefulWidget {
   const MainShell({super.key});
 
@@ -50,6 +52,7 @@ class _MainShellState extends ConsumerState<MainShell> {
     PredictionTab(),
     CommunityTab(),
     ExploreTab(),
+    Game540Screen(),
   ];
 
   @override
@@ -75,8 +78,11 @@ class _MainShellState extends ConsumerState<MainShell> {
             onTap: (i) => ref.read(mainTabIndexProvider.notifier).state = i,
             backgroundColor: AppColors.background,
             elevation: 0,
-            selectedFontSize: 10,
-            unselectedFontSize: 10,
+            type: BottomNavigationBarType.fixed,
+            selectedFontSize: 9.5,
+            unselectedFontSize: 9.5,
+            selectedItemColor: AppColors.textPrimary,
+            unselectedItemColor: AppColors.textTertiary,
             // 아이콘은 앱의 다른 화면에서도 쓰는 것만 고른다. Flutter 웹은 쓰는
             // 아이콘만 추려 글꼴을 만드는데, 브라우저가 예전 글꼴을 캐시하고
             // 있으면 새 아이콘이 빈칸으로 보이기 때문이다.
@@ -105,6 +111,11 @@ class _MainShellState extends ConsumerState<MainShell> {
                 icon: Icon(Icons.search),
                 activeIcon: Icon(Icons.search),
                 label: '탐색',
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.sports_basketball_outlined),
+                activeIcon: Icon(Icons.sports_basketball),
+                label: '54-0',
               ),
             ],
           ),
