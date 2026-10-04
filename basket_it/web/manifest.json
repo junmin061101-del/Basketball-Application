@@ -1,11 +1,11 @@
 {
-    "name": "basket_it",
-    "short_name": "basket_it",
+    "name": "Baskit",
+    "short_name": "Baskit",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "description": "KBL 팬을 위한 앱",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

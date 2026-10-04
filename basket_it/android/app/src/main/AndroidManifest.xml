@@ -6,7 +6,7 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
 
     <application
-        android:label="basket_it"
+        android:label="Baskit"
         android:name=".BasketItApplication"
         android:icon="@mipmap/ic_launcher">
         <activity

@@ -11,6 +11,7 @@ import '../../providers/onboarding_providers.dart';
 import '../../providers/repository_providers.dart';
 import '../common/league_switch.dart';
 import '../legal/legal_footer.dart';
+import '../settings/settings_screen.dart';
 import '../common/page_header.dart';
 import '../player/player_detail_screen.dart';
 import 'widgets/my_team_card.dart';
@@ -32,7 +33,7 @@ class HomeTab extends ConsumerWidget {
     return Scaffold(
       body: Column(
         children: [
-          const PageHeader(title: 'Home', trailing: LeagueSwitch()),
+          const PageHeader(title: 'Home', trailing: _HeaderActions()),
           const _FollowChips(),
           Expanded(
             child: RefreshIndicator(
@@ -56,6 +57,33 @@ class HomeTab extends ConsumerWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// 제목 줄 오른쪽: 뉴스 리그 전환과 설정.
+class _HeaderActions extends StatelessWidget {
+  const _HeaderActions();
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const LeagueSwitch(),
+        const SizedBox(width: 4),
+        IconButton(
+          onPressed: () => Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const SettingsScreen()),
+          ),
+          visualDensity: VisualDensity.compact,
+          icon: const Icon(
+            Icons.more_horiz,
+            color: AppColors.textSecondary,
+          ),
+          tooltip: '설정',
+        ),
+      ],
     );
   }
 }

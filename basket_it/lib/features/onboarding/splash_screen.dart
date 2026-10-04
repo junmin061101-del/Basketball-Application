@@ -39,7 +39,7 @@ class SplashScreen extends StatelessWidget {
               ),
               const SizedBox(height: 24),
               Text(
-                'Basket it',
+                'Baskit',
                 style: Theme.of(context).textTheme.headlineLarge
                     ?.copyWith(fontSize: 36),
               ),

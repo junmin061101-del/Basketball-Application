@@ -18,6 +18,9 @@ abstract class AuthRepository {
   /// 계정 없이 둘러보는 게스트(익명) 로그인.
   Future<AppUser> signInAnonymously();
   Future<void> signOut();
+
+  /// 계정을 지운다(회원 탈퇴). 로그인한 지 오래되면 다시 로그인해야 한다.
+  Future<void> deleteAccount();
 }
 
 class FirebaseAuthRepository implements AuthRepository {
@@ -86,4 +89,15 @@ class FirebaseAuthRepository implements AuthRepository {
 
   @override
   Future<void> signOut() => _auth.signOut();
+
+  @override
+  Future<void> deleteAccount() async {
+    final user = _auth.currentUser;
+    if (user == null) return;
+    try {
+      await user.delete();
+    } on fb.FirebaseAuthException catch (e) {
+      throw AuthException.fromCode(e.code);
+    }
+  }
 }

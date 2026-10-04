@@ -22,6 +22,8 @@ class AuthException implements Exception {
         return const AuthException('비밀번호가 너무 약해요. 6자 이상으로 설정해주세요.');
       case 'network-request-failed':
         return const AuthException('네트워크 연결을 확인해주세요.');
+      case 'requires-recent-login':
+        return const AuthException('보안을 위해 다시 로그인한 뒤 탈퇴해주세요.');
       case 'too-many-requests':
         return const AuthException('잠시 후 다시 시도해주세요.');
       default:
