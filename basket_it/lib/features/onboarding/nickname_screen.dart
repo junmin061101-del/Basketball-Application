@@ -122,9 +122,11 @@ class _NicknameScreenState extends ConsumerState<NicknameScreen> {
                       : const Text('시작하기'),
                 ),
               ),
-              TextButton(
-                onPressed: _saving ? null : widget.onDone,
-                child: const Text('나중에 정할게요'),
+              Center(
+                child: TextButton(
+                  onPressed: _saving ? null : widget.onDone,
+                  child: const Text('나중에 정할게요'),
+                ),
               ),
               const SizedBox(height: 16),
             ],

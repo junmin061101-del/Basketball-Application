@@ -294,7 +294,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 const SizedBox(height: 6),
                 Center(
                   child: Text(
-                    '게스트도 승부예측·팔로우를 쓸 수 있어요. 기기를 바꾸면 기록이 이어지지 않아요.',
+                    // 문장 사이에서 줄을 바꿔 준다(가운데서 끊기면 읽기 나쁘다).
+                    '게스트도 승부예측·팔로우를 쓸 수 있어요.\n기기를 바꾸면 기록이 이어지지 않아요.',
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
