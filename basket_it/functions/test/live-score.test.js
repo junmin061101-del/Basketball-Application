@@ -272,3 +272,50 @@ test('진행 중인 경기는 선수 기록을 Firestore에 적는다', async ()
   assert.equal(box.lines[0].points, 29);
   assert.equal(box.lines[0].teamId, 'sk');
 });
+
+test('끝난 경기도 Firestore에 적어 둔다 — 정적 JSON이 몇 시간씩 늦어도 앱이 결과를 본다', async () => {
+  const db = fakeDb({});
+  const messaging = { sendEach: async (m) => ({ responses: m.map(() => ({ success: true })) }) };
+  const endedRows = [{ ...kblRows[0], scoreH: 95, scoreA: 86, isEnded: 1, playingQuarter: 'X' }];
+  let statCalls = 0;
+  const fetchImpl = async (url) => {
+    if (url.includes('player-stat')) {
+      statCalls += 1;
+      return { ok: true, json: async () => [kblPlayerStatRow] };
+    }
+    return fakeFetch({ kbl: endedRows })(url);
+  };
+
+  // 함수가 그 경기 중에 한 번도 못 돌아, 끝난 상태로 처음 본다.
+  await runLivePush({ db, messaging, fetchImpl, now: () => 1000, sleep: async () => {} });
+
+  const doc = db.collections.liveGames.get('kbl:S49G01N7');
+  assert.equal(doc.state.status, 'final');
+  assert.equal(doc.state.homeScore, 95);
+  assert.equal(doc.boxFinal, true);
+  const box = db.collections.liveBoxScores.get('kbl:S49G01N7');
+  assert.equal(box.final, true);
+  assert.equal(box.lines.length, 1);
+
+  // 이미 최종 기록을 받아 뒀으면 다시 받지 않는다(1분마다 같은 요청을 반복하지 않는다).
+  const before = statCalls;
+  await runLivePush({ db, messaging, fetchImpl, now: () => 61000, sleep: async () => {} });
+  assert.equal(statCalls, before);
+  assert.equal(db.collections.liveGames.get('kbl:S49G01N7').updatedAt, 1000, '바뀐 게 없으면 다시 적지 않는다');
+});
+
+test('구독한 기기가 없어도 진행 중인 점수는 Firestore에 쌓인다', async () => {
+  const db = fakeDb({});
+  const messaging = { sendEach: async () => ({ responses: [] }) };
+  await runLivePush({
+    db,
+    messaging,
+    fetchImpl: fakeFetch({ kbl: kblRows }),
+    now: () => 5000,
+    sleep: async () => {},
+  });
+  const doc = db.collections.liveGames.get('kbl:S49G01N7');
+  assert.equal(doc.state.status, 'live');
+  assert.equal(doc.state.homeScore, 70);
+  assert.equal(doc.boxFinal, false);
+});

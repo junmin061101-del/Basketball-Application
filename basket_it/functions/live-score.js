@@ -371,30 +371,33 @@ async function fetchKblBoxScore(fetchImpl, gameId) {
 }
 
 /**
- * 진행 중(막 끝난) 경기의 선수 기록을 Firestore에 적는다.
+ * 진행 중(이거나 막 끝난) 경기의 선수 기록을 Firestore에 적는다.
  *
- * 앱이 읽는 정적 JSON은 20분에 한 번 올라와서, 경기가 시작하고 한참 동안
- * "기록이 아직 없어요"만 보인다. 여기서 30초마다 채워 준다.
+ * 앱이 읽는 정적 JSON은 수집기(GitHub Actions)가 올리는데, 20분 간격으로
+ * 걸어 둬도 몇 시간씩 밀릴 때가 있다. 그 사이를 여기서 메운다.
+ *
+ * 반환: 최종 기록까지 적어 둔 경기 키들. 다시 받지 않으려고 기억해 둔다.
  */
 async function writeBoxScores({ db, fetchImpl, games, nowMs }) {
-  let written = 0;
+  const finalKeys = new Set();
   for (const game of games) {
     if (game.league !== 'kbl') continue;
     try {
       const lines = await fetchKblBoxScore(fetchImpl, game.gameId);
       if (lines.length === 0) continue;
+      const isFinal = game.status === 'final';
       await db.collection(LIVE_BOX_SCORES).doc(game.key).set({
         gameId: game.gameId,
         lines,
-        final: game.status === 'final',
+        final: isFinal,
         updatedAt: nowMs,
       });
-      written += 1;
+      if (isFinal) finalKeys.add(game.key);
     } catch (error) {
       console.warn(`선수 기록 실패 ${game.key}: ${error.message}`);
     }
   }
-  return written;
+  return finalKeys;
 }
 
 /**
@@ -413,15 +416,17 @@ async function pushOnce({ db, messaging, fetchImpl, nowMs }) {
     if (snap.exists) previousByKey[game.key] = snap.data();
   }
 
-  // 진행 중이거나 방금 끝난 경기의 선수 기록을 채운다(푸시 여부와 상관없이).
-  await writeBoxScores({
+  // 선수 기록을 받아 올 경기: 진행 중이거나 방금 끝난 경기, 그리고 끝났는데
+  // 아직 최종 기록을 못 받아 둔 경기(함수가 그 경기 중에 못 돌았을 때)다.
+  const finalBoxKeys = await writeBoxScores({
     db,
     fetchImpl,
     nowMs,
     games: candidates.filter(
       (g) =>
         g.status === 'live' ||
-        previousByKey[g.key]?.state?.status === 'live',
+        previousByKey[g.key]?.state?.status === 'live' ||
+        (g.status === 'final' && previousByKey[g.key]?.boxFinal !== true),
     ),
   });
   const plans = planUpdates(candidates, previousByKey);
@@ -458,10 +463,20 @@ async function pushOnce({ db, messaging, fetchImpl, nowMs }) {
         }
       }
     }
-    await db.collection(LIVE_GAMES).doc(plan.game.key).set({
-      state: contentState(plan.game),
-      updatedAt: nowMs,
-    });
+  }
+
+  // 시작한 경기는 푸시와 상관없이 상태를 적어 둔다. 앱은 정적 JSON이 늦어도
+  // 이 값으로 오늘 경기의 점수와 종료를 보여준다. 바뀐 게 없으면 적지 않는다.
+  for (const game of candidates) {
+    const prev = previousByKey[game.key];
+    const state = contentState(game);
+    const boxFinal = prev?.boxFinal === true || finalBoxKeys.has(game.key);
+    const same =
+      prev &&
+      JSON.stringify(prev.state) === JSON.stringify(state) &&
+      (prev.boxFinal ?? false) === boxFinal;
+    if (same) continue;
+    await db.collection(LIVE_GAMES).doc(game.key).set({ state, boxFinal, updatedAt: nowMs });
   }
   return { live, sent, removed };
 }

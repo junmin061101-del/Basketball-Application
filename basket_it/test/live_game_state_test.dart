@@ -63,7 +63,31 @@ void main() {
     expect(game.liveClock, isNull);
   });
 
-  test('오래된 값은 쓰지 않는다(함수가 멈췄거나 종료를 못 적은 경우)', () {
+  test('끝난 경기의 최종 점수는 몇 시간이 지나도 그대로 쓴다', () {
+    // 수집기(GitHub Actions)가 몇 시간씩 밀리는 일이 있다. 그때도 앱은
+    // 서버가 적어 둔 최종 점수를 보여줘야 한다.
+    final game = applyLiveState(
+      scheduled,
+      states(
+        doc(
+          home: 95,
+          away: 86,
+          status: 'final',
+          period: '경기 종료',
+          clock: '',
+          ago: const Duration(hours: 5),
+        ),
+      ),
+      League.kbl,
+      now: now,
+    );
+
+    expect(game.status, GameStatus.finished);
+    expect(game.homeScore, 95);
+    expect(game.awayScore, 86);
+  });
+
+  test('진행 중이라던 오래된 값은 쓰지 않는다(함수가 멈췄거나 종료를 못 적은 경우)', () {
     final game = applyLiveState(
       scheduled,
       states(doc(ago: const Duration(minutes: 30))),
