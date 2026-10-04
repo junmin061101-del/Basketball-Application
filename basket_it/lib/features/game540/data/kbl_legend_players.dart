@@ -30,17 +30,26 @@ class LegendPlayerRepository {
   }
 }
 
-/// [players]를 [구단 · 시대]로 묶는다.
+/// 고를 선수가 이보다 적은 조합은 라운드로 내지 않는다.
+const _minPoolSize = 3;
+
+/// [players]를 [그때 그 구단 · 시대]로 묶는다.
 ///
-/// 한 번도 그 시대에 없던 구단(수원 KT는 2001년 창단)이 뽑히지 않도록,
-/// 선수가 있는 조합만 남긴다.
+/// 지금 구단이 아니라 그 시절 이름으로 묶기 때문에, 그 시대에 없던 이름은
+/// 아예 나오지 않는다(1990년대에는 고양 소노가 아니라 대구 동양이었다).
+/// 고를 선수가 너무 적은 조합도 뺀다.
 Map<RoundCondition, List<LegendPlayer>> groupByCondition(
   List<LegendPlayer> players,
 ) {
   final byCondition = <RoundCondition, List<LegendPlayer>>{};
   for (final player in players) {
-    final key = RoundCondition(teamId: player.teamId, era: player.era);
+    final key = RoundCondition(
+      teamKey: player.teamKey,
+      era: player.era,
+      teamId: player.teamId,
+    );
     byCondition.putIfAbsent(key, () => []).add(player);
   }
+  byCondition.removeWhere((_, pool) => pool.length < _minPoolSize);
   return byCondition;
 }

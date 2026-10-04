@@ -82,7 +82,7 @@ void main() {
     expect(now().condition, second);
   });
 
-  test('결과에는 무작위 라인업과 견준 순위가 붙는다', () async {
+  test('결과에는 견줄 라인업과 비교한 순위가 붙는다', () async {
     final container = await openGame();
     final controller = container.read(game540Provider.notifier);
     Game540State now() => container.read(game540Provider).value!;

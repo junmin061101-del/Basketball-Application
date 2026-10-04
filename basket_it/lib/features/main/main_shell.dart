@@ -115,7 +115,7 @@ class _MainShellState extends ConsumerState<MainShell> {
               BottomNavigationBarItem(
                 icon: Icon(Icons.sports_basketball_outlined),
                 activeIcon: Icon(Icons.sports_basketball),
-                label: '54-0',
+                label: '54 - 0',
               ),
             ],
           ),

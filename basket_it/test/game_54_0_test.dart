@@ -118,6 +118,32 @@ void main() {
       expect(together.wins, greaterThan(apart.wins));
     });
 
+    test('54승 0패는 최고 선수들이 제자리에 서고 호흡까지 맞아야 나온다', () {
+      final perfect = simulate(
+        lineupOf([
+          star('1', PlayerLine.guard, LineupSlot.pg),
+          star('2', PlayerLine.guard, LineupSlot.sg),
+          star('3', PlayerLine.forward, LineupSlot.sf),
+          star('4', PlayerLine.forward, LineupSlot.pf),
+          star('5', PlayerLine.center, LineupSlot.c),
+        ]),
+      );
+      expect(perfect.wins, kbl54Games);
+      expect(perfect.isPerfect, isTrue);
+
+      // 같은 선수들이라도 손발이 안 맞으면 54승까지는 못 간다.
+      final apart = simulate(
+        lineupOf([
+          star('1', PlayerLine.guard, LineupSlot.pg, teamId: 'sk', era: 1990),
+          star('2', PlayerLine.guard, LineupSlot.sg, teamId: 'db', era: 2000),
+          star('3', PlayerLine.forward, LineupSlot.sf, teamId: 'lg', era: 2010),
+          star('4', PlayerLine.forward, LineupSlot.pf, teamId: 'kcc', era: 2020),
+          star('5', PlayerLine.center, LineupSlot.c, teamId: 'kt', era: 2000),
+        ]),
+      );
+      expect(apart.wins, lessThan(kbl54Games));
+    });
+
     test('다섯 자리가 다 차기 전에는 0승', () {
       expect(simulate({LineupSlot.pg: player()}).wins, 0);
     });
@@ -149,7 +175,7 @@ void main() {
       final draw = RoundDraw(
         byCondition: {
           for (var team = 0; team < 6; team++)
-            RoundCondition(teamId: 'team$team', era: 2010): [
+            RoundCondition(teamKey: 'team$team', era: 2010, teamId: 'team$team'): [
               for (var i = 0; i < 4; i++)
                 player(id: 'p$team$i', ppg: 5.0 + i * 4),
             ],
@@ -181,11 +207,11 @@ void main() {
 
   group('라운드 뽑기', () {
     final pool = {
-      const RoundCondition(teamId: 'sk', era: 2010): [
+      const RoundCondition(teamKey: 'sk', era: 2010, teamId: 'sk'): [
         player(id: 'a'),
         player(id: 'b'),
       ],
-      const RoundCondition(teamId: 'db', era: 1990): [player(id: 'c')],
+      const RoundCondition(teamKey: 'db', era: 1990, teamId: 'db'): [player(id: 'c')],
     };
 
     test('선수가 있는 조합에서만 뽑는다', () {
@@ -208,8 +234,8 @@ void main() {
     test('고를 선수가 한 명도 없는 조합은 뽑지 않는다', () {
       final draw = RoundDraw(
         byCondition: {
-          const RoundCondition(teamId: 'db', era: 1990): [player(id: 'c')],
-          const RoundCondition(teamId: 'sk', era: 2010): [player(id: 'd')],
+          const RoundCondition(teamKey: 'db', era: 1990, teamId: 'db'): [player(id: 'c')],
+          const RoundCondition(teamKey: 'sk', era: 2010, teamId: 'sk'): [player(id: 'd')],
         },
         random: Random(4),
       );
@@ -221,7 +247,7 @@ void main() {
     test('이미 라인업에 들어간 선수는 다시 나오지 않는다', () {
       final draw = RoundDraw(
         byCondition: {
-          const RoundCondition(teamId: 'db', era: 1990): [player(id: 'c')],
+          const RoundCondition(teamKey: 'db', era: 1990, teamId: 'db'): [player(id: 'c')],
         },
         random: Random(2),
       );

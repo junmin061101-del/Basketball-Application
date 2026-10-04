@@ -26,7 +26,7 @@ class Game540Screen extends ConsumerWidget {
     return Scaffold(
       body: Column(
         children: [
-          const PageHeader(title: '54-0'),
+          const PageHeader(title: '54 - 0'),
           Expanded(
             child: gameAsync.when(
               loading: () => const Center(
@@ -487,10 +487,11 @@ class _RouletteState extends State<_Roulette> {
   Widget build(BuildContext context) {
     final spinning = widget.roulette == RouletteState.spinning;
     final ready = widget.roulette == RouletteState.ready;
-    final team = ready ? null : widget.teamById[_shown.teamId];
-    final teamName = ready
-        ? '구단 · 시대'
-        : (team == null ? _shown.teamId.toUpperCase() : '${team.city} ${team.name}');
+    // 그때 그 이름 그대로 보여준다. 이름이 지금과 같은 구단만 로고를 쓴다
+    // (고양 소노 로고를 "대구 동양" 옆에 둘 수는 없다).
+    final team = widget.teamById[_shown.teamId];
+    final sameTeamToday = team != null && teamKeyOf(team.fullName) == _shown.teamKey;
+    final teamName = ready ? '구단 · 시대' : _shown.teamName;
 
     return AnimatedContainer(
       duration: const Duration(milliseconds: 260),
@@ -506,24 +507,10 @@ class _RouletteState extends State<_Roulette> {
             height: 44,
             child: Center(
               child: ready
-                  ? Container(
-                      width: 40,
-                      height: 40,
-                      alignment: Alignment.center,
-                      decoration: const BoxDecoration(
-                        color: AppColors.primarySoft,
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Text(
-                        '?',
-                        style: TextStyle(
-                          fontSize: 19,
-                          fontWeight: FontWeight.w900,
-                          color: AppColors.primary,
-                        ),
-                      ),
-                    )
-                  : (team == null ? null : _TeamLogo(team: team, size: 40)),
+                  ? const _Mark(text: '?', dark: false)
+                  : (sameTeamToday
+                        ? _TeamLogo(team: team, size: 40)
+                        : _Mark(text: _clubInitial(_shown.teamName), dark: spinning)),
             ),
           ),
           const SizedBox(width: 12),
@@ -630,6 +617,42 @@ class _RouletteState extends State<_Roulette> {
       ),
     );
   }
+}
+
+/// 이름이 바뀐 구단은 로고 대신 글자 한 자를 둔다(옛 로고를 지어내지 않는다).
+class _Mark extends StatelessWidget {
+  final String text;
+  final bool dark;
+
+  const _Mark({required this.text, required this.dark});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 40,
+      height: 40,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: dark ? Colors.white.withValues(alpha: 0.14) : AppColors.primarySoft,
+        shape: BoxShape.circle,
+      ),
+      child: Text(
+        text,
+        style: TextStyle(
+          fontSize: 17,
+          fontWeight: FontWeight.w900,
+          color: dark ? Colors.white : AppColors.primary,
+        ),
+      ),
+    );
+  }
+}
+
+/// "대구 동양" → "동". 연고지를 뺀 구단 이름의 첫 글자.
+String _clubInitial(String teamName) {
+  final parts = teamName.split(' ');
+  final club = parts.length > 1 ? parts.last : teamName;
+  return club.isEmpty ? '?' : club.characters.first;
 }
 
 /// 뽑힌 구단·시대의 선수 명단. 검색·포지션·기록순으로 추려 고른다.
@@ -1011,7 +1034,7 @@ class _CandidateCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  '${player.line.korean} · ${player.season} ${player.teamName}',
+                  '${player.line.korean} · ${player.season} ${player.teamLabel}',
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     fontSize: 12,
@@ -1279,15 +1302,15 @@ class _ResultViewState extends ConsumerState<_ResultView>
   ) {
     final percent = result.topPercent;
     final lines = [
-      'Baskit 54-0 — ${result.headline}',
+      'Baskit 54 - 0 — ${result.headline}',
       if (percent != null)
-        '무작위 라인업 ${result.rankPool}팀 중 ${result.rank}위 '
+        '라인업 ${result.rankPool}팀 중 ${result.rank}위 '
             '(상위 ${percent.toStringAsFixed(1)}%)',
       '',
       for (final slot in LineupSlot.values)
         if (game.lineup[slot] != null)
           '${slot.label}  ${game.lineup[slot]!.name} '
-              '(${game.lineup[slot]!.season} ${game.lineup[slot]!.teamName})',
+              '(${game.lineup[slot]!.season} ${game.lineup[slot]!.teamLabel})',
     ];
     Clipboard.setData(ClipboardData(text: lines.join('\n')));
     ScaffoldMessenger.of(
@@ -1427,7 +1450,7 @@ class _RankCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 3),
                 Text(
-                  '같은 규칙으로 뽑은 무작위 라인업 ${result.rankPool}팀과 견줬어요.',
+                  '같은 규칙으로 만들어 본 라인업 ${result.rankPool}팀과 견줬어요.',
                   style: const TextStyle(
                     fontSize: 11,
                     color: AppColors.textTertiary,
@@ -1575,7 +1598,7 @@ class _LineupRow extends StatelessWidget {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  '${player.season} ${player.teamName}',
+                  '${player.season} ${player.teamLabel}',
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                     fontSize: 11.5,
@@ -1596,6 +1619,9 @@ class _LineupRow extends StatelessWidget {
 }
 
 /// 선수 얼굴. 사진이 없으면 이름 첫 글자로 대신한다.
+///
+/// 사진은 앱에 넣어 둔 것만 쓴다. KBL 서버에서 바로 불러오면 웹에서는 브라우저가
+/// 직접 그리게 되는데, 목록을 넘길 때 앞 선수의 얼굴이 남아 이름과 어긋났다.
 class _PlayerFace extends StatelessWidget {
   final LegendPlayer player;
   final double size;
@@ -1612,6 +1638,7 @@ class _PlayerFace extends StatelessWidget {
         color: AppColors.textSecondary,
       ),
     );
+    final asset = player.photoAsset;
     return Container(
       width: size,
       height: size,
@@ -1620,16 +1647,21 @@ class _PlayerFace extends StatelessWidget {
         color: AppColors.surfaceElevated,
         shape: BoxShape.circle,
       ),
-      child: ClipOval(
-        child: Image.network(
-          player.photoUrl,
-          width: size,
-          height: size,
-          fit: BoxFit.cover,
-          webHtmlElementStrategy: WebHtmlElementStrategy.fallback,
-          errorBuilder: (context, error, stackTrace) => Center(child: initial),
-        ),
-      ),
+      child: asset == null
+          ? initial
+          : ClipOval(
+              child: Image.asset(
+                asset,
+                // 줄이 재사용돼도 다른 선수 사진이 남지 않도록 선수마다 따로 둔다.
+                key: ValueKey(player.id),
+                width: size,
+                height: size,
+                fit: BoxFit.cover,
+                filterQuality: FilterQuality.medium,
+                errorBuilder: (context, error, stackTrace) =>
+                    Center(child: initial),
+              ),
+            ),
     );
   }
 }

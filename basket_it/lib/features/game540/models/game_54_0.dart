@@ -50,6 +50,9 @@ class LegendPlayer {
   final String season;
   final String teamName;
 
+  /// 앱에 넣어 둔 얼굴 사진이 있는가. 없으면 이름 첫 글자를 보여준다.
+  final bool hasPhoto;
+
   final int games;
   final double mpg;
   final double ppg;
@@ -66,6 +69,7 @@ class LegendPlayer {
     required this.era,
     required this.season,
     required this.teamName,
+    this.hasPhoto = false,
     required this.games,
     required this.mpg,
     required this.ppg,
@@ -88,6 +92,7 @@ class LegendPlayer {
       era: (row['era'] as num?)?.toInt() ?? 0,
       season: row['season'] as String? ?? '',
       teamName: row['teamName'] as String? ?? '',
+      hasPhoto: row['hasPhoto'] == true,
       games: (row['games'] as num?)?.toInt() ?? 0,
       mpg: d('mpg'),
       ppg: d('ppg'),
@@ -98,8 +103,14 @@ class LegendPlayer {
     );
   }
 
-  /// KBL 공식 선수 사진.
-  String get photoUrl => 'https://kbl.or.kr/files/kbl/players-photo/$id.png';
+  /// 앱에 넣어 둔 얼굴 사진. 없으면 null.
+  String? get photoAsset => hasPhoto ? 'assets/game/photos/$id.jpg' : null;
+
+  /// 같은 구단을 하나로 묶는 열쇠. KBL이 "서울SK"와 "서울 SK"를 섞어 쓴다.
+  String get teamKey => teamKeyOf(teamName);
+
+  /// 화면에 쓰는 그때 그 팀 이름("대구 동양").
+  String get teamLabel => teamLabelOf(teamName);
 
   /// "2000년대", 화면 뱃지에 쓴다.
   String get eraLabel => '$era년대';
@@ -116,22 +127,72 @@ class LegendPlayer {
   double get impact => ppg + rpg * 1.2 + apg * 1.5 + spg * 2 + bpg * 2;
 }
 
-/// 라운드마다 뽑히는 조건: 어느 구단, 어느 시대.
+/// 팀 이름을 묶는 열쇠. 띄어쓰기를 떼어 "서울SK"와 "서울 SK"를 같게 본다.
+String teamKeyOf(String name) => name.replaceAll(' ', '');
+
+/// KBL이 주는 이름("대구동양")에 연고지를 떼어 띄어 쓴다("대구 동양").
+String teamLabelOf(String name) {
+  final key = teamKeyOf(name);
+  for (final city in _cities) {
+    if (key.length > city.length && key.startsWith(city)) {
+      return '$city ${key.substring(city.length)}';
+    }
+  }
+  return key;
+}
+
+/// KBL 역대 연고지.
+const _cities = [
+  '서울',
+  '부산',
+  '대구',
+  '인천',
+  '광주',
+  '대전',
+  '울산',
+  '수원',
+  '고양',
+  '창원',
+  '전주',
+  '원주',
+  '안양',
+  '청주',
+  '여수',
+  '천안',
+  '경남',
+];
+
+/// 라운드마다 뽑히는 조건: 그때 그 구단, 그 시대.
+///
+/// 지금 구단이 아니라 그 시절 이름으로 묶는다. 1990년대에 고양 소노는 없었다
+/// (대구 동양 오리온스였다). 같은 구단이라도 이름이 바뀌면 다른 조건이다.
 @immutable
 class RoundCondition {
-  final String teamId;
+  /// 띄어쓰기를 뗀 그때 그 팀 이름("대구동양"). 같고 다름을 이걸로 가린다.
+  final String teamKey;
+
   final int era;
 
-  const RoundCondition({required this.teamId, required this.era});
+  /// 지금 구단 id. 이름이 그대로인 구단만 로고를 보여주는 데 쓴다.
+  final String teamId;
+
+  const RoundCondition({
+    required this.teamKey,
+    required this.era,
+    required this.teamId,
+  });
+
+  /// 화면에 쓰는 이름("대구 동양").
+  String get teamName => teamLabelOf(teamKey);
 
   String get eraLabel => '$era년대';
 
   @override
   bool operator ==(Object other) =>
-      other is RoundCondition && other.teamId == teamId && other.era == era;
+      other is RoundCondition && other.teamKey == teamKey && other.era == era;
 
   @override
-  int get hashCode => Object.hash(teamId, era);
+  int get hashCode => Object.hash(teamKey, era);
 }
 
 /// 결과 화면에 보여줄 승수와 그 근거.

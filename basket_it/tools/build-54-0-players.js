@@ -8,6 +8,10 @@
  * 받아 [구단 · 시대]로 묶어 둔다. 선수도 기록도 지어내지 않는다.
  *
  *   node tools/build-54-0-players.js assets/game/kbl_players_54_0.json
+ *   python3 tools/build-54-0-photos.py assets/game/kbl_players_54_0.json
+ *
+ * 두 번째 줄까지 돌려야 한다. 이 스크립트는 사진 여부(hasPhoto)를 지우므로,
+ * 선수 명단을 새로 만들면 사진 스크립트를 이어서 돌린다.
  *
  * 팀 코드(tcode)는 시즌마다 달라져서 쓸 수 없고, 팀 이름으로 지금 구단을 찾는다.
  * KBL 구단은 이름을 여러 번 바꿨지만 연고와 운영 주체가 이어지는 하나의 구단이다.
