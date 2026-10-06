@@ -2,13 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/theme/app_colors.dart';
+import '../../core/utils/team_label.dart';
 import '../../data/models/team.dart';
 import '../../data/models/team_season_stats.dart';
 import '../../data/models/team_standing.dart';
 import '../../providers/repository_providers.dart';
 import '../../shared/widgets/team_logo_placeholder.dart';
 import 'team_detail_screen.dart';
-import '../../core/utils/team_label.dart';
 
 /// 탐색 - 팀 순위 화면: 승/패/승률/게임차 + 득점/리바운드/야투% 등 상세 팀 기록.
 /// NBA는 동부·서부 컨퍼런스별로 표를 나눠 각각 1위부터 매긴다.

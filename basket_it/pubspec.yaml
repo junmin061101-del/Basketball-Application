@@ -86,9 +86,10 @@ flutter:
     - assets/legal/
     # 54-0 미니게임이 쓰는 역대 KBL 선수 명단(tools/build-54-0-players.js가 만든다)
     - assets/game/
-    # 선수 얼굴(tools/build-54-0-photos.py가 KBL 공식 사진을 받아 잘라 둔다).
-    # KBL 서버는 CORS 헤더가 없어 웹에서 직접 불러오면 다른 선수 얼굴이 섞인다.
-    - assets/game/photos/
+    # 현역 선수 얼굴(tools/build-player-photos.py가 KBL 공식 사진을 받아 잘라 둔다).
+    # KBL 서버는 CORS 헤더가 없어 웹에서 직접 불러오면 브라우저가 그리는 <img>가
+    # 목록마다 깔려 스크롤이 끊긴다.
+    - assets/photos/
 
   # To add assets to your application, add an assets section, like this:
   # assets:

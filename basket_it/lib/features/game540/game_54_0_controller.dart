@@ -121,7 +121,6 @@ class Game540Controller extends AsyncNotifier<Game540State> {
       byCondition: byCondition,
       random: seed == null ? Random() : Random(seed),
     );
-    _warmUpRanking();
     return Game540State(allConditions: byCondition.keys.toList());
   }
 
@@ -130,6 +129,9 @@ class Game540Controller extends AsyncNotifier<Game540State> {
   void start() {
     final drawn = _draw.drawCondition();
     if (drawn == null) return;
+    // 순위를 견줄 라인업은 게임을 시작할 때부터 만든다. 탭을 열자마자 만들면
+    // 들어오는 순간 화면이 끊기고, 결과까지는 다섯 라운드가 남아 시간이 넉넉하다.
+    _warmUpRanking();
     state = AsyncData(
       Game540State(
         phase: GamePhase.playing,

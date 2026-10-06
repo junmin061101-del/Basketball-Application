@@ -1,5 +1,7 @@
 import 'package:flutter/foundation.dart';
 
+import '../../../data/player_photos.dart';
+
 /// 라인업의 다섯 자리.
 enum LineupSlot {
   pg('PG', '포인트 가드'),
@@ -47,9 +49,6 @@ class GamePlayer {
   /// 기록을 가져온 시즌("2025-2026").
   final String season;
 
-  /// 앱에 넣어 둔 얼굴 사진이 있는가. 없으면 이름 첫 글자를 보여준다.
-  final bool hasPhoto;
-
   final int games;
   final double mpg;
   final double ppg;
@@ -65,7 +64,6 @@ class GamePlayer {
     required this.teamId,
     required this.teamName,
     required this.season,
-    this.hasPhoto = false,
     required this.games,
     required this.mpg,
     required this.ppg,
@@ -87,7 +85,6 @@ class GamePlayer {
       teamId: row['teamId'] as String? ?? '',
       teamName: row['teamName'] as String? ?? '',
       season: row['season'] as String? ?? '',
-      hasPhoto: row['hasPhoto'] == true,
       games: (row['games'] as num?)?.toInt() ?? 0,
       mpg: d('mpg'),
       ppg: d('ppg'),
@@ -98,8 +95,8 @@ class GamePlayer {
     );
   }
 
-  /// 앱에 넣어 둔 얼굴 사진. 없으면 null.
-  String? get photoAsset => hasPhoto ? 'assets/game/photos/$id.jpg' : null;
+  /// 앱에 넣어 둔 얼굴 사진. 없으면 null(이름 첫 글자를 보여준다).
+  String? get photoAsset => playerPhotoAsset(id);
 
   /// 기록 한 줄: "22.6점 11.9리바 4.4어시".
   String get statLine =>

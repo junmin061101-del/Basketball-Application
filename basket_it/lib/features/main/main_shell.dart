@@ -55,13 +55,24 @@ class _MainShellState extends ConsumerState<MainShell> {
     Game540Screen(),
   ];
 
+  /// 한 번이라도 연 탭. IndexedStack은 자식을 모두 만들어 두기 때문에, 들어간
+  /// 적 없는 탭까지 데이터를 받아 와 앱을 켜는 순간이 뚝뚝 끊겼다.
+  final _opened = <int>{0};
+
   @override
   Widget build(BuildContext context) {
     final index = ref.watch(mainTabIndexProvider);
+    _opened.add(index);
     return Scaffold(
       body: SafeArea(
         bottom: false,
-        child: IndexedStack(index: index, children: _tabs),
+        child: IndexedStack(
+          index: index,
+          children: [
+            for (var i = 0; i < _tabs.length; i++)
+              if (_opened.contains(i)) _tabs[i] else const SizedBox.shrink(),
+          ],
+        ),
       ),
       bottomNavigationBar: Container(
         decoration: const BoxDecoration(

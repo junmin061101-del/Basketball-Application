@@ -116,19 +116,25 @@ class _RankingList extends StatelessWidget {
     ];
     final season = stats.isEmpty ? '' : stats.first.season;
 
-    return ListView(
+    // 50줄을 한 번에 만들면 웹에서 스크롤이 끊긴다. 보이는 만큼만 만든다.
+    return ListView.builder(
       padding: const EdgeInsets.fromLTRB(20, 14, 20, 24),
-      children: [
-        Text(
-          [
-            if (season.isNotEmpty) '$season 시즌',
-            rankingNote(category),
-          ].join(' · '),
-          style: Theme.of(context).textTheme.bodySmall,
-        ),
-        const SizedBox(height: 12),
-        if (rows.isEmpty)
-          Padding(
+      itemCount: rows.isEmpty ? 2 : rows.length + 1,
+      itemBuilder: (context, i) {
+        if (i == 0) {
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: Text(
+              [
+                if (season.isNotEmpty) '$season 시즌',
+                rankingNote(category),
+              ].join(' · '),
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          );
+        }
+        if (rows.isEmpty) {
+          return Padding(
             padding: const EdgeInsets.symmetric(vertical: 40),
             child: Center(
               child: Text(
@@ -136,27 +142,33 @@ class _RankingList extends StatelessWidget {
                 style: Theme.of(context).textTheme.bodyMedium,
               ),
             ),
-          )
-        else ...[
-          _TopLeaderCard(
-            category: category,
-            player: playerById[rows.first.stats.playerId]!,
-            team: teamById[rows.first.stats.teamId],
-            value: rows.first.value,
-          ),
-          const SizedBox(height: 16),
-          for (var i = 1; i < rows.length; i++) ...[
-            if (i > 1) const Divider(),
+          );
+        }
+        if (i == 1) {
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 16),
+            child: _TopLeaderCard(
+              category: category,
+              player: playerById[rows.first.stats.playerId]!,
+              team: teamById[rows.first.stats.teamId],
+              value: rows.first.value,
+            ),
+          );
+        }
+        final row = rows[i - 1];
+        return Column(
+          children: [
+            if (i > 2) const Divider(),
             _LeaderRow(
-              rank: rows[i].rank,
-              player: playerById[rows[i].stats.playerId]!,
-              team: teamById[rows[i].stats.teamId],
-              value: category.format(rows[i].value),
+              rank: row.rank,
+              player: playerById[row.stats.playerId]!,
+              team: teamById[row.stats.teamId],
+              value: category.format(row.value),
               unit: category.unit,
             ),
           ],
-        ],
-      ],
+        );
+      },
     );
   }
 }

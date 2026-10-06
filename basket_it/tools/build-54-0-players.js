@@ -5,10 +5,9 @@
  * 미니게임 "54-0"에 쓸 선수 명단을 만든다.
  *
  *   node tools/build-54-0-players.js assets/game/kbl_players_54_0.json
- *   python3 tools/build-54-0-photos.py assets/game/kbl_players_54_0.json
+ *   python3 tools/build-player-photos.py
  *
- * 두 번째 줄까지 돌려야 한다. 이 스크립트는 사진 여부(hasPhoto)를 지우므로,
- * 명단을 새로 만들면 사진 스크립트를 이어서 돌린다.
+ * 두 번째 줄까지 돌려야 한다. 새로 들어온 선수의 얼굴 사진을 받아 둔다.
  *
  * 지금 KBL 10개 구단과 지금 뛰는 선수만 담는다. 옛날 선수는 이름을 알아보는
  * 사람이 적어서 게임이 되지 않는다.

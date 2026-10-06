@@ -154,6 +154,8 @@ class NewsThumbnail extends StatelessWidget {
         url,
         height: height,
         width: double.infinity,
+        // 원본이 800×1200짜리도 있어서, 보이는 높이에 맞춰 풀어 둔다.
+        cacheHeight: (height * MediaQuery.devicePixelRatioOf(context)).round(),
         fit: BoxFit.cover,
         // 웹에서는 CanvasKit이 이미지를 canvas에 그리느라 CORS 헤더를 요구한다.
         // 그 헤더를 안 보내는 언론사(바스켓코리아 등) 사진이 통째로 안 나오므로,
