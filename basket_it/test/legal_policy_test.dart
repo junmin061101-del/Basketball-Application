@@ -61,6 +61,11 @@ void main() {
     expect(terms, contains('금지행위'));
     // KBL이 내려 달라고 하면 바로 멈춘다는 약속이 빠지면 안 된다.
     expect(terms, contains('KBL이 기록·사진·엠블럼의 이용을 중단해 달라고 요청하면'));
+    // 약관에 적힌 기능은 앱이 실제로 하는 것과 같아야 한다(미니게임은 뒤늦게 넣었다).
+    expect(terms, contains('미니게임'));
+    expect(terms, contains('사행성 서비스가 아닙니다'));
+    // 닉네임은 직접 정하고 바꿀 수 있다 — 처리방침에 들어가야 한다.
+    expect(privacy, contains('닉네임'));
     expect(terms, contains('24시간 이내'));
     expect(terms, contains('관할법원'));
     // 처리방침: 국외 이전(Firebase)·보유 기간·권리 행사·보호책임자
