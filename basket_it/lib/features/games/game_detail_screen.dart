@@ -17,6 +17,7 @@ import '../../providers/repository_providers.dart';
 import '../../shared/widgets/team_logo_placeholder.dart';
 import '../explore/team_detail_screen.dart';
 import '../player/player_detail_screen.dart';
+import '../prediction/prediction_game_card.dart';
 
 /// 경기 상세 화면: 스코어보드 + 이 경기 최고 활약 + 양 팀 기록 비교 + 박스스코어.
 class GameDetailScreen extends ConsumerWidget {
@@ -87,6 +88,15 @@ class GameDetailScreen extends ConsumerWidget {
               awayTeam: awayTeam,
               homeRecord: recordByTeam[homeTeam.id],
               awayRecord: recordByTeam[awayTeam.id],
+            ),
+            const SizedBox(height: 28),
+            // 예측 탭까지 찾아가지 않아도 여기서 바로 찍고 토론으로 넘어간다.
+            const _SectionTitle('승부예측'),
+            const SizedBox(height: 12),
+            PredictionGameCard(
+              game: game,
+              homeTeam: homeTeam,
+              awayTeam: awayTeam,
             ),
             const SizedBox(height: 28),
             if (game.status == GameStatus.scheduled)
