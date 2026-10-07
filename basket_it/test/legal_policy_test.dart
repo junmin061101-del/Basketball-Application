@@ -59,6 +59,8 @@ void main() {
     }
     // 약관: 금지행위·게시물 관리·면책·관할
     expect(terms, contains('금지행위'));
+    // KBL이 내려 달라고 하면 바로 멈춘다는 약속이 빠지면 안 된다.
+    expect(terms, contains('KBL이 기록·사진·엠블럼의 이용을 중단해 달라고 요청하면'));
     expect(terms, contains('24시간 이내'));
     expect(terms, contains('관할법원'));
     // 처리방침: 국외 이전(Firebase)·보유 기간·권리 행사·보호책임자
