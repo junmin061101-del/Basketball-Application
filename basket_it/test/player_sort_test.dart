@@ -8,7 +8,6 @@ Player p(
   String teamId, {
   int followers = 0,
   int number = 0,
-  String? englishName,
 }) => Player(
   id: '$teamId-$name',
   name: name,
@@ -16,7 +15,6 @@ Player p(
   position: PlayerPosition.pg,
   backNumber: number,
   followerCount: followers,
-  englishName: englishName,
 );
 
 void main() {
@@ -41,22 +39,10 @@ void main() {
     expect(sorted.map((e) => e.name), ['김도현', '나성민', '박준영', '하동훈']);
   });
 
-  test('ABC순: 영문 이름 알파벳순, 영문 이름이 없으면 뒤로', () {
-    final withEnglish = [
-      p('하동훈', 'lg', englishName: 'Ha Dong Hun'),
-      p('김도현', 'sk', englishName: 'Kim Do Hyun'),
-      p('나성민', 'lg'), // 영문 이름 없음
-      p('박준영', 'sk', englishName: 'Bak Jun Young'),
-    ];
-    final sorted = sortPlayers(withEnglish, sort: PlayerSort.alphabet);
-    expect(sorted.map((e) => e.name), ['박준영', '하동훈', '김도현', '나성민']);
-  });
-
   test('정렬 이름표', () {
     expect(PlayerSort.values.map((s) => s.label), [
       '나의 팀',
       '가나다순',
-      'ABC순',
       '팀별',
     ]);
   });
@@ -93,13 +79,10 @@ void main() {
   });
 
   test('빈 목록도 처리한다', () {
-    expect(sortPlayers(const [], sort: PlayerSort.alphabet), isEmpty);
+    expect(sortPlayers(const [], sort: PlayerSort.name), isEmpty);
   });
 
-  test('리그마다 쓸모 있는 정렬만 보여준다', () {
-    // 이름이 한글뿐인 KBL에 ABC순은 의미가 없고,
-    // 이름을 영문으로 보여주는 NBA에 가나다순은 맞지 않는다.
+  test('이름이 한글뿐이라 가나다순으로만 세운다', () {
     expect(sortsFor(League.kbl).map((s) => s.label), ['나의 팀', '가나다순', '팀별']);
-    expect(sortsFor(League.nba).map((s) => s.label), ['나의 팀', 'ABC순', '팀별']);
   });
 }

@@ -176,7 +176,6 @@ class LeagueDataSource {
         followerCount: 0,
         positionLabel: r['positionLabel'] as String?,
         // KBL이 함께 주는 영문 표기. 영문으로도 검색할 수 있게 들고 있는다.
-        englishName: r['nameEn'] as String?,
         photoUrl: r['headshot'] as String?,
       );
     }).toList();

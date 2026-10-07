@@ -139,14 +139,6 @@ function startedSeasons(seasons, today) {
     .sort((a, b) => String(b.gamedateStart).localeCompare(String(a.gamedateStart)));
 }
 
-/** "KANG SANG JAE" → "Kang Sang Jae". 한글이 섞였거나 비었으면 null. */
-function englishName(ename) {
-  const s = String(ename ?? '').trim();
-  if (!s || /[가-힣]/.test(s)) return null;
-  if (s !== s.toUpperCase()) return s; // 외국인 선수는 이미 "Jameel Warney"
-  return s.toLowerCase().replace(/\b([a-z])/g, (c) => c.toUpperCase());
-}
-
 function toTeam(code) {
   const t = teamOf(code);
   return {
@@ -169,7 +161,6 @@ function toPlayer(p) {
   return {
     id: String(p.pcode),
     name: p.pname ?? '',
-    nameEn: englishName(p.ename),
     teamId: teamOf(p.tcode)?.id ?? '',
     position,
     positionLabel,
@@ -651,7 +642,6 @@ module.exports = {
   isCompleteBoxScore,
   isFinalBoxScore,
   doubleDigitCount,
-  englishName,
   kstDate,
   pointsAgainstByTeam,
   seasonHighlights,

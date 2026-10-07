@@ -119,7 +119,6 @@ abstract class CollectedPlayerRepository implements PlayerRepository {
   Future<List<Player>> searchPlayersByName(String query) async {
     if (query.trim().isEmpty) return getPlayers();
     final players = await source.players();
-    // 한국어 이름과 영문 이름을 모두 받는다.
     return players.where((p) => p.matchesQuery(query)).toList();
   }
 

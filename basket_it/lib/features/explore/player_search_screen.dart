@@ -51,7 +51,7 @@ class _PlayerSearchScreenState extends ConsumerState<PlayerSearchScreen> {
               onChanged: (value) => setState(() => _query = value),
               style: const TextStyle(color: AppColors.textPrimary),
               decoration: const InputDecoration(
-                hintText: '선수 이름으로 검색 (한글·영문)',
+                hintText: '선수 이름으로 검색',
                 prefixIcon: Icon(Icons.search, color: AppColors.textTertiary),
               ),
             ),

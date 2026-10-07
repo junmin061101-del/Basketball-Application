@@ -14,7 +14,7 @@ final files = <String, Object>{
   'players': {
     'players': [
       {
-        'id': '290776', 'name': '허웅', 'nameEn': 'Heo Ung', 'teamId': 'kcc',
+        'id': '290776', 'name': '허웅', 'teamId': 'kcc',
         'position': 'pg', 'positionLabel': '가드', 'backNumber': 3,
         'headshot': 'https://kbl.or.kr/files/kbl/players-photo/290776.png',
       },
@@ -93,13 +93,12 @@ Player player(String id, {String teamId = 'kcc'}) => Player(
 );
 
 void main() {
-  test('선수 이름·영문 표기·사진·포지션을 읽는다', () async {
+  test('선수 이름·사진·포지션을 읽는다', () async {
     final heo = (await source().players()).firstWhere((p) => p.id == '290776');
     expect(heo.name, '허웅');
-    expect(heo.englishName, 'Heo Ung');
     expect(heo.positionText, '가드');
     expect(heo.photoUrl, endsWith('290776.png'));
-    expect(heo.matchesQuery('heo'), isTrue);
+    expect(heo.matchesQuery('허'), isTrue);
   });
 
   test('팀은 공식 엠블럼 주소를 갖는다', () async {

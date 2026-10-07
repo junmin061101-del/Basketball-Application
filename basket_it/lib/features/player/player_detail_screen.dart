@@ -224,18 +224,6 @@ class _HeroHeader extends StatelessWidget {
                             height: 1.05,
                           ),
                         ),
-                        if (player.englishName != null &&
-                            player.englishName != player.name) ...[
-                          const SizedBox(height: 4),
-                          Text(
-                            player.englishName!,
-                            style: const TextStyle(
-                              color: Colors.white60,
-                              fontWeight: FontWeight.w600,
-                              fontSize: 13,
-                            ),
-                          ),
-                        ],
                       ],
                     ),
                   ),

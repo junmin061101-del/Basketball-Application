@@ -30,8 +30,6 @@ class Player {
   /// "포인트가드"라고 적게 된다. 값이 있으면 이쪽을 먼저 쓴다.
   final String? positionLabel;
 
-  /// 리그가 함께 주는 영문 표기. 영문으로도 검색할 수 있게 들고 있는다.
-  final String? englishName;
 
   /// 얼굴 사진 주소. 없으면 화면이 이름 글자로 대신한다.
   final String? photoUrl;
@@ -44,16 +42,13 @@ class Player {
     required this.backNumber,
     this.followerCount = 0,
     this.positionLabel,
-    this.englishName,
     this.photoUrl,
   });
 
-  /// 한국어 이름이나 영문 이름에 [query]가 들어 있는지. 영문은 대소문자를 가리지 않는다.
+  /// 이름에 [query]가 들어 있는지.
   bool matchesQuery(String query) {
     final q = query.trim();
-    if (q.isEmpty) return true;
-    if (name.contains(q)) return true;
-    return englishName?.toLowerCase().contains(q.toLowerCase()) ?? false;
+    return q.isEmpty || name.contains(q);
   }
 
   /// 화면에 보여줄 포지션. 리그가 알려준 표기가 있으면 그걸 쓴다.

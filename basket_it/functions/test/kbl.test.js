@@ -5,7 +5,6 @@ const assert = require('node:assert/strict');
 
 const {
   TEAMS,
-  englishName,
   isCompleteBoxScore,
   isFinalBoxScore,
   kstDate,
@@ -48,22 +47,14 @@ test('한국 날짜는 UTC 자정 직후에도 하루 앞선다', () => {
   assert.equal(kstDate(1, new Date('2026-09-10T01:00:00Z')), '20260911');
 });
 
-test('영문 이름: 대문자 표기는 보기 좋게, 외국인 표기는 그대로, 한글이면 없음', () => {
-  assert.equal(englishName('KANG SANG JAE'), 'Kang Sang Jae');
-  assert.equal(englishName('Jameel Warney'), 'Jameel Warney');
-  assert.equal(englishName('CJ 레슬리'), null);
-  assert.equal(englishName(''), null);
-});
-
 test('선수: 포지션·등번호·사진·팀을 옮긴다', () => {
   const p = toPlayer({
     pcode: '291001', pname: '강상재', tcode: '16', backNum: '26', pos: 'FD',
-    img: 'https://kbl.or.kr/files/kbl/players-photo/291001.png', ename: 'KANG SANG JAE',
+    img: 'https://kbl.or.kr/files/kbl/players-photo/291001.png',
   });
   assert.deepEqual(p, {
     id: '291001',
     name: '강상재',
-    nameEn: 'Kang Sang Jae',
     teamId: 'db',
     position: 'sf',
     positionLabel: '포워드',
