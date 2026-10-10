@@ -123,18 +123,18 @@ void main() {
   testWidgets('뉴스 카드 리스트가 헤드라인 + 목록으로 구성된다', (tester) async {
     await pumpHome(tester, _FakeNewsRepository(feed));
 
-    // 세 기사 모두 카드로 그려진다.
-    expect(find.text('서울 SK, 창원 LG 꺾고 4연승'), findsOneWidget);
-    expect(find.text('안양 정관장 5연승 단독 선두'), findsOneWidget);
-    expect(find.text('부산 KCC, 새 외국인 선수 영입'), findsOneWidget);
-
     // 맨 위 기사만 요약과 팀 배지를 함께 보여준다(헤드라인 카드).
+    expect(find.text('서울 SK, 창원 LG 꺾고 4연승'), findsOneWidget);
     expect(find.text('리바운드를 장악하며 승리했다.'), findsOneWidget);
     expect(find.text('서울 SK'), findsOneWidget);
-
-    // 분류·언론사·시간 줄.
     expect(find.text('점프볼 · 20분 전'), findsOneWidget);
+
+    // 아래 기사는 화면에 들어올 때 만들어진다(한꺼번에 만들면 스크롤이 끊긴다).
+    await tester.scrollUntilVisible(find.text('안양 정관장 5연승 단독 선두'), 300);
+    expect(find.text('안양 정관장 5연승 단독 선두'), findsOneWidget);
     expect(find.text('점프볼 · 3시간 전'), findsOneWidget);
+    await tester.scrollUntilVisible(find.text('부산 KCC, 새 외국인 선수 영입'), 300);
+    expect(find.text('부산 KCC, 새 외국인 선수 영입'), findsOneWidget);
   });
 
   testWidgets('목록 카드를 누르면 그 기사의 원문 링크를 연다', (tester) async {
@@ -142,7 +142,7 @@ void main() {
     await pumpHome(tester, _FakeNewsRepository(feed), opened: opened);
 
     // 뉴스는 내 팀 카드 아래에 있어 스크롤해서 누른다.
-    await tester.ensureVisible(find.text('안양 정관장 5연승 단독 선두'));
+    await tester.scrollUntilVisible(find.text('안양 정관장 5연승 단독 선두'), 300);
     await tester.pumpAndSettle();
     await tester.tap(find.text('안양 정관장 5연승 단독 선두'));
     await tester.pump();

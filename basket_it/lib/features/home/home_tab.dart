@@ -42,15 +42,28 @@ class HomeTab extends ConsumerWidget {
                 ref.invalidate(myTeamSummaryProvider);
                 await ref.read(newsFeedProvider.notifier).refresh();
               },
-              child: ListView(
-                padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
-                children: [
-                  const MyTeamSection(),
-                  const SizedBox(height: 28),
-                  _SectionTitle(league == League.kbl ? 'KBL 뉴스' : 'NBA 뉴스'),
-                  const SizedBox(height: 12),
-                  const _NewsSection(),
-                  const LegalFooter(),
+              // 뉴스 카드를 한꺼번에 만들면 기사 사진 수십 장을 동시에 받아
+              // 와서 스크롤이 멎는다. 슬리버로 나눠 보이는 것만 만든다.
+              child: CustomScrollView(
+                slivers: [
+                  SliverPadding(
+                    padding: const EdgeInsets.fromLTRB(20, 4, 20, 0),
+                    sliver: SliverList.list(
+                      children: [
+                        const MyTeamSection(),
+                        const SizedBox(height: 28),
+                        _SectionTitle(
+                          league == League.kbl ? 'KBL 뉴스' : 'NBA 뉴스',
+                        ),
+                        const SizedBox(height: 12),
+                      ],
+                    ),
+                  ),
+                  const _NewsSliver(),
+                  SliverPadding(
+                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+                    sliver: const SliverToBoxAdapter(child: LegalFooter()),
+                  ),
                 ],
               ),
             ),
@@ -117,29 +130,40 @@ class _SectionTitle extends StatelessWidget {
 }
 
 /// 고른 리그의 뉴스 목록. 불러오기·실패·빈 상태를 목록 자리에서 보여준다.
-class _NewsSection extends ConsumerWidget {
-  const _NewsSection();
+class _NewsSliver extends ConsumerWidget {
+  const _NewsSliver();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final feedAsync = ref.watch(newsFeedProvider);
     final teamsAsync = ref.watch(teamsProvider);
 
+    Widget box(Widget child) => SliverPadding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      sliver: SliverToBoxAdapter(child: child),
+    );
+
     return feedAsync.when(
-      loading: () => const Padding(
-        padding: EdgeInsets.symmetric(vertical: 40),
-        child: Center(
-          child: CircularProgressIndicator(color: AppColors.primary),
+      loading: () => box(
+        const Padding(
+          padding: EdgeInsets.symmetric(vertical: 40),
+          child: Center(
+            child: CircularProgressIndicator(color: AppColors.primary),
+          ),
         ),
       ),
-      error: (err, _) => _NewsError(
-        message: err is Exception ? '$err' : '뉴스를 불러오지 못했어요.',
-        onRetry: () => ref.read(newsFeedProvider.notifier).retry(),
+      error: (err, _) => box(
+        _NewsError(
+          message: err is Exception ? '$err' : '뉴스를 불러오지 못했어요.',
+          onRetry: () => ref.read(newsFeedProvider.notifier).retry(),
+        ),
       ),
       data: (feed) {
         if (feed.articles.isEmpty) {
-          return _EmptyNews(
-            onRetry: () => ref.read(newsFeedProvider.notifier).refresh(),
+          return box(
+            _EmptyNews(
+              onRetry: () => ref.read(newsFeedProvider.notifier).refresh(),
+            ),
           );
         }
         final teamById = {
@@ -148,26 +172,45 @@ class _NewsSection extends ConsumerWidget {
         final headline = feed.articles.first;
         final rest = feed.articles.skip(1).toList();
 
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            NewsHeadlineCard(
-              article: headline,
-              team: teamById[headline.relatedTeamId],
-            ),
-            const SizedBox(height: 18),
-            for (var i = 0; i < rest.length; i++) ...[
-              if (i > 0) const Divider(height: 22),
-              NewsRow(article: rest[i], team: teamById[rest[i].relatedTeamId]),
-            ],
-            const SizedBox(height: 20),
-            Center(
-              child: Text(
-                '${relativeTime(feed.updatedAt)} 업데이트 · 네이버 뉴스 검색',
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
-            ),
-          ],
+        return SliverPadding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          sliver: SliverList.builder(
+            // 머리기사 + 나머지 기사 + 업데이트 시각
+            itemCount: rest.length + 2,
+            itemBuilder: (context, i) {
+              if (i == 0) {
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 18),
+                  child: NewsHeadlineCard(
+                    article: headline,
+                    team: teamById[headline.relatedTeamId],
+                  ),
+                );
+              }
+              if (i <= rest.length) {
+                final article = rest[i - 1];
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    if (i > 1) const Divider(height: 22),
+                    NewsRow(
+                      article: article,
+                      team: teamById[article.relatedTeamId],
+                    ),
+                  ],
+                );
+              }
+              return Padding(
+                padding: const EdgeInsets.only(top: 20, bottom: 8),
+                child: Center(
+                  child: Text(
+                    '${relativeTime(feed.updatedAt)} 업데이트 · 네이버 뉴스 검색',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ),
+              );
+            },
+          ),
         );
       },
     );
