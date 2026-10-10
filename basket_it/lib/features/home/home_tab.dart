@@ -86,14 +86,10 @@ class _HeaderActions extends StatelessWidget {
         const LeagueSwitch(),
         const SizedBox(width: 4),
         IconButton(
-          onPressed: () => Navigator.of(context).push(
-            MaterialPageRoute(builder: (_) => const SettingsScreen()),
-          ),
+          onPressed: () => Navigator.of(context)
+              .push(MaterialPageRoute(builder: (_) => const SettingsScreen())),
           visualDensity: VisualDensity.compact,
-          icon: const Icon(
-            Icons.more_horiz,
-            color: AppColors.textSecondary,
-          ),
+          icon: const Icon(Icons.more_horiz, color: AppColors.textSecondary),
           tooltip: '설정',
         ),
       ],
@@ -193,10 +189,7 @@ class _NewsSliver extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     if (i > 1) const Divider(height: 22),
-                    NewsRow(
-                      article: article,
-                      team: teamById[article.relatedTeamId],
-                    ),
+                    NewsRow(article: article),
                   ],
                 );
               }

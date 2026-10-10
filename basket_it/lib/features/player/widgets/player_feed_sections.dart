@@ -317,10 +317,7 @@ class PlayerNewsSection extends ConsumerWidget {
                 const SizedBox(height: 16),
                 for (var i = 0; i < rest.length; i++) ...[
                   if (i > 0) const Divider(height: 22),
-                  NewsRow(
-                    article: rest[i],
-                    team: teamById[rest[i].relatedTeamId],
-                  ),
+                  NewsRow(article: rest[i]),
                 ],
               ],
             );

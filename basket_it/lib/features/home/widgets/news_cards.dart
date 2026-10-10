@@ -80,11 +80,15 @@ class NewsHeadlineCard extends ConsumerWidget {
 }
 
 /// 헤드라인 아래로 이어지는 목록 카드. 작은 정사각 썸네일 + 제목만.
+/// 목록 한 줄: 제목과 언론사·시간.
+///
+/// 사진은 머리기사 카드에만 둔다. 목록마다 기사 사진을 받으면 한 화면에
+/// 수백 KB짜리 사진이 여러 장 깔려, 느린 기기에서 스크롤이 끊기고 사진이
+/// 뒤늦게 하나씩 떴다.
 class NewsRow extends ConsumerWidget {
   final NewsArticle article;
-  final Team? team;
 
-  const NewsRow({super.key, required this.article, required this.team});
+  const NewsRow({super.key, required this.article});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -92,39 +96,23 @@ class NewsRow extends ConsumerWidget {
       borderRadius: BorderRadius.circular(12),
       onTap: () => ref.read(articleOpenerProvider)(context, article),
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 2),
-        child: Row(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    article.title,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 14.5,
-                      fontWeight: FontWeight.w800,
-                      height: 1.35,
-                      color: AppColors.textPrimary,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  NewsMetaLine(article: article),
-                ],
+            Text(
+              article.title,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                fontSize: 14.5,
+                fontWeight: FontWeight.w800,
+                height: 1.35,
+                color: AppColors.textPrimary,
               ),
             ),
-            const SizedBox(width: 14),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: SizedBox(
-                width: 72,
-                height: 72,
-                child: NewsThumbnail(article: article, team: team, height: 72),
-              ),
-            ),
+            const SizedBox(height: 6),
+            NewsMetaLine(article: article),
           ],
         ),
       ),
