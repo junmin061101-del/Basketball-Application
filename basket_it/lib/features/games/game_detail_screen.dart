@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/theme/app_colors.dart';
+import '../legal/legal_footer.dart';
 import '../../core/utils/game_time.dart';
 import '../../data/models/game.dart';
 import '../../data/models/live_game_state.dart';
@@ -124,6 +125,10 @@ class GameDetailScreen extends ConsumerWidget {
                   );
                 },
               ),
+            // 맨 아래 기록표가 화면 끝에 붙지 않게 바닥글로 여백을 둔다.
+            const SizedBox(height: 24),
+            const LegalFooter(),
+            const SizedBox(height: 24),
           ],
         ),
       ),
@@ -674,8 +679,6 @@ class _GameBody extends StatelessWidget {
           awayScore: game.awayScore,
         ),
         const SizedBox(height: 28),
-        const _SectionTitle('선수 기록'),
-        const SizedBox(height: 10),
         _BoxScoreSection(
           homeTeam: homeTeam,
           awayTeam: awayTeam,
@@ -1107,9 +1110,10 @@ class _BoxScoreSectionState extends State<_BoxScoreSection> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        // 제목과 팀 고르기를 한 줄에, 세로 가운데로 맞춘다.
         Row(
-          mainAxisAlignment: MainAxisAlignment.end,
           children: [
+            const Expanded(child: _SectionTitle('선수 기록')),
             for (final (team, isHome) in [
               (widget.homeTeam, true),
               (widget.awayTeam, false),

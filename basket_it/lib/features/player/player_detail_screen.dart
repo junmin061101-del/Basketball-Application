@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_theme.dart';
-import '../../core/utils/player_display.dart';
 import '../../core/utils/team_label.dart';
 import '../../data/models/player.dart';
 import '../../data/models/player_bio.dart';
@@ -227,49 +226,12 @@ class _HeroHeader extends StatelessWidget {
                       ],
                     ),
                   ),
-                  _HeaderPhoto(player: player),
                 ],
               ),
             ),
           ),
         ],
       ),
-    );
-  }
-}
-
-/// 헤더 오른쪽 선수 사진. 사진이 없으면 이름 글자로 대신한다.
-class _HeaderPhoto extends StatelessWidget {
-  final Player player;
-
-  const _HeaderPhoto({required this.player});
-
-  @override
-  Widget build(BuildContext context) {
-    final initial = Center(
-      child: Text(
-        playerInitial(player.name),
-        style: const TextStyle(
-          color: Colors.white,
-          fontSize: 34,
-          fontWeight: FontWeight.w900,
-        ),
-      ),
-    );
-    const radius = BorderRadius.only(
-      topLeft: Radius.circular(16),
-      topRight: Radius.circular(16),
-    );
-    // 선수 사진은 사용 허가를 받기 전까지 쓰지 않는다.
-    return Container(
-      width: 92,
-      height: 108,
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.14),
-        borderRadius: radius,
-        border: Border.all(color: Colors.white.withValues(alpha: 0.25)),
-      ),
-      child: initial,
     );
   }
 }
@@ -537,7 +499,8 @@ final _seasonColumns = <_SeasonCol>[
   ),
 ];
 
-const _seasonColWidth = 76.0;
+// "2025-26"이 한 줄에 들어가는 폭. 더 좁은 화면 글꼴이면 글자를 줄인다.
+const _seasonColWidth = 92.0;
 const _seasonRowHeight = 46.0;
 // 머리글이 두 줄로 접히는 칸까지 들어가는 높이.
 const _seasonHeaderHeight = 38.0;
@@ -622,9 +585,14 @@ class _SeasonStatsTable extends StatelessWidget {
                           top: BorderSide(color: AppColors.border),
                         ),
                       ),
-                      child: Text(
-                        s.season,
-                        style: Theme.of(context).textTheme.titleMedium,
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          s.season,
+                          maxLines: 1,
+                          softWrap: false,
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
                       ),
                     ),
                 ],
