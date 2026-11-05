@@ -287,7 +287,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       ),
                       textStyle: const TextStyle(fontFamily: AppTheme.font, 
                         fontSize: 15,
-                        fontWeight: FontWeight.w500,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
                   ),
@@ -325,7 +325,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             text: '회원가입',
                             style: TextStyle(
                               color: AppColors.primary,
-                              fontWeight: FontWeight.w500,
+                              fontWeight: FontWeight.w700,
                             ),
                           ),
                         ],

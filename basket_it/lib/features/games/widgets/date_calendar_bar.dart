@@ -130,7 +130,7 @@ class _DateCalendarBarState extends ConsumerState<DateCalendarBar> {
                     _titleFor(selected, _today),
                     style: const TextStyle(
                       fontSize: 15,
-                      fontWeight: FontWeight.w500,
+                      fontWeight: FontWeight.w800,
                       color: AppColors.textPrimary,
                     ),
                   ),
@@ -207,7 +207,7 @@ class _DateCell extends StatelessWidget {
               weekday,
               style: const TextStyle(
                 fontSize: 12,
-                fontWeight: FontWeight.w500,
+                fontWeight: FontWeight.w600,
                 color: AppColors.textTertiary,
               ),
             ),
@@ -227,7 +227,7 @@ class _DateCell extends StatelessWidget {
                 '${date.day}',
                 style: TextStyle(
                   fontSize: 15,
-                  fontWeight: selected ? FontWeight.w500 : FontWeight.w500,
+                  fontWeight: selected ? FontWeight.w900 : FontWeight.w600,
                   color: AppColors.textPrimary,
                 ),
               ),

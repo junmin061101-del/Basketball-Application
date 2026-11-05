@@ -80,7 +80,7 @@ class _FollowingStrip extends ConsumerWidget {
             child: Text(
               '팔로잉 · 탭하면 언팔로우',
               style: Theme.of(context).textTheme.bodySmall
-                  ?.copyWith(fontWeight: FontWeight.w500),
+                  ?.copyWith(fontWeight: FontWeight.w700),
             ),
           ),
           const SizedBox(height: 10),

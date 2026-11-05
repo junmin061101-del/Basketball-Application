@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """앱 글꼴(Pretendard)을 한글 표준 2,350자 + 자주 쓰는 기호만 남겨 줄인다.
 
-정식 Pretendard는 한글 11,172자가 다 들어 있어 굵기마다 1.5MB다. 5개면 7.5MB라
+정식 Pretendard는 한글 11,172자가 다 들어 있어 굵기마다 1.5MB다. 4개면 6MB라
 웹 앱이 켜질 때마다 받기 무겁다. KS X 1001 완성형 2,350자에 없는 드문 글자는
 Flutter가 Noto Sans KR로 대신 그린다.
 
@@ -14,9 +14,8 @@ import sys
 
 from fontTools import subset
 
-# 900은 뺀다(ExtraBold로 그린다). 굵기 하나가 400KB라 켜질 때 받는 양을 줄인다.
-# 작은 글자는 Medium(500), 헤드라인(17pt 이상)만 굵게 쓴다.
-WEIGHTS = ['Regular', 'Medium', 'SemiBold', 'Bold', 'ExtraBold']
+# 500·900은 뺀다(가까운 굵기로 그린다). 굵기 하나가 400KB라 켜질 때 받는 양을 줄인다.
+WEIGHTS = ['Regular', 'SemiBold', 'Bold', 'ExtraBold']
 OUT = pathlib.Path(__file__).resolve().parent.parent / 'assets' / 'fonts'
 
 

@@ -78,7 +78,7 @@ class TeamDetailScreen extends ConsumerWidget {
                             '$rankLabel · ${row.wins}승 ${row.losses}패',
                             style: TextStyle(
                               fontSize: 13,
-                              fontWeight: FontWeight.w500,
+                              fontWeight: FontWeight.w600,
                               color: Colors.white.withValues(alpha: 0.85),
                             ),
                           );
@@ -179,7 +179,7 @@ class _Stat extends StatelessWidget {
             label,
             style: const TextStyle(
               fontSize: 11,
-              fontWeight: FontWeight.w500,
+              fontWeight: FontWeight.w600,
               color: AppColors.textTertiary,
             ),
           ),

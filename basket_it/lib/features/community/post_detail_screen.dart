@@ -308,7 +308,7 @@ class _LikeButton extends ConsumerWidget {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(30),
           ),
-          textStyle: const TextStyle(fontFamily: AppTheme.font, fontWeight: FontWeight.w500, fontSize: 13),
+          textStyle: const TextStyle(fontFamily: AppTheme.font, fontWeight: FontWeight.w800, fontSize: 13),
         ),
       ),
     );
@@ -358,7 +358,7 @@ class _CommentTile extends StatelessWidget {
                   comment.displayName.substring(0, 1),
                   style: const TextStyle(
                     fontSize: 11,
-                    fontWeight: FontWeight.w500,
+                    fontWeight: FontWeight.w800,
                     color: AppColors.textPrimary,
                   ),
                 ),
@@ -368,7 +368,7 @@ class _CommentTile extends StatelessWidget {
                 comment.displayName,
                 style: const TextStyle(
                   fontSize: 12,
-                  fontWeight: FontWeight.w500,
+                  fontWeight: FontWeight.w800,
                   color: AppColors.textPrimary,
                 ),
               ),

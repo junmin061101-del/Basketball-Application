@@ -94,7 +94,7 @@ class _IntroView extends StatelessWidget {
                   'KBL 미니게임',
                   style: TextStyle(
                     fontSize: 11,
-                    fontWeight: FontWeight.w500,
+                    fontWeight: FontWeight.w900,
                     color: Colors.white,
                   ),
                 ),
@@ -131,7 +131,7 @@ class _IntroView extends StatelessWidget {
             onPressed: onStart,
             child: const Text(
               '54-0 도전하기',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900),
             ),
           ),
         ),
@@ -173,7 +173,7 @@ class _RuleCard extends StatelessWidget {
             '게임 방법',
             style: TextStyle(
               fontSize: 15,
-              fontWeight: FontWeight.w500,
+              fontWeight: FontWeight.w900,
               color: AppColors.textPrimary,
             ),
           ),
@@ -196,7 +196,7 @@ class _RuleCard extends StatelessWidget {
                       number,
                       style: const TextStyle(
                         fontSize: 11.5,
-                        fontWeight: FontWeight.w500,
+                        fontWeight: FontWeight.w900,
                         color: AppColors.primary,
                       ),
                     ),
@@ -297,7 +297,7 @@ class _WaitingList extends StatelessWidget {
             message,
             style: const TextStyle(
               fontSize: 13,
-              fontWeight: FontWeight.w500,
+              fontWeight: FontWeight.w700,
               color: AppColors.textTertiary,
             ),
           ),
@@ -380,7 +380,7 @@ class _RoundBar extends StatelessWidget {
           '/ $totalRounds',
           style: TextStyle(
             fontSize: 13,
-            fontWeight: FontWeight.w500,
+            fontWeight: FontWeight.w700,
             color: AppColors.textTertiary,
           ),
         ),
@@ -521,7 +521,7 @@ class _RouletteState extends State<_Roulette> {
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     fontSize: 15.5,
-                    fontWeight: FontWeight.w500,
+                    fontWeight: FontWeight.w900,
                     color: spinning ? Colors.white : AppColors.textPrimary,
                   ),
                 ),
@@ -567,7 +567,7 @@ class _RouletteState extends State<_Roulette> {
                     ),
                     textStyle: const TextStyle(fontFamily: AppTheme.font, 
                       fontSize: 13.5,
-                      fontWeight: FontWeight.w500,
+                      fontWeight: FontWeight.w900,
                     ),
                   ),
                   child: const Text('돌리기'),
@@ -581,7 +581,7 @@ class _RouletteState extends State<_Roulette> {
                 '뽑는 중',
                 style: TextStyle(
                   fontSize: 12.5,
-                  fontWeight: FontWeight.w500,
+                  fontWeight: FontWeight.w800,
                   color: AppColors.primary,
                 ),
               ),
@@ -597,7 +597,7 @@ class _RouletteState extends State<_Roulette> {
                     : AppColors.textPrimary,
                 textStyle: const TextStyle(
                   fontSize: 12.5,
-                  fontWeight: FontWeight.w500,
+                  fontWeight: FontWeight.w800,
                 ),
               ),
             ),
@@ -760,7 +760,7 @@ class _PlayerPickerState extends State<_PlayerPicker> {
                       '${_sort.label}순',
                       style: const TextStyle(
                         fontSize: 12.5,
-                        fontWeight: FontWeight.w500,
+                        fontWeight: FontWeight.w800,
                         color: AppColors.textSecondary,
                       ),
                     ),
@@ -817,7 +817,7 @@ class _PlayerPickerState extends State<_PlayerPicker> {
             label,
             style: TextStyle(
               fontSize: 12.5,
-              fontWeight: FontWeight.w500,
+              fontWeight: FontWeight.w800,
               color: selected ? Colors.white : AppColors.textSecondary,
             ),
           ),
@@ -869,7 +869,7 @@ class _PickerRow extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
                           fontSize: 14,
-                          fontWeight: FontWeight.w500,
+                          fontWeight: FontWeight.w800,
                           color: AppColors.textPrimary,
                         ),
                       ),
@@ -929,7 +929,7 @@ class _StatCell extends StatelessWidget {
             value.toStringAsFixed(1),
             style: TextStyle(
               fontSize: 12.5,
-              fontWeight: FontWeight.w500,
+              fontWeight: FontWeight.w900,
               color: strong ? AppColors.primary : AppColors.textPrimary,
             ),
           ),
@@ -981,7 +981,7 @@ class _PlaceView extends StatelessWidget {
               foregroundColor: AppColors.textSecondary,
               textStyle: const TextStyle(
                 fontSize: 13,
-                fontWeight: FontWeight.w500,
+                fontWeight: FontWeight.w700,
               ),
             ),
           ),
@@ -1036,7 +1036,7 @@ class _CandidateCard extends StatelessWidget {
                   player.statLine,
                   style: const TextStyle(
                     fontSize: 13.5,
-                    fontWeight: FontWeight.w500,
+                    fontWeight: FontWeight.w800,
                     color: AppColors.accent,
                   ),
                 ),
@@ -1137,7 +1137,7 @@ class _SlotTile extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
                   fontSize: 12,
-                  fontWeight: FontWeight.w500,
+                  fontWeight: FontWeight.w800,
                   color: AppColors.textPrimary,
                 ),
               ),
@@ -1146,7 +1146,7 @@ class _SlotTile extends StatelessWidget {
                 slot.label,
                 style: const TextStyle(
                   fontSize: 10.5,
-                  fontWeight: FontWeight.w500,
+                  fontWeight: FontWeight.w900,
                   color: AppColors.primary,
                 ),
               ),
@@ -1157,7 +1157,7 @@ class _SlotTile extends StatelessWidget {
                 slot.label,
                 style: const TextStyle(
                   fontSize: 15,
-                  fontWeight: FontWeight.w500,
+                  fontWeight: FontWeight.w900,
                   color: AppColors.textPrimary,
                 ),
               ),
@@ -1239,7 +1239,7 @@ class _ResultViewState extends ConsumerState<_ResultView>
                     '내 라인업',
                     style: TextStyle(
                       fontSize: 15,
-                      fontWeight: FontWeight.w500,
+                      fontWeight: FontWeight.w900,
                       color: AppColors.textPrimary,
                     ),
                   ),
@@ -1336,7 +1336,7 @@ class _ResultHero extends StatelessWidget {
             rolling ? '시즌을 치르는 중' : (result.isPerfect ? '완벽한 시즌' : '시즌 결과'),
             style: TextStyle(
               fontSize: 12.5,
-              fontWeight: FontWeight.w500,
+              fontWeight: FontWeight.w800,
               color: Colors.white.withValues(alpha: 0.75),
             ),
           ),
@@ -1422,7 +1422,7 @@ class _RankCard extends StatelessWidget {
                   '순위',
                   style: TextStyle(
                     fontSize: 11.5,
-                    fontWeight: FontWeight.w500,
+                    fontWeight: FontWeight.w800,
                     color: AppColors.textSecondary,
                   ),
                 ),
@@ -1484,7 +1484,7 @@ class _TeamStatCard extends StatelessWidget {
                 '라인업 경기당 기록',
                 style: TextStyle(
                   fontSize: 14,
-                  fontWeight: FontWeight.w500,
+                  fontWeight: FontWeight.w900,
                   color: AppColors.textPrimary,
                 ),
               ),
@@ -1562,7 +1562,7 @@ class _LineupRow extends StatelessWidget {
               slot.label,
               style: const TextStyle(
                 fontSize: 12.5,
-                fontWeight: FontWeight.w500,
+                fontWeight: FontWeight.w900,
                 color: AppColors.primary,
               ),
             ),
@@ -1579,7 +1579,7 @@ class _LineupRow extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                     fontSize: 14,
-                    fontWeight: FontWeight.w500,
+                    fontWeight: FontWeight.w800,
                     color: AppColors.textPrimary,
                   ),
                 ),
@@ -1652,7 +1652,7 @@ class _TeamLogo extends StatelessWidget {
         child: Center(
           child: Text(
             team.name.characters.first,
-            style: const TextStyle(fontWeight: FontWeight.w500),
+            style: const TextStyle(fontWeight: FontWeight.w900),
           ),
         ),
       );

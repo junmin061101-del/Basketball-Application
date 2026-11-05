@@ -208,7 +208,7 @@ class _FollowingStrip extends ConsumerWidget {
             child: Text(
               '팔로잉 · 탭하면 언팔로우',
               style: Theme.of(context).textTheme.bodySmall
-                  ?.copyWith(fontWeight: FontWeight.w500),
+                  ?.copyWith(fontWeight: FontWeight.w700),
             ),
           ),
           const SizedBox(height: 10),
@@ -353,7 +353,7 @@ class _FollowButton extends StatelessWidget {
           followed ? '팔로잉' : '팔로우',
           style: TextStyle(
             fontSize: 12,
-            fontWeight: FontWeight.w500,
+            fontWeight: FontWeight.w700,
             color: followed ? Colors.white : AppColors.textSecondary,
           ),
         ),
@@ -437,7 +437,7 @@ class _SortChip extends StatelessWidget {
           label,
           style: TextStyle(
             fontSize: 13,
-            fontWeight: FontWeight.w500,
+            fontWeight: FontWeight.w700,
             color: active ? Colors.white : AppColors.textSecondary,
           ),
         ),

@@ -193,7 +193,7 @@ class _Scoreboard extends StatelessWidget {
                     'VS',
                   style: TextStyle(
                       color: AppColors.textTertiary,
-                      fontWeight: FontWeight.w500,
+                      fontWeight: FontWeight.w800,
                       fontSize: 13,
                     ),
                   ),
@@ -239,7 +239,7 @@ class _StatusLine extends StatelessWidget {
             'LIVE${game.liveClock == null ? '' : ' · ${game.liveClock}'}',
             style: const TextStyle(
               color: AppColors.live,
-              fontWeight: FontWeight.w500,
+              fontWeight: FontWeight.w800,
               fontSize: 13,
             ),
           ),
@@ -252,7 +252,7 @@ class _StatusLine extends StatelessWidget {
           : '경기 예정 · ${dayLabel(game.startTime)}',
       style: const TextStyle(
         color: AppColors.textTertiary,
-        fontWeight: FontWeight.w500,
+        fontWeight: FontWeight.w700,
         fontSize: 13,
       ),
     );
@@ -418,7 +418,7 @@ class _FormCard extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(
                 fontSize: 14.5,
-                fontWeight: FontWeight.w500,
+                fontWeight: FontWeight.w800,
                 color: AppColors.textPrimary,
               ),
             ),
@@ -464,7 +464,7 @@ class _ResultPill extends StatelessWidget {
         won ? '승' : '패',
         style: const TextStyle(
           fontSize: 11,
-          fontWeight: FontWeight.w500,
+          fontWeight: FontWeight.w800,
           color: Colors.white,
         ),
       ),
@@ -544,7 +544,7 @@ class _HeadToHeadCard extends StatelessWidget {
                   '${game.homeScore} : ${game.awayScore}',
                   style: const TextStyle(
                     fontSize: 13.5,
-                    fontWeight: FontWeight.w500,
+                    fontWeight: FontWeight.w800,
                     color: AppColors.textPrimary,
                   ),
                 ),
@@ -795,7 +795,7 @@ class _TopPerformerCard extends StatelessWidget {
                     'PTS',
                     style: TextStyle(
                       fontSize: 10,
-                      fontWeight: FontWeight.w500,
+                      fontWeight: FontWeight.w800,
                       color: AppColors.sky.withValues(alpha: 0.8),
                     ),
                   ),
@@ -828,7 +828,7 @@ class _MiniStat extends StatelessWidget {
             text: '$value ',
             style: const TextStyle(
               color: Colors.white,
-              fontWeight: FontWeight.w500,
+              fontWeight: FontWeight.w800,
               fontSize: 12,
             ),
           ),
@@ -948,7 +948,7 @@ class _CompareRow extends StatelessWidget {
 
     const valueStyle = TextStyle(
       fontSize: 15,
-      fontWeight: FontWeight.w500,
+      fontWeight: FontWeight.w800,
       color: AppColors.textPrimary,
     );
 
@@ -1164,7 +1164,7 @@ class _TeamChip extends StatelessWidget {
           team.shortName,
           style: TextStyle(
             fontSize: 13,
-            fontWeight: FontWeight.w500,
+            fontWeight: FontWeight.w800,
             color: active ? AppColors.textPrimary : AppColors.textSecondary,
           ),
         ),
@@ -1211,7 +1211,7 @@ class _BoxScoreTable extends StatelessWidget {
     const headerStyle = TextStyle(
       fontSize: 11,
       height: 1.15,
-      fontWeight: FontWeight.w500,
+      fontWeight: FontWeight.w700,
       color: AppColors.textTertiary,
     );
 
@@ -1349,8 +1349,8 @@ class _ValueCell extends StatelessWidget {
         style: TextStyle(
           fontSize: 13,
           fontWeight: isLeader || col.emphasize
-              ? FontWeight.w500
-              : FontWeight.w500,
+              ? FontWeight.w900
+              : FontWeight.w600,
           color: isLeader ? AppColors.accent : AppColors.textPrimary,
         ),
       ),
@@ -1375,7 +1375,7 @@ class _GroupBand extends StatelessWidget {
         title,
         style: const TextStyle(
           fontSize: 12,
-          fontWeight: FontWeight.w500,
+          fontWeight: FontWeight.w800,
           color: AppColors.textSecondary,
         ),
       ),
@@ -1430,7 +1430,7 @@ class _BoxScoreNameCell extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(
                 fontSize: 13.5,
-                fontWeight: FontWeight.w500,
+                fontWeight: FontWeight.w700,
                 color: AppColors.textPrimary,
               ),
             ),

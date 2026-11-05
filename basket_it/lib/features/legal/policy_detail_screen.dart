@@ -176,7 +176,7 @@ Widget _bullet(String marker, String text, double indent) => Padding(
         width: 22,
         child: Text(
           marker,
-          style: _bodyStyle.copyWith(fontWeight: FontWeight.w500),
+          style: _bodyStyle.copyWith(fontWeight: FontWeight.w700),
         ),
       ),
       Expanded(child: _InlineText(text, style: _bodyStyle)),
@@ -225,7 +225,7 @@ class _InlineTextState extends State<_InlineText> {
           TextSpan(
             text: match.group(1),
             style: const TextStyle(
-              fontWeight: FontWeight.w500,
+              fontWeight: FontWeight.w800,
               color: AppColors.textPrimary,
             ),
           ),

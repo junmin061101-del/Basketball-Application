@@ -228,7 +228,7 @@ class _FollowButton extends StatelessWidget {
           selected ? '팔로잉' : '팔로우',
           style: TextStyle(
             fontSize: 12,
-            fontWeight: FontWeight.w500,
+            fontWeight: FontWeight.w700,
             color: selected ? Colors.white : AppColors.textSecondary,
           ),
         ),

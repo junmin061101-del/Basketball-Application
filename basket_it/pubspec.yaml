@@ -80,13 +80,11 @@ flutter:
   uses-material-design: true
 
   # Pretendard(SIL OFL, assets/fonts/OFL.txt)를 한글 표준 2,350자 + 기호만 남겨
-  # 줄였다(tools/build-fonts.py). 900은 ExtraBold로 그린다.
+  # 줄였다(tools/build-fonts.py). 500·900은 가까운 굵기로 그린다.
   fonts:
     - family: Pretendard
       fonts:
         - asset: assets/fonts/Pretendard-Regular.otf
-        - asset: assets/fonts/Pretendard-Medium.otf
-          weight: 500
         - asset: assets/fonts/Pretendard-SemiBold.otf
           weight: 600
         - asset: assets/fonts/Pretendard-Bold.otf

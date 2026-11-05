@@ -31,10 +31,10 @@ class PredictionTab extends StatelessWidget {
               indicatorSize: TabBarIndicatorSize.tab,
               labelColor: AppColors.textPrimary,
               unselectedLabelColor: AppColors.textTertiary,
-              labelStyle: TextStyle(fontFamily: AppTheme.font, fontSize: 16, fontWeight: FontWeight.w500),
+              labelStyle: TextStyle(fontFamily: AppTheme.font, fontSize: 16, fontWeight: FontWeight.w800),
               unselectedLabelStyle: TextStyle(
                 fontSize: 16,
-                fontWeight: FontWeight.w500,
+                fontWeight: FontWeight.w600,
               ),
               tabs: [
                 Tab(text: '예측하기'),

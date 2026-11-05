@@ -142,7 +142,7 @@ class _MyRankCard extends StatelessWidget {
               '내 순위',
               style: TextStyle(
                 fontSize: 12,
-                fontWeight: FontWeight.w500,
+                fontWeight: FontWeight.w900,
                 color: Colors.white,
               ),
             ),
@@ -190,7 +190,7 @@ class _MyRankCard extends StatelessWidget {
                 '적중률',
                 style: TextStyle(
                   fontSize: 11,
-                  fontWeight: FontWeight.w500,
+                  fontWeight: FontWeight.w700,
                   color: Colors.white.withValues(alpha: 0.6),
                 ),
               ),
@@ -242,7 +242,7 @@ class _TopRow extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                     fontSize: 16.5,
-                    fontWeight: FontWeight.w500,
+                    fontWeight: FontWeight.w900,
                     color: AppColors.textPrimary,
                   ),
                 ),
@@ -296,7 +296,7 @@ class _RankRow extends StatelessWidget {
               textAlign: TextAlign.center,
               style: const TextStyle(
                 fontSize: 15,
-                fontWeight: FontWeight.w500,
+                fontWeight: FontWeight.w700,
                 color: AppColors.textSecondary,
               ),
             ),
@@ -310,7 +310,7 @@ class _RankRow extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(
                 fontSize: 15,
-                fontWeight: FontWeight.w500,
+                fontWeight: FontWeight.w800,
                 color: AppColors.textPrimary,
               ),
             ),
@@ -319,7 +319,7 @@ class _RankRow extends StatelessWidget {
             '${entry.correct}/${entry.settled}',
             style: const TextStyle(
               fontSize: 14,
-              fontWeight: FontWeight.w500,
+              fontWeight: FontWeight.w700,
               color: AppColors.textSecondary,
             ),
           ),

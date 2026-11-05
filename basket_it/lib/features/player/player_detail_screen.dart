@@ -84,7 +84,7 @@ class PlayerDetailScreen extends ConsumerWidget {
                         borderRadius: BorderRadius.circular(12),
                       ),
                       textStyle: const TextStyle(fontFamily: AppTheme.font, 
-                        fontWeight: FontWeight.w500,
+                        fontWeight: FontWeight.w800,
                         fontSize: 15,
                       ),
                     ),
@@ -201,7 +201,7 @@ class _HeroHeader extends StatelessWidget {
                             team!.fullName,
                             style: const TextStyle(
                               color: Colors.white70,
-                              fontWeight: FontWeight.w500,
+                              fontWeight: FontWeight.w700,
                               fontSize: 13,
                             ),
                           ),
@@ -210,7 +210,7 @@ class _HeroHeader extends StatelessWidget {
                           '${player.positionText} · #${player.backNumber}',
                           style: const TextStyle(
                             color: Colors.white70,
-                            fontWeight: FontWeight.w500,
+                            fontWeight: FontWeight.w600,
                             fontSize: 13,
                           ),
                         ),
@@ -333,7 +333,7 @@ class _BioCell extends StatelessWidget {
             label,
             style: const TextStyle(
               fontSize: 11,
-              fontWeight: FontWeight.w500,
+              fontWeight: FontWeight.w600,
               color: AppColors.textTertiary,
             ),
           ),
@@ -343,7 +343,7 @@ class _BioCell extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
             style: const TextStyle(
               fontSize: 14,
-              fontWeight: FontWeight.w500,
+              fontWeight: FontWeight.w700,
               color: AppColors.textPrimary,
             ),
           ),
@@ -466,7 +466,7 @@ class _Stat extends StatelessWidget {
             label,
             style: const TextStyle(
               fontSize: 11,
-              fontWeight: FontWeight.w500,
+              fontWeight: FontWeight.w600,
               color: AppColors.textTertiary,
             ),
           ),
@@ -609,7 +609,7 @@ class _SeasonStatsTable extends StatelessWidget {
                     child: Text(
                       '시즌',
                       style: Theme.of(context).textTheme.bodySmall
-                          ?.copyWith(fontWeight: FontWeight.w500),
+                          ?.copyWith(fontWeight: FontWeight.w700),
                     ),
                   ),
                   for (final s in history)
@@ -652,7 +652,7 @@ class _SeasonStatsTable extends StatelessWidget {
                                     ?.copyWith(
                                       fontSize: 11,
                                       height: 1.15,
-                                      fontWeight: FontWeight.w500,
+                                      fontWeight: FontWeight.w700,
                                     ),
                               ),
                             ),
@@ -681,7 +681,7 @@ class _SeasonStatsTable extends StatelessWidget {
                                   shrinkToFit: col.shrinkToFit,
                                   style: col.emphasize
                                       ? const TextStyle(
-                                          fontWeight: FontWeight.w500,
+                                          fontWeight: FontWeight.w800,
                                           color: AppColors.textPrimary,
                                         )
                                       : Theme.of(context).textTheme.bodyMedium,

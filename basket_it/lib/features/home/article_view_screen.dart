@@ -93,7 +93,7 @@ class _ArticleViewScreenState extends State<ArticleViewScreen> {
       appBar: AppBar(
         title: Text(
           widget.article.source,
-          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
         ),
         leading: IconButton(
           icon: const Icon(Icons.close),

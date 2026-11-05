@@ -113,7 +113,7 @@ class _PredictionBanner extends ConsumerWidget {
                 'LIVE',
                 style: TextStyle(
                   fontSize: 12,
-                  fontWeight: FontWeight.w500,
+                  fontWeight: FontWeight.w900,
                   color: Colors.white,
                 ),
               ),
@@ -124,7 +124,7 @@ class _PredictionBanner extends ConsumerWidget {
                 '오늘의 실시간 경기 예측 참여하기',
                 style: TextStyle(
                   fontSize: 15,
-                  fontWeight: FontWeight.w500,
+                  fontWeight: FontWeight.w800,
                   color: Colors.white,
                 ),
               ),

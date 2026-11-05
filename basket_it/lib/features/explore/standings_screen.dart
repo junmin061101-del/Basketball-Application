@@ -54,7 +54,7 @@ class StandingsScreen extends ConsumerWidget {
                           '$seasonCaption 순위',
                           style: const TextStyle(
                             fontSize: 13,
-                            fontWeight: FontWeight.w500,
+                            fontWeight: FontWeight.w700,
                             color: AppColors.textSecondary,
                           ),
                         ),
@@ -219,7 +219,7 @@ class _StandingsTableState extends State<_StandingsTable> {
                       child: Text(
                         '팀',
                         style: Theme.of(context).textTheme.bodySmall
-                            ?.copyWith(fontWeight: FontWeight.w500),
+                            ?.copyWith(fontWeight: FontWeight.w700),
                       ),
                     ),
                     for (var i = 0; i < rows.length; i++)
@@ -312,7 +312,7 @@ class _HeaderCell extends StatelessWidget {
             Text(
               col.label,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                fontWeight: FontWeight.w500,
+                fontWeight: FontWeight.w700,
                 color: active ? AppColors.primary : null,
               ),
             ),
@@ -349,7 +349,7 @@ class _ValueCell extends StatelessWidget {
         col.value(row, stats),
         style: (active || col.label == '승률')
             ? const TextStyle(
-                fontWeight: FontWeight.w500,
+                fontWeight: FontWeight.w800,
                 color: AppColors.textPrimary,
               )
             : Theme.of(context).textTheme.bodyMedium,
@@ -379,7 +379,7 @@ class _TeamCell extends StatelessWidget {
             child: Text(
               '$rank',
               style: TextStyle(
-                fontWeight: FontWeight.w500,
+                fontWeight: FontWeight.w800,
                 fontSize: 13,
                 color: rank <= 4 ? AppColors.primary : AppColors.textSecondary,
               ),

@@ -135,7 +135,7 @@ class _TeamHeader extends ConsumerWidget {
                   team.city,
                   style: const TextStyle(
                     fontSize: 12,
-                    fontWeight: FontWeight.w500,
+                    fontWeight: FontWeight.w700,
                     color: AppColors.textSecondary,
                   ),
                 ),
@@ -158,7 +158,7 @@ class _TeamHeader extends ConsumerWidget {
                   ].join(' · '),
                   style: const TextStyle(
                     fontSize: 12,
-                    fontWeight: FontWeight.w500,
+                    fontWeight: FontWeight.w600,
                     color: AppColors.textSecondary,
                   ),
                 ),
@@ -266,7 +266,7 @@ class _GameRow extends StatelessWidget {
               isHome ? 'vs' : '@',
               style: const TextStyle(
                 fontSize: 12,
-                fontWeight: FontWeight.w500,
+                fontWeight: FontWeight.w700,
                 color: AppColors.textTertiary,
               ),
             ),
@@ -276,7 +276,7 @@ class _GameRow extends StatelessWidget {
                 opponent?.shortName ?? opponentId,
                 style: const TextStyle(
                   fontSize: 15,
-                  fontWeight: FontWeight.w500,
+                  fontWeight: FontWeight.w800,
                   color: AppColors.textPrimary,
                 ),
               ),
@@ -286,7 +286,7 @@ class _GameRow extends StatelessWidget {
                 won ? '승' : '패',
                 style: TextStyle(
                   fontSize: 12,
-                  fontWeight: FontWeight.w500,
+                  fontWeight: FontWeight.w900,
                   color: won ? AppColors.positive : AppColors.negative,
                 ),
               ),
@@ -295,7 +295,7 @@ class _GameRow extends StatelessWidget {
                 '$myScore-$theirScore',
                 style: const TextStyle(
                   fontSize: 15,
-                  fontWeight: FontWeight.w500,
+                  fontWeight: FontWeight.w800,
                   color: AppColors.textPrimary,
                 ),
               ),
@@ -304,7 +304,7 @@ class _GameRow extends StatelessWidget {
                 _shortWhen(game.startTime),
                 style: const TextStyle(
                   fontSize: 13,
-                  fontWeight: FontWeight.w500,
+                  fontWeight: FontWeight.w700,
                   color: AppColors.textSecondary,
                 ),
               ),

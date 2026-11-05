@@ -159,7 +159,7 @@ Future<void> _showReportDialog(
               '신고',
               style: TextStyle(
                 color: AppColors.negative,
-                fontWeight: FontWeight.w500,
+                fontWeight: FontWeight.w800,
               ),
             ),
           ),

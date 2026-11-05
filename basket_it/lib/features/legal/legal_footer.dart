@@ -69,7 +69,7 @@ class _PolicyLink extends StatelessWidget {
           document.title,
           style: const TextStyle(
             fontSize: 12.5,
-            fontWeight: FontWeight.w500,
+            fontWeight: FontWeight.w700,
             color: AppColors.textSecondary,
           ),
         ),

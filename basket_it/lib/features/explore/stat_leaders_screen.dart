@@ -237,7 +237,7 @@ class _TopLeaderCard extends StatelessWidget {
                       style: TextStyle(
                         color: Colors.white,
                         fontSize: 12,
-                        fontWeight: FontWeight.w500,
+                        fontWeight: FontWeight.w900,
                       ),
                     ),
                   ),
@@ -253,7 +253,7 @@ class _TopLeaderCard extends StatelessWidget {
                     '${category.label} 1위',
                     style: TextStyle(
                       color: accent,
-                      fontWeight: FontWeight.w500,
+                      fontWeight: FontWeight.w800,
                       fontSize: 11.5,
                     ),
                   ),
@@ -293,7 +293,7 @@ class _TopLeaderCard extends StatelessWidget {
                     text: ' ${category.unit}',
                     style: const TextStyle(
                       fontSize: 11.5,
-                      fontWeight: FontWeight.w500,
+                      fontWeight: FontWeight.w700,
                       color: AppColors.textTertiary,
                     ),
                   ),
@@ -339,7 +339,7 @@ class _LeaderRow extends StatelessWidget {
               child: Text(
                 '$rank',
                 style: TextStyle(
-                  fontWeight: FontWeight.w500,
+                  fontWeight: FontWeight.w800,
                   color: rank <= 3
                       ? AppColors.primary
                       : AppColors.textSecondary,

@@ -73,7 +73,7 @@ class AppTheme {
             titleMedium: const TextStyle(
               fontFamily: font,
               fontSize: 15,
-              fontWeight: FontWeight.w500,
+              fontWeight: FontWeight.w700,
               color: AppColors.textPrimary,
             ),
             bodyMedium: const TextStyle(
@@ -112,12 +112,12 @@ class AppTheme {
         selectedLabelStyle: TextStyle(
           fontFamily: font,
           fontSize: 11,
-          fontWeight: FontWeight.w500,
+          fontWeight: FontWeight.w700,
         ),
         unselectedLabelStyle: TextStyle(
           fontFamily: font,
           fontSize: 11,
-          fontWeight: FontWeight.w500,
+          fontWeight: FontWeight.w600,
         ),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
@@ -134,7 +134,7 @@ class AppTheme {
           textStyle: const TextStyle(
             fontFamily: font,
             fontSize: 16,
-            fontWeight: FontWeight.w500,
+            fontWeight: FontWeight.w800,
           ),
         ),
       ),
@@ -171,7 +171,7 @@ class AppTheme {
         indicatorColor: AppColors.primary,
         labelStyle: TextStyle(
           fontFamily: font,
-          fontWeight: FontWeight.w500,
+          fontWeight: FontWeight.w800,
           fontSize: 14,
         ),
       ),
