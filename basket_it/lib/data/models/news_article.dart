@@ -32,7 +32,14 @@ class NewsArticle {
 
   /// 기사 요약(네이버 검색 결과의 description에서 태그를 뗀 것).
   final String? summary;
+
+  /// 머리기사 카드 사진. 수집기가 줄여 올린 사진(720×400)이 있으면 그것,
+  /// 없으면 언론사 원본.
   final String? thumbnailUrl;
+
+  /// 목록 한 줄의 작은 사진(160px). 수집기가 줄여 올린 것만 쓴다. 언론사
+  /// 원본은 무겁고 절반은 CORS가 없어, 목록마다 깔면 웹에서 스크롤이 끊긴다.
+  final String? smallThumbnailUrl;
 
   /// 원문 링크. 카드를 누르면 이 주소를 웹뷰로 연다.
   final String? url;
@@ -51,6 +58,7 @@ class NewsArticle {
     required this.category,
     this.summary,
     this.thumbnailUrl,
+    this.smallThumbnailUrl,
     this.url,
     this.relatedTeamId,
     this.teamLabel,
@@ -77,12 +85,16 @@ class NewsArticle {
 
     return NewsArticle(
       id: articleUrl,
-      title: title,
+      title: _plainTilde(title),
       source: json['source'] as String? ?? '',
       publishedAt: publishedAt.toLocal(),
       category: category,
-      summary: (description == null || description.isEmpty) ? null : description,
-      thumbnailUrl: json['thumbnail_url'] as String?,
+      summary: (description == null || description.isEmpty)
+          ? null
+          : _plainTilde(description),
+      thumbnailUrl:
+          json['thumb_url'] as String? ?? json['thumbnail_url'] as String?,
+      smallThumbnailUrl: json['thumb_small_url'] as String?,
       url: articleUrl,
       relatedTeamId: json['team_id'] as String?,
       teamLabel: json['team'] as String?,
@@ -95,3 +107,7 @@ class NewsArticle {
   @override
   int get hashCode => id.hashCode;
 }
+
+/// 기사에서 범위를 나타내는 '∼'(수학 기호)를 '~'로 바꾼다. 앱 글꼴에 '∼'가
+/// 없어서, 한 글자 때문에 웹 앱이 스크롤 중 수학 기호 글꼴(226KB)을 받아 왔다.
+String _plainTilde(String text) => text.replaceAll('\u223C', '~');

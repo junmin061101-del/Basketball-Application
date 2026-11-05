@@ -33,8 +33,30 @@ void main() {
     expect(article.publishedAt.toUtc(), DateTime.utc(2026, 9, 8, 1));
   });
 
+  test('수집기가 줄여 올린 사진이 있으면 그걸 쓴다', () {
+    final hosted = NewsArticle.tryParse({
+      ...sample(),
+      'thumb_url': 'https://x.github.io/news/thumbs/a-l.webp',
+      'thumb_small_url': 'https://x.github.io/news/thumbs/a-s.webp',
+    })!;
+    expect(hosted.thumbnailUrl, endsWith('a-l.webp'));
+    expect(hosted.smallThumbnailUrl, endsWith('a-s.webp'));
+    // 예전 수집 결과: 머리기사는 원본으로, 목록 줄은 사진 없이
+    final old = NewsArticle.tryParse(sample())!;
+    expect(old.thumbnailUrl, 'https://jumpball.co.kr/img/1.jpg');
+    expect(old.smallThumbnailUrl, isNull);
+  });
+
+  test("범위 기호 '∼'는 '~'로 보여준다(앱 글꼴에 없다)", () {
+    final article = NewsArticle.tryParse({...sample(title: '3∼5위 싸움')})!;
+    expect(article.title, '3~5위 싸움');
+  });
+
   test('NBA 기사는 nba로 읽고, KBL·NBA가 아닌 기사(예전 해외파 등)는 받지 않는다', () {
-    expect(NewsArticle.tryParse(sample(category: 'nba'))!.category, NewsCategory.nba);
+    expect(
+      NewsArticle.tryParse(sample(category: 'nba'))!.category,
+      NewsCategory.nba,
+    );
     expect(NewsArticle.tryParse(sample(category: 'overseas')), isNull);
   });
 

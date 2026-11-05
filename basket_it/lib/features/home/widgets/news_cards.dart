@@ -79,12 +79,12 @@ class NewsHeadlineCard extends ConsumerWidget {
   }
 }
 
-/// 헤드라인 아래로 이어지는 목록 카드. 작은 정사각 썸네일 + 제목만.
-/// 목록 한 줄: 제목과 언론사·시간.
+/// 목록 한 줄: 제목과 언론사·시간, 오른쪽에 작은 사진.
 ///
-/// 사진은 머리기사 카드에만 둔다. 목록마다 기사 사진을 받으면 한 화면에
-/// 수백 KB짜리 사진이 여러 장 깔려, 느린 기기에서 스크롤이 끊기고 사진이
-/// 뒤늦게 하나씩 떴다.
+/// 사진은 수집기가 160px로 줄여 우리 사이트에 올린 것([NewsArticle.smallThumbnailUrl])만
+/// 쓴다. 언론사 원본은 장당 100KB 안팎에 절반은 CORS가 없어, 목록마다 깔면
+/// 웹에서 <img> 요소가 겹겹이 깔려 스크롤이 끊겼다. 줄인 사진이 없는 기사는
+/// 사진 없이 그린다.
 class NewsRow extends ConsumerWidget {
   final NewsArticle article;
 
@@ -97,22 +97,51 @@ class NewsRow extends ConsumerWidget {
       onTap: () => ref.read(articleOpenerProvider)(context, article),
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 4),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        child: Row(
           children: [
-            Text(
-              article.title,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                fontSize: 14.5,
-                fontWeight: FontWeight.w800,
-                height: 1.35,
-                color: AppColors.textPrimary,
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    article.title,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 14.5,
+                      fontWeight: FontWeight.w800,
+                      height: 1.35,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  NewsMetaLine(article: article),
+                ],
               ),
             ),
-            const SizedBox(height: 6),
-            NewsMetaLine(article: article),
+            if (article.smallThumbnailUrl case final small?) ...[
+              const SizedBox(width: 12),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(10),
+                child: Image.network(
+                  small,
+                  width: 64,
+                  height: 64,
+                  fit: BoxFit.cover,
+                  filterQuality: FilterQuality.low,
+                  // 우리 사이트 사진이라 CORS가 있다. 못 받으면 자리만 비운다.
+                  errorBuilder: (_, _, _) => const SizedBox(width: 64),
+                  frameBuilder: (_, child, frame, sync) =>
+                      frame == null && !sync
+                      ? Container(
+                          width: 64,
+                          height: 64,
+                          color: AppColors.surfaceElevated,
+                        )
+                      : child,
+                ),
+              ),
+            ],
           ],
         ),
       ),

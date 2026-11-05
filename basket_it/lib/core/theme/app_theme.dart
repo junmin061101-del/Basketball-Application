@@ -9,7 +9,8 @@ import 'app_colors.dart';
 class AppTheme {
   AppTheme._();
 
-  /// 앱에 넣은 Pretendard(한글 표준 2,350자 + 영문). 없는 글자는 기본 글꼴로 그린다.
+  /// 앱에 넣은 Pretendard(한글 표준 2,350자 + 영문·기호, tools/build-fonts.py).
+  /// 없는 드문 글자만 Flutter가 Noto Sans KR을 받아 그린다.
   /// 아래 TextStyle마다 다시 적는 건, 테마에 직접 넣은 글자 모양은 fontFamily를
   /// 물려받지 않기 때문이다.
   static const font = 'Pretendard';

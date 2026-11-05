@@ -79,21 +79,18 @@ flutter:
   # the material Icons class.
   uses-material-design: true
 
-  # Pretendard Std(SIL OFL, assets/fonts/OFL.txt). 굵기마다 한 파일.
+  # Pretendard(SIL OFL, assets/fonts/OFL.txt)를 한글 표준 2,350자 + 기호만 남겨
+  # 줄였다(tools/build-fonts.py). 500·900은 가까운 굵기로 그린다.
   fonts:
     - family: Pretendard
       fonts:
-        - asset: assets/fonts/PretendardStd-Regular.otf
-        - asset: assets/fonts/PretendardStd-Medium.otf
-          weight: 500
-        - asset: assets/fonts/PretendardStd-SemiBold.otf
+        - asset: assets/fonts/Pretendard-Regular.otf
+        - asset: assets/fonts/Pretendard-SemiBold.otf
           weight: 600
-        - asset: assets/fonts/PretendardStd-Bold.otf
+        - asset: assets/fonts/Pretendard-Bold.otf
           weight: 700
-        - asset: assets/fonts/PretendardStd-ExtraBold.otf
+        - asset: assets/fonts/Pretendard-ExtraBold.otf
           weight: 800
-        - asset: assets/fonts/PretendardStd-Black.otf
-          weight: 900
 
   assets:
     # 이용약관·개인정보처리방침. 앱이 읽어 화면에 그린다(문서가 곧 원본이다).

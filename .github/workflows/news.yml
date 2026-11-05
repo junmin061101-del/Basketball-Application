@@ -52,6 +52,11 @@ jobs:
         with:
           node-version: '20'
 
+      # 기사 사진을 줄이는 데 쓴다(tools/fetch-news.js). 없으면 원본 사진만 남는다.
+      - name: 사진 도구 설치
+        working-directory: basket_it
+        run: npm install --no-save --no-package-lock sharp@0.34.4
+
       - name: 데이터 수집
         working-directory: basket_it
         env:

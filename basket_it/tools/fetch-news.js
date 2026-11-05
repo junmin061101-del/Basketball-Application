@@ -12,6 +12,7 @@
  * 사용법: node tools/fetch-news.js <출력 디렉터리>
  */
 
+const crypto = require('crypto');
 const fs = require('fs/promises');
 const path = require('path');
 
@@ -166,6 +167,108 @@ async function attachThumbnails(articles, known) {
   return articles;
 }
 
+/**
+ * 기사 사진을 작게 줄여 우리 사이트(GitHub Pages)에 함께 올린다.
+ *
+ * 언론사 사진은 평균 100KB 안팎에 절반은 CORS 헤더가 없다. 웹 앱은 CORS가 없는
+ * 사진을 <img> 요소로 따로 띄우는데, 그게 깔릴 때마다 스크롤하면서 화면을
+ * 여러 겹으로 다시 합쳐 버벅였다. GitHub Pages는 CORS를 허용하므로 여기 올린
+ * 사진은 앱이 보통 이미지처럼 가볍게 그린다.
+ *
+ * - 큰 사진(머리기사 카드): 720×400 WebP → thumb_url
+ * - 작은 사진(목록 한 줄): 160px 정사각 WebP → thumb_small_url
+ *
+ * 사이트는 실행마다 통째로 새로 올라가므로, 지난번에 만든 사진은 다시
+ * 줄이지 않고(다시 압축하면 화질이 깎인다) 그대로 받아 옮긴다. 한 장 실패는
+ * 무시한다(앱은 원본 thumbnail_url로 그린다).
+ */
+const THUMB_SIZES = {
+  // 머리기사 카드 모양(가로:세로 ≈ 1.8:1)으로 미리 자른다. 세로로 긴 사진을
+  // 통째로 보내면 보이지도 않는 아래위가 절반이다. 얼굴이 있는 위쪽을 남긴다.
+  l: (img) =>
+    img.resize(720, 400, { fit: 'cover', position: 'north', withoutEnlargement: true })
+      .webp({ quality: 72 }),
+  s: (img) => img.resize(160, 160, { fit: 'cover', position: 'north' }).webp({ quality: 70 }),
+};
+
+async function attachHostedThumbnails(groups, outDir) {
+  let sharp;
+  try {
+    sharp = require('sharp');
+  } catch (_) {
+    console.warn('sharp가 없어 사진을 줄이지 않습니다(npm install sharp).');
+    return;
+  }
+  const publicBase = PREVIOUS_BASE.replace(/\/$/, '');
+  if (!publicBase) {
+    console.warn('NEWS_PREVIOUS_BASE_URL이 없어 사진 주소를 만들 수 없습니다.');
+    return;
+  }
+  const thumbDir = path.join(outDir, 'thumbs');
+  await fs.mkdir(thumbDir, { recursive: true });
+
+  const byUrl = new Map(); // 원본 주소 → 그 사진을 쓰는 기사들
+  for (const articles of Object.values(groups)) {
+    for (const a of articles) {
+      if (!a.thumbnail_url) continue;
+      if (!byUrl.has(a.thumbnail_url)) byUrl.set(a.thumbnail_url, []);
+      byUrl.get(a.thumbnail_url).push(a);
+    }
+  }
+
+  const fetchBytes = async (url, headers) => {
+    const res = await fetch(url, { headers, signal: AbortSignal.timeout(10000) });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const buf = Buffer.from(await res.arrayBuffer());
+    if (buf.length > 8 * 1024 * 1024) throw new Error('너무 큼');
+    return buf;
+  };
+
+  let made = 0;
+  let reused = 0;
+  const one = async ([url, articles]) => {
+    const key = crypto.createHash('sha1').update(url).digest('hex').slice(0, 16);
+    const names = Object.fromEntries(
+      Object.keys(THUMB_SIZES).map((size) => [size, `${key}-${size}.webp`]),
+    );
+    try {
+      // 지난번에 만든 사진이 있으면 그대로 옮긴다.
+      const previous = await Promise.all(
+        Object.values(names).map((n) => fetchBytes(`${publicBase}/thumbs/${n}`)),
+      ).catch(() => null);
+      if (previous) {
+        await Promise.all(
+          Object.values(names).map((n, i) => fs.writeFile(path.join(thumbDir, n), previous[i])),
+        );
+        reused++;
+      } else {
+        const original = await fetchBytes(url, {
+          'User-Agent': 'Mozilla/5.0 (compatible; BasketItBot/1.0; +https://basket-it-kbl.web.app)',
+        });
+        for (const [size, make] of Object.entries(THUMB_SIZES)) {
+          // rotate(): 휴대폰 사진의 EXIF 방향대로 세운다.
+          const out = await make(sharp(original, { failOn: 'none' }).rotate()).toBuffer();
+          await fs.writeFile(path.join(thumbDir, names[size]), out);
+        }
+        made++;
+      }
+      for (const a of articles) {
+        a.thumb_url = `${publicBase}/thumbs/${names.l}`;
+        a.thumb_small_url = `${publicBase}/thumbs/${names.s}`;
+      }
+    } catch (_) {
+      // 원본 thumbnail_url이 그대로 남는다.
+    }
+  };
+
+  // ponytail: 8장씩 끊어 받는다. 사진이 수백 장으로 늘면 진짜 동시성 제한으로 바꾼다.
+  const entries = [...byUrl.entries()];
+  for (let i = 0; i < entries.length; i += 8) {
+    await Promise.all(entries.slice(i, i + 8).map(one));
+  }
+  console.log(`사진 ${byUrl.size}장: 새로 줄임 ${made}, 재사용 ${reused}`);
+}
+
 async function main() {
   const outDir = process.argv[2];
   if (!outDir) {
@@ -206,6 +309,9 @@ async function main() {
   }
 
   await fs.mkdir(outDir, { recursive: true });
+  console.log('사진 줄이기...');
+  await attachHostedThumbnails(groups, outDir);
+
   const generatedAt = new Date().toISOString();
   for (const [category, articles] of Object.entries(groups)) {
     const file = path.join(outDir, `${category}.json`);
@@ -217,7 +323,11 @@ async function main() {
   }
 }
 
-main().catch((error) => {
-  console.error('수집 실패:', error.message);
-  process.exit(1);
-});
+if (require.main === module) {
+  main().catch((error) => {
+    console.error('수집 실패:', error.message);
+    process.exit(1);
+  });
+}
+
+module.exports = { attachHostedThumbnails };
