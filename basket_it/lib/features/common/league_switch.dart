@@ -13,11 +13,16 @@ class LeagueSwitch extends ConsumerWidget {
   /// 온보딩처럼 화면 너비를 꽉 채워야 하는 곳은 true.
   final bool expanded;
 
-  const LeagueSwitch({super.key, this.expanded = false});
+  /// 바꿀 리그 상태. 없으면 홈 뉴스 리그([newsLeagueProvider]).
+  final StateProvider<League>? provider;
+
+  const LeagueSwitch({super.key, this.expanded = false, this.provider});
+
+  StateProvider<League> get _provider => provider ?? newsLeagueProvider;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final selected = ref.watch(newsLeagueProvider);
+    final selected = ref.watch(_provider);
 
     return Container(
       padding: const EdgeInsets.all(3),
@@ -42,7 +47,7 @@ class LeagueSwitch extends ConsumerWidget {
     league: league,
     active: active,
     expanded: expanded,
-    onTap: () => ref.read(newsLeagueProvider.notifier).state = league,
+    onTap: () => ref.read(_provider.notifier).state = league,
   );
 }
 

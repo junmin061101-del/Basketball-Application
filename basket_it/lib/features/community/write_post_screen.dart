@@ -49,6 +49,7 @@ class _WritePostScreenState extends ConsumerState<WritePostScreen> {
               // 정해 둔 닉네임, 없으면 가린 이름(원본은 공용 컬렉션에 남기지 않는다).
               displayName: name,
               category: _category,
+              league: ref.read(communityLeagueProvider),
               title: title,
               body: _bodyController.text.trim(),
             ),
@@ -138,7 +139,8 @@ class _WritePostScreenState extends ConsumerState<WritePostScreen> {
                           ? AppColors.primary
                           : AppColors.border,
                     ),
-                    labelStyle: TextStyle(fontFamily: AppTheme.font, 
+                    labelStyle: TextStyle(
+                      fontFamily: AppTheme.font,
                       fontSize: 13,
                       fontWeight: FontWeight.w700,
                       color: _category == c

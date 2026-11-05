@@ -35,8 +35,46 @@
 
   <title>Baskit</title>
   <link rel="manifest" href="manifest.json">
+
+  <!-- 앱(Flutter)을 받는 동안 보여주는 로딩 화면. 앱의 켜질 때 로딩 화면
+       (lib/features/auth/auth_gate.dart)과 같은 로고·동그라미라 넘어갈 때 튀지 않는다.
+       앱이 첫 화면을 그리면(flutter-first-frame) 지운다. -->
+  <style>
+    html, body { margin: 0; height: 100%; background: #FFFFFF; }
+    #splash {
+      position: fixed; inset: 0; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; gap: 40px;
+      transition: opacity .2s;
+    }
+    /* 아이콘 PNG는 공이 칸을 거의 채워서, 주황 칸 안에 작게 넣어 앱 로고와 맞춘다. */
+    #splash .logo {
+      width: 120px; height: 120px; border-radius: 28px; background: #F97316;
+      box-shadow: 0 0 40px 4px rgba(249, 115, 22, .35);
+      display: flex; align-items: center; justify-content: center;
+    }
+    #splash img { width: 86px; height: 86px; }
+    #splash .spinner {
+      width: 26px; height: 26px; border-radius: 50%;
+      border: 3px solid rgba(249, 115, 22, .2); border-top-color: #F97316;
+      animation: spin .8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @media (prefers-reduced-motion: reduce) { #splash .spinner { animation-duration: 2.4s; } }
+  </style>
 </head>
 <body>
+  <div id="splash" role="progressbar" aria-label="Baskit 불러오는 중">
+    <div class="logo"><img src="icons/Icon-192.png" alt=""></div>
+    <div class="spinner"></div>
+  </div>
+  <script>
+    window.addEventListener('flutter-first-frame', function () {
+      var s = document.getElementById('splash');
+      if (!s) return;
+      s.style.opacity = '0';
+      setTimeout(function () { s.remove(); }, 200);
+    });
+  </script>
   <!--
     You can customize the "flutter_bootstrap.js" script.
     This is useful to provide a custom configuration to the Flutter loader

@@ -1,4 +1,5 @@
 import 'package:basket_it/data/models/community_post.dart';
+import 'package:basket_it/data/models/league.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -21,6 +22,26 @@ void main() {
     expect(restored.category, PostCategory.question);
     expect(restored.likeCount, 2);
     expect(restored.commentCount, 3);
+    expect(restored.league, League.kbl);
+  });
+
+  test('리그는 왕복하고, 리그를 나누기 전 글은 KBL 게시판 글이다', () {
+    const nba = CommunityPost(
+      id: 'p2',
+      uid: 'u1',
+      displayName: 'a',
+      category: PostCategory.free,
+      league: League.nba,
+      title: 't',
+      body: 'b',
+    );
+    expect(CommunityPost.fromMap('p2', nba.toMap())!.league, League.nba);
+    final old = CommunityPost.fromMap('p0', {
+      'uid': 'u',
+      'title': 't',
+      'body': '',
+    });
+    expect(old!.league, League.kbl);
   });
 
   test('필수 필드가 없으면 null을 돌려준다', () {

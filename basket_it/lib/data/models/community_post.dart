@@ -1,5 +1,7 @@
 import 'package:flutter/foundation.dart';
 
+import 'league.dart';
+
 /// 커뮤니티 말머리(게시판 분류).
 enum PostCategory { free, team, prediction, question }
 
@@ -28,6 +30,9 @@ class CommunityPost {
   final String uid;
   final String displayName;
   final PostCategory category;
+
+  /// 어느 리그 게시판 글인지. 리그를 나누기 전 글은 KBL로 본다.
+  final League league;
   final String title;
   final String body;
   final int commentCount;
@@ -39,6 +44,7 @@ class CommunityPost {
     required this.uid,
     required this.displayName,
     required this.category,
+    this.league = League.kbl,
     required this.title,
     required this.body,
     this.commentCount = 0,
@@ -53,6 +59,7 @@ class CommunityPost {
     'uid': uid,
     'displayName': displayName,
     'category': category.code,
+    'league': league.wireName,
     'title': title,
     'body': body,
     'commentCount': commentCount,
@@ -69,6 +76,7 @@ class CommunityPost {
       uid: uid,
       displayName: (data['displayName'] as String?) ?? '사용자',
       category: PostCategoryLabel.fromCode(data['category']),
+      league: data['league'] == 'nba' ? League.nba : League.kbl,
       title: title,
       body: body,
       commentCount: (data['commentCount'] as num?)?.toInt() ?? 0,

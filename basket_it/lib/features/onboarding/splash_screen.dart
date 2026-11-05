@@ -16,27 +16,7 @@ class SplashScreen extends StatelessWidget {
           child: Column(
             children: [
               const Spacer(flex: 3),
-              // 임시 로고 플레이스홀더
-              Container(
-                width: 120,
-                height: 120,
-                decoration: BoxDecoration(
-                  color: AppColors.primary,
-                  borderRadius: BorderRadius.circular(28),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppColors.primary.withValues(alpha: 0.35),
-                      blurRadius: 40,
-                      spreadRadius: 4,
-                    ),
-                  ],
-                ),
-                child: const Icon(
-                  Icons.sports_basketball,
-                  color: Colors.white,
-                  size: 64,
-                ),
-              ),
+              const AppLogo(),
               const SizedBox(height: 24),
               Text(
                 'Baskit',
@@ -66,6 +46,32 @@ class SplashScreen extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// 앱 로고(주황 둥근 네모 + 농구공). 시작 화면과 켜질 때 로딩 화면이 함께 쓴다.
+/// web/index.html의 첫 로딩 화면도 같은 크기·모양이라 넘어갈 때 튀지 않는다.
+class AppLogo extends StatelessWidget {
+  const AppLogo({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 120,
+      height: 120,
+      decoration: BoxDecoration(
+        color: AppColors.primary,
+        borderRadius: BorderRadius.circular(28),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primary.withValues(alpha: 0.35),
+            blurRadius: 40,
+            spreadRadius: 4,
+          ),
+        ],
+      ),
+      child: const Icon(Icons.sports_basketball, color: Colors.white, size: 64),
     );
   }
 }

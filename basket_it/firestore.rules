@@ -41,8 +41,10 @@ service cloud.firestore {
         && request.resource.data.title.size() > 0
         && request.resource.data.title.size() <= 100
         && request.resource.data.body is string
-        && request.resource.data.body.size() <= 2000;
+        && request.resource.data.body.size() <= 2000
+        && request.resource.data.get('league', 'kbl') in ['kbl', 'nba'];
       allow update: if request.auth != null
+        && request.resource.data.get('league', 'kbl') in ['kbl', 'nba']
         && (
           resource.data.uid == request.auth.uid
           || request.resource.data.diff(resource.data).affectedKeys()

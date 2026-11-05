@@ -1,11 +1,15 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../models/community_post.dart';
+import '../models/league.dart';
 
 /// 커뮤니티(자유게시판) 데이터 접근을 추상화한 Repository.
 abstract class CommunityRepository {
   /// 최신순 게시글 목록. [category]가 null이면 전체.
-  Stream<List<CommunityPost>> watchPosts({PostCategory? category});
+  Stream<List<CommunityPost>> watchPosts({
+    required League league,
+    PostCategory? category,
+  });
 
   /// 게시글 하나를 실시간으로 구독한다(좋아요·댓글 수 반영).
   Stream<CommunityPost?> watchPost(String postId);
@@ -18,7 +22,10 @@ abstract class CommunityRepository {
 
   Stream<List<PostComment>> watchComments(String postId);
   Future<void> addComment(PostComment comment);
-  Future<void> deleteComment({required String postId, required String commentId});
+  Future<void> deleteComment({
+    required String postId,
+    required String commentId,
+  });
 }
 
 class FirestoreCommunityRepository implements CommunityRepository {
@@ -33,16 +40,22 @@ class FirestoreCommunityRepository implements CommunityRepository {
       _db.collection('communityComments');
 
   @override
-  Stream<List<CommunityPost>> watchPosts({PostCategory? category}) {
+  Stream<List<CommunityPost>> watchPosts({
+    required League league,
+    PostCategory? category,
+  }) {
     Query<Map<String, dynamic>> query = _posts;
     if (category != null) {
       query = query.where('category', isEqualTo: category.code);
     }
     // category + createdAt 복합 인덱스를 요구하지 않도록 정렬은 클라이언트에서.
+    // 리그도 클라이언트에서 거른다. 리그를 나누기 전 글에는 league가 없어서
+    // where로 거르면 빠지는데, 그 글들은 KBL 게시판에 남아야 한다.
     return query.snapshots().map((snap) {
       final posts = snap.docs
           .map((d) => CommunityPost.fromMap(d.id, d.data()))
           .whereType<CommunityPost>()
+          .where((p) => p.league == league)
           .toList();
       posts.sort(_newestFirst);
       return posts;
@@ -127,9 +140,7 @@ class FirestoreCommunityRepository implements CommunityRepository {
     required String commentId,
   }) async {
     await _comments.doc(commentId).delete();
-    await _posts.doc(postId).update({
-      'commentCount': FieldValue.increment(-1),
-    });
+    await _posts.doc(postId).update({'commentCount': FieldValue.increment(-1)});
   }
 
   int _newestFirst(CommunityPost a, CommunityPost b) {

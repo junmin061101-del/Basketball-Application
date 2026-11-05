@@ -39,8 +39,25 @@ class _GateLoading extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // web/index.html의 첫 로딩 화면과 같은 모양: 로고 + 도는 동그라미.
     return const Scaffold(
-      body: Center(child: CircularProgressIndicator(color: AppColors.primary)),
+      body: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            AppLogo(),
+            SizedBox(height: 40),
+            SizedBox(
+              width: 32,
+              height: 32,
+              child: CircularProgressIndicator(
+                color: AppColors.primary,
+                strokeWidth: 3,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

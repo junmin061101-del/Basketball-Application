@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/theme/app_colors.dart';
+import '../common/league_switch.dart';
 import '../common/page_header.dart';
 import '../../data/models/community_post.dart';
 import '../../data/models/moderation.dart';
@@ -40,16 +41,24 @@ class CommunityTab extends ConsumerWidget {
         children: [
           PageHeader(
             title: 'Community',
-            trailing: IconButton(
-              tooltip: '차단한 사용자',
-              onPressed: () => Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const BlockedUsersScreen()),
-              ),
-              icon: const Icon(
-                Icons.block,
-                size: 20,
-                color: AppColors.textSecondary,
-              ),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                LeagueSwitch(provider: communityLeagueProvider),
+                IconButton(
+                  tooltip: '차단한 사용자',
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => const BlockedUsersScreen(),
+                    ),
+                  ),
+                  icon: const Icon(
+                    Icons.block,
+                    size: 20,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ],
             ),
           ),
           _CategoryChips(
