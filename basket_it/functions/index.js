@@ -71,13 +71,19 @@ exports.updatePredictionLeaderboard = onSchedule(
 /**
  * Auth 계정이 지워지면(탈퇴) 그 사람의 데이터를 정리한다. 계정 삭제 이벤트는
  * 2세대 함수에 없어 1세대 트리거를 쓴다. 실패하면 다시 시도한다(정리는 몇 번
- * 돌아도 같은 결과다).
+ * 돌아도 같은 결과다). 재시도는 최대 7일까지 이어지며 매번 과금되므로,
+ * 하루가 지난 이벤트는 더 시도하지 않고 로그만 남긴다(운영자가 손으로 정리).
  */
+const CLEANUP_RETRY_MS = 24 * 60 * 60 * 1000;
 exports.cleanUpDeletedUser = functionsV1
   .region('asia-northeast3')
-  .runWith({ failurePolicy: true, timeoutSeconds: 120 })
+  .runWith({ failurePolicy: true, timeoutSeconds: 120, maxInstances: 5 })
   .auth.user()
-  .onDelete(async (user) => {
+  .onDelete(async (user, context) => {
+    if (Date.now() - Date.parse(context.timestamp) > CLEANUP_RETRY_MS) {
+      logger.error('탈퇴 데이터 정리 재시도 포기(하루 지남)', { uid: user.uid });
+      return;
+    }
     await cleanUpDeletedUser(db, admin.firestore.FieldValue, user.uid);
     logger.info('탈퇴 데이터 정리', { uid: user.uid });
   });
