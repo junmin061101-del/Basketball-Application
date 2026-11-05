@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_theme.dart';
 import '../../data/models/community_post.dart';
 import '../../data/models/moderation.dart';
 import '../../providers/community_providers.dart';
@@ -307,7 +308,7 @@ class _LikeButton extends ConsumerWidget {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(30),
           ),
-          textStyle: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13),
+          textStyle: const TextStyle(fontFamily: AppTheme.font, fontWeight: FontWeight.w800, fontSize: 13),
         ),
       ),
     );

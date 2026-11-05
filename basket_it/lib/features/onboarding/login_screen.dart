@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/errors/auth_exception.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_theme.dart';
 import '../../data/models/app_user.dart';
 import '../../data/repositories/credential_store.dart';
 import '../../providers/auth_providers.dart';
@@ -284,7 +285,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(14),
                       ),
-                      textStyle: const TextStyle(
+                      textStyle: const TextStyle(fontFamily: AppTheme.font, 
                         fontSize: 15,
                         fontWeight: FontWeight.w700,
                       ),

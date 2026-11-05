@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart' show DateUtils, immutable;
 
 import '../../data/models/game.dart';
 import '../../data/models/team_standing.dart';
@@ -27,6 +27,9 @@ class MyTeamSummary {
   /// 예정 경기가 모자라면(비시즌) 끝난 경기로 채운다.
   final List<Game> schedule;
 
+  /// 오늘 경기(진행중 → 예정 → 종료 순으로 하나). 없으면 null. 홈 맨 위 중계 카드.
+  final Game? todayGame;
+
   const MyTeamSummary({
     required this.teamId,
     required this.rank,
@@ -36,6 +39,7 @@ class MyTeamSummary {
     required this.nearby,
     required this.streak,
     required this.schedule,
+    required this.todayGame,
   });
 
   /// "동부 7위" / "7위". 순위가 없으면 null.
@@ -122,6 +126,13 @@ class MyTeamSummary {
         .toList();
     final past = finished.reversed.take(5 - upcoming.length).toList().reversed;
 
+    final today = DateUtils.dateOnly(now);
+    final todayGames =
+        mineGames
+            .where((g) => DateUtils.dateOnly(g.startTime) == today)
+            .toList()
+          ..sort((a, b) => _todayOrder(a).compareTo(_todayOrder(b)));
+
     return MyTeamSummary(
       teamId: teamId,
       rank: rank,
@@ -131,6 +142,13 @@ class MyTeamSummary {
       nearby: nearby,
       streak: streak,
       schedule: [...past, ...upcoming],
+      todayGame: todayGames.firstOrNull,
     );
   }
+
+  static int _todayOrder(Game game) => switch (game.status) {
+    GameStatus.live => 0,
+    GameStatus.scheduled => 1,
+    GameStatus.finished => 2,
+  };
 }

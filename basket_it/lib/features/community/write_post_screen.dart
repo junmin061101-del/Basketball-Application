@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_theme.dart';
 import '../../data/models/community_post.dart';
 import '../../providers/community_providers.dart';
 import '../../providers/prediction_providers.dart';
@@ -137,7 +138,7 @@ class _WritePostScreenState extends ConsumerState<WritePostScreen> {
                           ? AppColors.primary
                           : AppColors.border,
                     ),
-                    labelStyle: TextStyle(
+                    labelStyle: TextStyle(fontFamily: AppTheme.font, 
                       fontSize: 13,
                       fontWeight: FontWeight.w700,
                       color: _category == c

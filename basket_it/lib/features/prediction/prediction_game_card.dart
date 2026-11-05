@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_theme.dart';
 import '../../core/utils/game_time.dart';
 import '../../data/models/game.dart';
 import '../../data/models/prediction.dart';
@@ -143,7 +144,7 @@ class PredictionGameCard extends ConsumerWidget {
                     borderRadius: BorderRadius.circular(12),
                   ),
                   padding: const EdgeInsets.symmetric(vertical: 11),
-                  textStyle: const TextStyle(
+                  textStyle: const TextStyle(fontFamily: AppTheme.font, 
                     fontWeight: FontWeight.w700,
                     fontSize: 13,
                   ),

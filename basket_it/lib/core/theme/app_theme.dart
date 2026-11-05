@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import 'app_colors.dart';
 
 /// Baskit UI 디자인(Figma)에 맞춘 라이트 테마.
@@ -8,10 +9,16 @@ import 'app_colors.dart';
 class AppTheme {
   AppTheme._();
 
+  /// 앱에 넣은 Pretendard(한글 표준 2,350자 + 영문). 없는 글자는 기본 글꼴로 그린다.
+  /// 아래 TextStyle마다 다시 적는 건, 테마에 직접 넣은 글자 모양은 fontFamily를
+  /// 물려받지 않기 때문이다.
+  static const font = 'Pretendard';
+
   static ThemeData get light {
     final base = ThemeData(
       useMaterial3: true,
       brightness: Brightness.light,
+      fontFamily: font,
       scaffoldBackgroundColor: AppColors.background,
       colorScheme: const ColorScheme.light(
         primary: AppColors.primary,
@@ -29,6 +36,7 @@ class AppTheme {
         elevation: 0,
         centerTitle: false,
         titleTextStyle: TextStyle(
+          fontFamily: font,
           color: AppColors.textPrimary,
           fontSize: 22,
           fontWeight: FontWeight.w800,
@@ -42,33 +50,39 @@ class AppTheme {
           )
           .copyWith(
             headlineLarge: const TextStyle(
+              fontFamily: font,
               fontSize: 30,
               fontWeight: FontWeight.w900,
               color: AppColors.textPrimary,
               letterSpacing: -0.5,
             ),
             headlineMedium: const TextStyle(
+              fontFamily: font,
               fontSize: 26,
               fontWeight: FontWeight.w900,
               color: AppColors.textPrimary,
               letterSpacing: -0.5,
             ),
             titleLarge: const TextStyle(
+              fontFamily: font,
               fontSize: 17,
               fontWeight: FontWeight.w800,
               color: AppColors.textPrimary,
             ),
             titleMedium: const TextStyle(
+              fontFamily: font,
               fontSize: 15,
               fontWeight: FontWeight.w700,
               color: AppColors.textPrimary,
             ),
             bodyMedium: const TextStyle(
+              fontFamily: font,
               fontSize: 14,
               fontWeight: FontWeight.w500,
               color: AppColors.textSecondary,
             ),
             bodySmall: const TextStyle(
+              fontFamily: font,
               fontSize: 12.5,
               fontWeight: FontWeight.w500,
               color: AppColors.textTertiary,
@@ -95,10 +109,12 @@ class AppTheme {
         elevation: 0,
         type: BottomNavigationBarType.fixed,
         selectedLabelStyle: TextStyle(
+          fontFamily: font,
           fontSize: 11,
           fontWeight: FontWeight.w700,
         ),
         unselectedLabelStyle: TextStyle(
+          fontFamily: font,
           fontSize: 11,
           fontWeight: FontWeight.w600,
         ),
@@ -115,15 +131,14 @@ class AppTheme {
             borderRadius: BorderRadius.circular(14),
           ),
           textStyle: const TextStyle(
+            fontFamily: font,
             fontSize: 16,
             fontWeight: FontWeight.w800,
           ),
         ),
       ),
       textButtonTheme: TextButtonThemeData(
-        style: TextButton.styleFrom(
-          foregroundColor: AppColors.textSecondary,
-        ),
+        style: TextButton.styleFrom(foregroundColor: AppColors.textSecondary),
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
@@ -144,13 +159,20 @@ class AppTheme {
           borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
         ),
-        hintStyle: const TextStyle(color: AppColors.textTertiary),
+        hintStyle: const TextStyle(
+          fontFamily: font,
+          color: AppColors.textTertiary,
+        ),
       ),
       tabBarTheme: const TabBarThemeData(
         labelColor: AppColors.textPrimary,
         unselectedLabelColor: AppColors.textTertiary,
         indicatorColor: AppColors.primary,
-        labelStyle: TextStyle(fontWeight: FontWeight.w800, fontSize: 14),
+        labelStyle: TextStyle(
+          fontFamily: font,
+          fontWeight: FontWeight.w800,
+          fontSize: 14,
+        ),
       ),
     );
   }

@@ -49,6 +49,7 @@ class MyTeamSection extends ConsumerWidget {
           _TeamSelector(teams: teams, selected: team),
           const SizedBox(height: 10),
         ],
+        _GameDayCard(team: team),
         MyTeamCard(team: team),
       ],
     );
@@ -106,6 +107,253 @@ class _TeamSelector extends ConsumerWidget {
           );
         },
       ),
+    );
+  }
+}
+
+/// 내 팀 경기가 있는 날 맨 위에 뜨는 중계 카드. 없는 날은 아무것도 그리지 않는다.
+///
+/// 두 팀 색을 대각선으로 나눈 띠에 "모비스 vs 삼성", 그 아래 점수와 진행 상황.
+/// 점수는 [gameRepositoryProvider]가 실시간 스코어를 덮어 주므로 따라 바뀐다.
+class _GameDayCard extends ConsumerWidget {
+  final Team team;
+
+  const _GameDayCard({required this.team});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final game = ref
+        .watch(myTeamSummaryProvider(team.id))
+        .valueOrNull
+        ?.todayGame;
+    final teamById = {
+      for (final t in ref.watch(teamsProvider).valueOrNull ?? const <Team>[])
+        t.id: t,
+    };
+    final home = teamById[game?.homeTeamId];
+    final away = teamById[game?.awayTeamId];
+    if (game == null || home == null || away == null) {
+      return const SizedBox.shrink();
+    }
+    final standing = {
+      for (final s in ref.watch(standingsProvider).valueOrNull ?? const [])
+        s.teamId: s,
+    };
+    String? record(Team t) {
+      final s = standing[t.id];
+      return s == null ? null : '${s.wins}승 ${s.losses}패';
+    }
+
+    final (badge, badgeColor) = switch (game.status) {
+      GameStatus.live => ('LIVE', AppColors.live),
+      GameStatus.scheduled => ('오늘 경기', Colors.black54),
+      GameStatus.finished => ('경기 종료', Colors.black54),
+    };
+    final started = game.status != GameStatus.scheduled;
+    const score = TextStyle(
+      fontSize: 34,
+      height: 1,
+      fontWeight: FontWeight.w900,
+      color: AppColors.textPrimary,
+      fontFeatures: [FontFeature.tabularFigures()],
+    );
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Material(
+        color: AppColors.background,
+        clipBehavior: Clip.antiAlias,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: const BorderSide(color: AppColors.border),
+        ),
+        child: InkWell(
+          onTap: () => Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) =>
+                  GameDetailScreen(game: game, homeTeam: home, awayTeam: away),
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Container(
+                height: 128,
+                padding: const EdgeInsets.fromLTRB(18, 14, 18, 16),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      home.primaryColor,
+                      home.primaryColor,
+                      away.primaryColor,
+                      away.primaryColor,
+                    ],
+                    stops: const [0, 0.5, 0.5, 1],
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 3,
+                      ),
+                      decoration: BoxDecoration(
+                        color: badgeColor,
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        badge,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w800,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                    const Spacer(),
+                    Text(
+                      '${home.shortName} vs ${away.shortName}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 30,
+                        height: 1.1,
+                        fontWeight: FontWeight.w900,
+                        color: Colors.white,
+                        letterSpacing: -0.5,
+                        shadows: [Shadow(color: Colors.black38, blurRadius: 8)],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(12, 18, 12, 16),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: _Side(team: home, record: record(home)),
+                    ),
+                    if (started) Text('${game.homeScore}', style: score),
+                    SizedBox(
+                      width: 92,
+                      child: Column(
+                        children: [
+                          if (!started)
+                            Text(
+                              timeLabel(game.startTime),
+                              style: const TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.w800,
+                                color: AppColors.textPrimary,
+                              ),
+                            ),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              if (game.status == GameStatus.live) ...[
+                                Container(
+                                  width: 6,
+                                  height: 6,
+                                  decoration: const BoxDecoration(
+                                    color: AppColors.live,
+                                    shape: BoxShape.circle,
+                                  ),
+                                ),
+                                const SizedBox(width: 5),
+                              ],
+                              Flexible(
+                                child: Text(
+                                  switch (game.status) {
+                                    GameStatus.live => game.liveClock ?? '경기 중',
+                                    GameStatus.scheduled => '경기 예정',
+                                    GameStatus.finished => '종료',
+                                  },
+                                  textAlign: TextAlign.center,
+                                  style: const TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w700,
+                                    color: AppColors.textSecondary,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (started) Text('${game.awayScore}', style: score),
+                    Expanded(
+                      child: _Side(team: away, record: record(away)),
+                    ),
+                  ],
+                ),
+              ),
+              const Divider(height: 1, color: AppColors.border),
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 13),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      '문자중계 · 기록 보기',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                    Icon(
+                      Icons.chevron_right,
+                      size: 18,
+                      color: AppColors.textTertiary,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _Side extends StatelessWidget {
+  final Team team;
+  final String? record;
+
+  const _Side({required this.team, required this.record});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        TeamCrest(team: team, size: 40),
+        const SizedBox(height: 6),
+        Text(
+          team.shortName,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.w800,
+            color: AppColors.textPrimary,
+          ),
+        ),
+        if (record != null)
+          Text(
+            record!,
+            style: const TextStyle(
+              fontSize: 12,
+              color: AppColors.textSecondary,
+            ),
+          ),
+      ],
     );
   }
 }

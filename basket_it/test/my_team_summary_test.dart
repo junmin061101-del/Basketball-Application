@@ -156,6 +156,7 @@ void main() {
     expect([for (final g in s.schedule) g.id], ['3', '4', '5', '6', '7']);
     expect(s.streak, -3);
     expect(s.streakLabel, '3연패');
+    expect(s.todayGame, isNull); // 오늘(4월 10일) 경기가 없다
 
     final one = MyTeamSummary.build(
       teamId: 'kgc',
@@ -213,6 +214,7 @@ void main() {
       games: games,
       now: today.add(const Duration(hours: 12)),
     );
+    expect(s.todayGame!.id, 'live');
     expect(
       [for (final g in s.schedule) g.id],
       ['p5', 'p6', 'live', 'n12', 'n13'],

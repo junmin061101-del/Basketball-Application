@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../../data/models/team.dart';
 import '../../../providers/repository_providers.dart';
 import '../../common/page_header.dart';
@@ -564,7 +565,7 @@ class _RouletteState extends State<_Roulette> {
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    textStyle: const TextStyle(
+                    textStyle: const TextStyle(fontFamily: AppTheme.font, 
                       fontSize: 13.5,
                       fontWeight: FontWeight.w900,
                     ),

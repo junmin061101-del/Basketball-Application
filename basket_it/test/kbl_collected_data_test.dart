@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:basket_it/core/utils/team_label.dart';
 import 'package:basket_it/data/models/player.dart';
 import 'package:basket_it/data/repositories/kbl_repositories.dart';
 import 'package:basket_it/data/repositories/league_data_source.dart';
@@ -14,8 +15,12 @@ final files = <String, Object>{
   'players': {
     'players': [
       {
-        'id': '290776', 'name': '허웅', 'teamId': 'kcc',
-        'position': 'pg', 'positionLabel': '가드', 'backNumber': 3,
+        'id': '290776',
+        'name': '허웅',
+        'teamId': 'kcc',
+        'position': 'pg',
+        'positionLabel': '가드',
+        'backNumber': 3,
         'headshot': 'https://kbl.or.kr/files/kbl/players-photo/290776.png',
       },
       {
@@ -33,14 +38,26 @@ final files = <String, Object>{
   'player_seasons': {
     'rows': [
       {
-        'playerId': '290776', 'season': '2021-22', 'teamId': 'db',
-        'teamName': '원주 DB', 'gamesPlayed': 54, 'points': 16.7,
-        'oreb': 0.5, 'dreb': 2.0, 'reb': 2.5,
+        'playerId': '290776',
+        'season': '2021-22',
+        'teamId': 'db',
+        'teamName': '원주 DB',
+        'gamesPlayed': 54,
+        'points': 16.7,
+        'oreb': 0.5,
+        'dreb': 2.0,
+        'reb': 2.5,
       },
       {
-        'playerId': '290776', 'season': '2025-26', 'teamId': 'kcc',
-        'teamName': '부산 KCC', 'gamesPlayed': 45, 'points': 16.4,
-        'oreb': 0.4, 'dreb': 2.1, 'reb': 2.5,
+        'playerId': '290776',
+        'season': '2025-26',
+        'teamId': 'kcc',
+        'teamName': '부산 KCC',
+        'gamesPlayed': 45,
+        'points': 16.4,
+        'oreb': 0.4,
+        'dreb': 2.1,
+        'reb': 2.5,
       },
       {
         // 지금은 없는 구단: 팀 코드만 있고 앱 팀 목록에는 없다
@@ -54,16 +71,26 @@ final files = <String, Object>{
     'season': '2025-26',
     'leaders': [
       {
-        'playerId': '290776', 'teamId': 'kcc', 'gamesPlayed': 45,
-        'points': 16.4, 'oreb': 0.4, 'dreb': 2.1, 'reb': 2.5,
-        'dd2': 0, 'td3': 0, 'gameHigh': 51,
+        'playerId': '290776',
+        'teamId': 'kcc',
+        'gamesPlayed': 45,
+        'points': 16.4,
+        'oreb': 0.4,
+        'dreb': 2.1,
+        'reb': 2.5,
+        'dd2': 0,
+        'td3': 0,
+        'gameHigh': 51,
       },
     ],
   },
   'teams': {
     'teams': [
       {
-        'id': 'kcc', 'city': '부산', 'name': 'KCC', 'shortName': 'KCC',
+        'id': 'kcc',
+        'city': '부산',
+        'name': 'KCC',
+        'shortName': 'KCC',
         'color': '#07215A',
         'logo': 'https://www.kbl.or.kr/assets/img/club/kcc/emblem-kcc01.png',
       },
@@ -105,13 +132,15 @@ void main() {
     final kcc = (await source().teams()).single;
     expect(kcc.fullName, '부산 KCC');
     expect((kcc.logoAsset, kcc.logoUrl), (null, null));
+    // 긴 이름은 팬들이 부르는 뒤쪽 이름으로 줄인다
+    expect(compactTeamName('한국가스공사'), '페가수스');
+    expect(compactTeamName('울산 현대모비스'), '울산 모비스');
   });
 
   group('시즌별 기록', () {
     test('최근 시즌이 맨 앞이고 시즌마다 그때 팀을 쓴다', () async {
-      final seasons = await KblPlayerRepository(
-        source(),
-      ).getSeasonStatsHistory(player('290776'));
+      final seasons = await KblPlayerRepository(source())
+          .getSeasonStatsHistory(player('290776'));
       expect(seasons.map((s) => s.season), ['2025-26', '2021-22']);
       expect(seasons.map((s) => s.teamId), ['kcc', 'db']);
       expect(seasons.first.hasReboundSplit, isTrue);
@@ -120,26 +149,23 @@ void main() {
 
     test('한 경기도 안 뛴 선수는 빈 목록 (지어낸 기록을 채우지 않는다)', () async {
       expect(
-        await KblPlayerRepository(
-          source(),
-        ).getSeasonStatsHistory(player('291999', teamId: 'sk')),
+        await KblPlayerRepository(source())
+            .getSeasonStatsHistory(player('291999', teamId: 'sk')),
         isEmpty,
       );
     });
 
     test('지금은 없는 구단 기록은 원본 팀 이름을 남긴다', () async {
-      final seasons = await KblPlayerRepository(
-        source(),
-      ).getSeasonStatsHistory(player('200001', teamId: 'sk'));
+      final seasons = await KblPlayerRepository(source())
+          .getSeasonStatsHistory(player('200001', teamId: 'sk'));
       expect(seasons.single.teamId, '30');
       expect(seasons.single.teamName, '고양 오리온');
     });
   });
 
   test('신상은 KBL 원본에 없어 지어내지 않고 비워 둔다', () async {
-    final bio = await KblPlayerRepository(
-      source(),
-    ).getPlayerBio(player('290776'));
+    final bio = await KblPlayerRepository(source())
+        .getPlayerBio(player('290776'));
     expect(bio.isEmpty, isTrue);
     expect(bio.heightLabel, '-');
     expect(bio.weightLabel, '-');
@@ -154,9 +180,8 @@ void main() {
   });
 
   test('랭킹용 이번 시즌 기록에 박스스코어로 센 최다 득점이 들어 있다', () async {
-    final stats = await KblPlayerRepository(
-      source(),
-    ).getCurrentSeasonStatsForAllPlayers();
+    final stats = await KblPlayerRepository(source())
+        .getCurrentSeasonStatsForAllPlayers();
     expect(stats.single.gameHigh, 51);
     expect(stats.single.season, '2025-26');
   });

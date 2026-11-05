@@ -317,6 +317,48 @@ void main() {
     );
   });
 
+  testWidgets('내 팀 경기가 있는 날은 중계 카드가 맨 위에 뜬다', (tester) async {
+    final now = DateTime.now();
+    await pumpHome(
+      tester,
+      _FakeNewsRepository(feed),
+      followedTeamIds: {'sk'},
+      standings: const [
+        TeamStanding(teamId: 'sk', wins: 6, losses: 2, gamesBehind: 0),
+        TeamStanding(teamId: 'lg', wins: 1, losses: 6, gamesBehind: 4.5),
+      ],
+      games: [
+        Game(
+          id: 'today',
+          date: DateUtils.dateOnly(now),
+          homeTeamId: 'sk',
+          awayTeamId: 'lg',
+          homeScore: 61,
+          awayScore: 54,
+          status: GameStatus.live,
+          startTime: now.subtract(const Duration(hours: 1)),
+          liveClock: '2쿼터 종료',
+        ),
+      ],
+    );
+
+    expect(find.text('SK vs LG'), findsOneWidget);
+    expect(find.text('LIVE'), findsWidgets);
+    expect(find.text('2쿼터 종료'), findsOneWidget);
+    expect(find.text('61'), findsOneWidget);
+    expect(find.text('6승 2패'), findsOneWidget);
+    // 중계 카드가 내 팀 카드보다 위
+    expect(
+      tester.getTopLeft(find.text('SK vs LG')).dy,
+      lessThan(tester.getTopLeft(find.text('전체 일정')).dy),
+    );
+  });
+
+  testWidgets('내 팀 경기가 없는 날은 중계 카드가 없다', (tester) async {
+    await pumpHome(tester, _FakeNewsRepository(feed), followedTeamIds: {'sk'});
+    expect(find.text('문자중계 · 기록 보기'), findsNothing);
+  });
+
   testWidgets('팔로우한 팀이 여럿이면 카드 위에서 팀을 고른다', (tester) async {
     await pumpHome(
       tester,

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_theme.dart';
 import '../../core/utils/player_display.dart';
 import '../../core/utils/team_label.dart';
 import '../../data/models/player.dart';
@@ -82,7 +83,7 @@ class PlayerDetailScreen extends ConsumerWidget {
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      textStyle: const TextStyle(
+                      textStyle: const TextStyle(fontFamily: AppTheme.font, 
                         fontWeight: FontWeight.w800,
                         fontSize: 15,
                       ),

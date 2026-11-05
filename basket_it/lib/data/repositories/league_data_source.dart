@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart' show Color;
 import 'package:http/http.dart' as http;
 
+import '../../core/utils/team_label.dart';
 import '../models/game.dart';
 import '../models/player.dart';
 import '../models/player_game_stats.dart';
@@ -323,7 +324,7 @@ class LeagueDataSource {
       id: row['id'] as String? ?? '',
       city: row['city'] as String? ?? '',
       name: row['name'] as String? ?? '',
-      shortName: row['shortName'] as String? ?? '',
+      shortName: compactTeamName(row['shortName'] as String? ?? ''),
       primaryColor: Color(int.parse('FF$hex', radix: 16)),
       // 팀 로고는 사용 허가를 받기 전까지 쓰지 않는다. 화면은 팀색 + 이름 글자로 그린다.
     );

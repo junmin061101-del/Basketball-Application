@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../common/page_header.dart';
 
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_theme.dart';
 import '../../data/models/game.dart';
 import '../../data/models/team.dart';
 import '../../providers/prediction_providers.dart';
@@ -30,7 +31,7 @@ class PredictionTab extends StatelessWidget {
               indicatorSize: TabBarIndicatorSize.tab,
               labelColor: AppColors.textPrimary,
               unselectedLabelColor: AppColors.textTertiary,
-              labelStyle: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+              labelStyle: TextStyle(fontFamily: AppTheme.font, fontSize: 16, fontWeight: FontWeight.w800),
               unselectedLabelStyle: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
