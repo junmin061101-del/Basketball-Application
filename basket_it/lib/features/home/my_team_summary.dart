@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart' show DateUtils, immutable;
 
 import '../../data/models/game.dart';
@@ -23,8 +25,8 @@ class MyTeamSummary {
   /// 연승이면 양수, 연패면 음수. 경기가 없으면 0.
   final int streak;
 
-  /// 일정 다섯 경기, 날짜순: 최근에 끝난 경기 + 진행중·예정 경기(최대 3).
-  /// 예정 경기가 모자라면(비시즌) 끝난 경기로 채운다.
+  /// 일정 다섯 경기, 날짜순: 최근에 끝난 경기 3 + 진행중·예정 경기 2.
+  /// 한쪽이 모자라면(개막 직후·비시즌) 다른 쪽으로 채운다.
   final List<Game> schedule;
 
   /// 오늘 경기(진행중 → 예정 → 종료 순으로 하나). 없으면 null. 홈 맨 위 중계 카드.
@@ -116,15 +118,16 @@ class MyTeamSummary {
       streak += w ? 1 : -1;
     }
 
-    final upcoming = mineGames
+    final ahead = mineGames
         .where(
           (g) =>
               g.status == GameStatus.live ||
               (g.status == GameStatus.scheduled && g.startTime.isAfter(now)),
         )
-        .take(3)
         .toList();
-    final past = finished.reversed.take(5 - upcoming.length).toList().reversed;
+    final pastCount = math.min(finished.length, math.max(3, 5 - ahead.length));
+    final past = finished.sublist(finished.length - pastCount);
+    final upcoming = ahead.take(5 - pastCount);
 
     final today = DateUtils.dateOnly(now);
     final todayGames =

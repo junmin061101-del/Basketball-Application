@@ -183,7 +183,7 @@ void main() {
     expect(s.streak, 2);
   });
 
-  test('일정은 최근 경기 뒤에 진행중·예정 경기를 최대 3개 붙인다', () {
+  test('일정은 최근 경기 3개 뒤에 진행중·예정 경기 2개를 붙인다', () {
     final today = DateTime(2026, 4, 10);
     final games = [
       for (var d = 1; d <= 6; d++)
@@ -217,7 +217,18 @@ void main() {
     expect(s.todayGame!.id, 'live');
     expect(
       [for (final g in s.schedule) g.id],
-      ['p5', 'p6', 'live', 'n12', 'n13'],
+      ['p4', 'p5', 'p6', 'live', 'n12'],
+    );
+    // 끝난 경기가 1개뿐(개막 직후)이면 예정 경기로 채운다
+    final early = MyTeamSummary.build(
+      teamId: 'kgc',
+      standings: kbl,
+      games: games.skip(5).toList(),
+      now: today.add(const Duration(hours: 12)),
+    );
+    expect(
+      [for (final g in early.schedule) g.id],
+      ['p6', 'live', 'n12', 'n13', 'n14'],
     );
   });
 }
