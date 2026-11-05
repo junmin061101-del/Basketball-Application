@@ -36,7 +36,12 @@ service cloud.firestore {
     match /predictionComments/{commentId} {
       allow read: if request.auth != null;
       allow create: if request.auth != null
+        && request.resource.data.keys().hasOnly(['gameId', 'uid', 'displayName', 'text', 'createdAt'])
         && request.resource.data.uid == request.auth.uid
+        && request.resource.data.gameId is string
+        && request.resource.data.gameId.size() <= 40
+        && validName(request.resource.data.displayName)
+        && request.resource.data.createdAt == request.time
         && request.resource.data.text is string
         && request.resource.data.text.size() > 0
         && request.resource.data.text.size() <= 300;
@@ -45,27 +50,51 @@ service cloud.firestore {
       allow delete: if request.auth != null && resource.data.uid == request.auth.uid;
     }
 
-    // 커뮤니티 게시글: 로그인한 사용자는 모두 읽고 쓸 수 있다.
-    // 글 수정/삭제는 작성자만. 다만 좋아요(likedBy)와 댓글 수(commentCount)는
-    // 다른 사람도 바꿀 수 있어야 하므로, 그 두 필드만 바뀌는 업데이트는 허용한다.
+    // 커뮤니티 게시글: 로그인한 사용자는 모두 읽고 쓸 수 있다. 앱에 글 수정은
+    // 없다. 다른 사람이 바꿀 수 있는 건 좋아요(내 uid 하나 넣기/빼기)와
+    // 댓글 수(1씩)뿐이다. 새 글은 좋아요·댓글 0개, 서버 시각으로만 만든다.
     match /communityPosts/{postId} {
       allow read: if request.auth != null;
       allow create: if request.auth != null
+        && request.resource.data.keys().hasOnly(['uid', 'displayName', 'category', 'league', 'title', 'body', 'commentCount', 'likedBy', 'createdAt'])
         && request.resource.data.uid == request.auth.uid
+        && validName(request.resource.data.displayName)
+        && request.resource.data.category in ['free', 'team', 'prediction', 'question']
+        && request.resource.data.get('league', 'kbl') in ['kbl', 'nba']
         && request.resource.data.title is string
         && request.resource.data.title.size() > 0
         && request.resource.data.title.size() <= 100
         && request.resource.data.body is string
         && request.resource.data.body.size() <= 2000
-        && request.resource.data.get('league', 'kbl') in ['kbl', 'nba'];
+        && request.resource.data.commentCount == 0
+        && request.resource.data.likedBy == []
+        && request.resource.data.createdAt == request.time;
       allow update: if request.auth != null
-        && request.resource.data.get('league', 'kbl') in ['kbl', 'nba']
-        && (
-          resource.data.uid == request.auth.uid
-          || request.resource.data.diff(resource.data).affectedKeys()
-               .hasOnly(['likedBy', 'commentCount'])
-        );
+        && (togglingMyLike() || stepCommentCount() || anonymizingOwn());
       allow delete: if request.auth != null && resource.data.uid == request.auth.uid;
+    }
+
+    /// 좋아요: likedBy에서 내 uid 하나만 넣거나 뺀다.
+    function togglingMyLike() {
+      let before = resource.data.likedBy.toSet();
+      let after = request.resource.data.likedBy.toSet();
+      let me = [request.auth.uid].toSet();
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likedBy'])
+        && request.resource.data.likedBy.size() == after.size()
+        && ((after.difference(before) == me && before.difference(after).size() == 0)
+          || (before.difference(after) == me && after.difference(before).size() == 0));
+    }
+
+    /// 댓글을 달거나 지울 때 댓글 수를 1만큼 바꾼다.
+    function stepCommentCount() {
+      let delta = request.resource.data.commentCount - resource.data.commentCount;
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['commentCount'])
+        && (delta == 1 || (delta == -1 && request.resource.data.commentCount >= 0));
+    }
+
+    /// 글쓴이 표시 이름. 닉네임(10자)이나 가린 이름이 들어온다.
+    function validName(name) {
+      return name is string && name.size() > 0 && name.size() <= 30;
     }
 
     // 신고: 로그인한 사용자가 자기 이름으로 접수만 할 수 있다.
@@ -93,6 +122,13 @@ service cloud.firestore {
     }
     match /config/{docId} {
       allow read, write: if false;
+    }
+
+    // 강제 업데이트 기준(minBuild 등). 로그인 전에 읽으므로 누구나 읽고,
+    // 운영자만 콘솔에서 고친다.
+    match /appConfig/{docId} {
+      allow read: if true;
+      allow write: if false;
     }
 
     // 잠금화면 실시간 스코어 구독. 문서 id는 기기의 FCM 토큰이다.
@@ -138,7 +174,11 @@ service cloud.firestore {
     match /communityComments/{commentId} {
       allow read: if request.auth != null;
       allow create: if request.auth != null
+        && request.resource.data.keys().hasOnly(['postId', 'uid', 'displayName', 'text', 'createdAt'])
         && request.resource.data.uid == request.auth.uid
+        && exists(/databases/$(database)/documents/communityPosts/$(request.resource.data.postId))
+        && validName(request.resource.data.displayName)
+        && request.resource.data.createdAt == request.time
         && request.resource.data.text is string
         && request.resource.data.text.size() > 0
         && request.resource.data.text.size() <= 500;

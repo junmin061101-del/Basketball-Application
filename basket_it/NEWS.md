@@ -86,26 +86,15 @@ gh secret set NAVER_CLIENT_SECRET
 
 ## 실시간이 필요해지면
 
-[functions/](functions/)에 Cloud Functions 버전(`getBasketballNews`)이 이미
-완성돼 있다. 호출할 때마다 실시간으로 검색한다. 다만 Cloud Functions는
-Firebase **Blaze(종량제)** 요금제에서만 배포된다. 자세한 건
-[functions/README.md](functions/README.md).
-
-바꾸려면 [lib/providers/news_providers.dart](lib/providers/news_providers.dart)의
-주입 지점 한 줄만 고치면 된다.
-
-```dart
-final newsRepositoryProvider = Provider<NewsRepository>((ref) {
-  return FunctionsNewsRepository(); // StaticJsonNewsRepository() 대신
-});
-```
-
-폴링 주기(`newsPollInterval`)도 90초 정도로 줄이면 된다.
+예전에는 [functions/](functions/)에 Cloud Functions 버전(`getBasketballNews`)이
+있었다. 앱이 쓰지 않고, 배포되면 인증 없이 열리는 함수라 지웠다. 필요하면 커밋
+`e357af5`의 `functions/index.js`와 `lib/data/repositories/news_repository.dart`의
+`FunctionsNewsRepository`를 되살리고, 인증·App Check·`maxInstances`·
+`defineSecret`을 붙여 배포한다.
 
 ## 테스트
 
 ```bash
 flutter test                          # 앱 (파싱·카드 리스트·클릭·필터)
 cd functions && npm test              # 수집 로직 단위 테스트
-cd functions && npm run test:pipeline # Cloud Functions 전체 파이프라인
 ```

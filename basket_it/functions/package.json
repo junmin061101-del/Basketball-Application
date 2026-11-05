@@ -1,6 +1,6 @@
 {
   "name": "basket-it-functions",
-  "description": "Baskit 백엔드 함수 (농구 뉴스 수집)",
+  "description": "Baskit 백엔드 예약 함수 (실시간 스코어, 승부예측 랭킹)",
   "main": "index.js",
   "engines": {
     "node": "22"
@@ -9,11 +9,15 @@
     "serve": "firebase emulators:start --only functions",
     "deploy": "firebase deploy --only functions",
     "test": "node --test test/*.test.js",
-    "test:pipeline": "firebase emulators:exec --only firestore --project demo-basket \"node test/pipeline.e2e.js\""
+    "test:rules": "firebase emulators:exec --only firestore --project demo-basket \"node --test test/rules.e2e.js\""
   },
   "dependencies": {
     "firebase-admin": "^13.10.0",
     "firebase-functions": "^6.1.0"
   },
-  "private": true
+  "private": true,
+  "devDependencies": {
+    "@firebase/rules-unit-testing": "^4.0.1",
+    "firebase": "^11.10.0"
+  }
 }

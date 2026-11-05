@@ -7,6 +7,7 @@ import 'core/theme/app_colors.dart';
 import 'core/theme/app_theme.dart';
 import 'features/auth/auth_gate.dart';
 import 'features/onboarding/splash_screen.dart';
+import 'features/update/update_gate.dart';
 
 class BasketItApp extends StatelessWidget {
   /// main()에서 Firebase.initializeApp()이 성공했는지 여부.
@@ -35,7 +36,9 @@ class BasketItApp extends StatelessWidget {
       // 정해진 것 옆에 빈 공간만 남는다. 휴대폰 너비로 모아 가운데에 둔다.
       builder: (context, child) =>
           _PhoneWidth(child: child ?? const SizedBox.shrink()),
-      home: firebaseReady ? const AuthGate() : const SplashScreen(),
+      home: firebaseReady
+          ? const UpdateGate(child: AuthGate())
+          : const SplashScreen(),
     );
   }
 }
@@ -104,7 +107,8 @@ class AppScrollBehavior extends MaterialScrollBehavior {
     Widget child,
     ScrollableDetails details,
   ) {
-    final horizontal = details.direction == AxisDirection.left ||
+    final horizontal =
+        details.direction == AxisDirection.left ||
         details.direction == AxisDirection.right;
     if (horizontal && kIsWeb) {
       return Scrollbar(controller: details.controller, child: child);

@@ -28,6 +28,9 @@ abstract class CommunityRepository {
   });
 }
 
+/// 커뮤니티 목록이 한 번에 받는 글 수.
+const postPageSize = 100;
+
 class FirestoreCommunityRepository implements CommunityRepository {
   final FirebaseFirestore _db;
 
@@ -48,18 +51,27 @@ class FirestoreCommunityRepository implements CommunityRepository {
     if (category != null) {
       query = query.where('category', isEqualTo: category.code);
     }
-    // category + createdAt 복합 인덱스를 요구하지 않도록 정렬은 클라이언트에서.
-    // 리그도 클라이언트에서 거른다. 리그를 나누기 전 글에는 league가 없어서
-    // where로 거르면 빠지는데, 그 글들은 KBL 게시판에 남아야 한다.
-    return query.snapshots().map((snap) {
-      final posts = snap.docs
-          .map((d) => CommunityPost.fromMap(d.id, d.data()))
-          .whereType<CommunityPost>()
-          .where((p) => p.league == league)
-          .toList();
-      posts.sort(_newestFirst);
-      return posts;
-    });
+    // 최신 글만 구독한다. 전체를 구독하면 글이 쌓일수록 읽기 비용이 커진다.
+    // 말머리로 거를 때는 category + createdAt 복합 인덱스를 쓴다
+    // (firestore.indexes.json). 리그는 클라이언트에서 거른다. 리그를 나누기 전
+    // 글에는 league가 없어서 where로 거르면 빠지는데, 그 글들은 KBL 게시판에
+    // 남아야 한다.
+    // ponytail: 최신 [postPageSize]개에서 리그를 거르므로 한쪽 리그 글이 몰리면
+    // 다른 쪽은 적게 보인다. 글이 많아지면 예전 글에 league를 채우고 where로
+    // 거른 뒤 "더 보기"(startAfter)를 붙인다.
+    return query
+        .orderBy('createdAt', descending: true)
+        .limit(postPageSize)
+        .snapshots()
+        .map((snap) {
+          final posts = snap.docs
+              .map((d) => CommunityPost.fromMap(d.id, d.data()))
+              .whereType<CommunityPost>()
+              .where((p) => p.league == league)
+              .toList();
+          posts.sort(_newestFirst);
+          return posts;
+        });
   }
 
   @override

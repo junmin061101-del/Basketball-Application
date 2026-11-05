@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -246,7 +247,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         ),
                         const SizedBox(width: 8),
                         Text(
-                          '아이디·비밀번호 저장',
+                          // 웹은 비밀번호를 기억하지 않는다(credential_store.dart).
+                          kIsWeb ? '아이디 저장' : '아이디·비밀번호 저장',
                           style: Theme.of(context).textTheme.bodyMedium
                               ?.copyWith(color: AppColors.textPrimary),
                         ),

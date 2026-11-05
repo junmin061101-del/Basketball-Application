@@ -71,7 +71,12 @@ class CommunityTab extends ConsumerWidget {
               loading: () => const Center(
                 child: CircularProgressIndicator(color: AppColors.primary),
               ),
-              error: (err, _) => Center(child: Text('불러오지 못했어요: $err')),
+              error: (err, _) => Center(
+                child: TextButton(
+                  onPressed: () => ref.invalidate(communityPostsProvider),
+                  child: const Text('글을 불러오지 못했어요. 눌러서 다시 시도'),
+                ),
+              ),
               data: (allPosts) {
                 // 차단한 사용자의 글은 목록에서 감춘다.
                 final posts = allPosts

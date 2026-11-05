@@ -11,8 +11,7 @@ import '../features/home/article_view_screen.dart';
 /// 실제 뉴스 주입 지점.
 ///
 /// GitHub Actions가 20분마다 네이버에서 모아 GitHub Pages에 올려둔 JSON을
-/// 읽는다. Firebase Blaze 요금제로 올라가 실시간 검색을 쓰고 싶으면 이 줄만
-/// `FunctionsNewsRepository()`로 바꾸면 된다.
+/// 읽는다.
 final newsRepositoryProvider = Provider<NewsRepository>((ref) {
   return StaticJsonNewsRepository();
 });

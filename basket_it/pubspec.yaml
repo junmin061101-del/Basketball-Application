@@ -43,8 +43,6 @@ dependencies:
   firebase_auth: ^5.3.3
   cloud_firestore: ^5.5.0
   flutter_secure_storage: ^11.0.0
-  cloud_functions: ^5.6.2
-
   # 뉴스 원문 보기(앱 안에서 웹뷰로 연다)
   webview_flutter: ^4.14.1
   url_launcher: ^6.3.2
@@ -58,6 +56,7 @@ dependencies:
   live_activities: ^2.5.1
   firebase_crashlytics: ^4.3.10
   firebase_app_check: ^0.3.2+10
+  package_info_plus: ^10.2.2
 
 dev_dependencies:
   flutter_test:

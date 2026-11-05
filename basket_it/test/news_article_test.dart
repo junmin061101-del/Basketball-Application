@@ -1,5 +1,4 @@
 import 'package:basket_it/data/models/news_article.dart';
-import 'package:basket_it/data/repositories/news_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -82,8 +81,4 @@ void main() {
     expect(NewsCategory.nba.wireName, 'nba');
   });
 
-  test('정렬의 네이버 전달값', () {
-    expect(NewsSort.date.wireName, 'date');
-    expect(NewsSort.similarity.wireName, 'sim');
-  });
 }

@@ -1,6 +1,5 @@
 import 'dart:convert';
 
-import 'package:cloud_functions/cloud_functions.dart';
 import 'package:http/http.dart' as http;
 
 import '../models/news_article.dart';
@@ -98,63 +97,4 @@ List<NewsArticle> _parseArticles(Object? raw) {
   }
   articles.sort((a, b) => b.publishedAt.compareTo(a.publishedAt));
   return articles;
-}
-
-/// 네이버 뉴스 검색의 정렬 방식.
-enum NewsSort {
-  /// 최신순(네이버 sort=date). 뉴스 피드의 기본값.
-  date,
-
-  /// 정확도순(네이버 sort=sim).
-  similarity;
-
-  String get wireName => switch (this) {
-    NewsSort.date => 'date',
-    NewsSort.similarity => 'sim',
-  };
-}
-
-/// Cloud Functions(`getBasketballNews`) 기반 구현.
-class FunctionsNewsRepository implements NewsRepository {
-  /// 함수를 배포한 리전. functions/index.js의 region과 같아야 한다.
-  static const region = 'asia-northeast3';
-
-  final FirebaseFunctions _functions;
-
-  /// 서버에 요청할 정렬 방식. 홈 피드는 최신순이 자연스럽다.
-  final NewsSort sort;
-
-  FunctionsNewsRepository({
-    FirebaseFunctions? functions,
-    this.sort = NewsSort.date,
-  }) : _functions = functions ?? FirebaseFunctions.instanceFor(region: region);
-
-  @override
-  Future<List<NewsArticle>> getNews({NewsCategory? category}) async {
-    final callable = _functions.httpsCallable(
-      'getBasketballNews',
-      options: HttpsCallableOptions(timeout: const Duration(seconds: 60)),
-    );
-
-    final HttpsCallableResult result;
-    try {
-      result = await callable.call<Map<String, dynamic>>({
-        'category': category?.wireName ?? 'all',
-        'sort': sort.wireName,
-      });
-    } on FirebaseFunctionsException catch (e) {
-      throw NewsUnavailableException(_messageFor(e));
-    } catch (_) {
-      throw const NewsUnavailableException('뉴스를 불러오지 못했어요. 잠시 후 다시 시도해주세요.');
-    }
-
-    return _parseArticles(result.data['articles']);
-  }
-
-  String _messageFor(FirebaseFunctionsException e) => switch (e.code) {
-    'failed-precondition' => '뉴스 서버 설정이 아직 끝나지 않았어요.',
-    'deadline-exceeded' => '뉴스를 가져오는 데 시간이 너무 오래 걸렸어요.',
-    'unavailable' => '네트워크 연결을 확인해주세요.',
-    _ => '뉴스를 불러오지 못했어요. 잠시 후 다시 시도해주세요.',
-  };
 }

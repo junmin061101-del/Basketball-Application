@@ -145,7 +145,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       body:
           '계정과 팔로우·예측 기록이 바로 지워지고 되돌릴 수 없어요.\n'
           '커뮤니티에 쓴 글과 댓글은 대화 맥락을 위해 남지만, 글쓴이는 '
-          '"$anonymousName"으로 바뀌어 누가 썼는지 알 수 없게 됩니다.',
+          '"탈퇴한 사용자"로 바뀌어 누가 썼는지 알 수 없게 됩니다.',
       action: '탈퇴하기',
       danger: true,
     );
