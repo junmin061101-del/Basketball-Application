@@ -10,7 +10,15 @@ abstract class UserProfileRepository {
   Future<String?> loadNickname(String uid);
 
   Future<void> saveNickname({required String uid, required String nickname});
+
+  /// 지금 판([termsVersion])의 약관에 동의했는지.
+  Future<bool> hasAgreedTerms(String uid);
+
+  Future<void> agreeTerms(String uid);
 }
+
+/// 약관 판. 약관을 크게 바꿔 다시 동의를 받아야 하면 올린다.
+const termsVersion = 1;
 
 class FirestoreUserProfileRepository implements UserProfileRepository {
   final FirebaseFirestore _db;
@@ -25,6 +33,21 @@ class FirestoreUserProfileRepository implements UserProfileRepository {
     if (value is! String) return null;
     final name = value.trim();
     return name.isEmpty ? null : name;
+  }
+
+  @override
+  Future<bool> hasAgreedTerms(String uid) async {
+    final snapshot = await _db.collection('users').doc(uid).get();
+    final agreed = snapshot.data()?['termsVersion'];
+    return agreed is num && agreed >= termsVersion;
+  }
+
+  @override
+  Future<void> agreeTerms(String uid) async {
+    await _db.collection('users').doc(uid).set({
+      'termsVersion': termsVersion,
+      'termsAgreedAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
   }
 
   @override

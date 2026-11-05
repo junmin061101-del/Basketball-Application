@@ -1,3 +1,5 @@
+import 'profanity.dart';
+
 /// 닉네임 규칙.
 ///
 /// 커뮤니티 글·예측 토론·랭킹에 그대로 보이는 이름이라, 남을 사칭하거나
@@ -26,6 +28,7 @@ String? nicknameError(String value) {
   if (!_allowed.hasMatch(name)) {
     return '한글·영문·숫자·밑줄만 쓸 수 있어요';
   }
+  if (containsProfanity(name)) return '쓸 수 없는 닉네임이에요';
   final lower = name.toLowerCase();
   if (_reservedNames.any((n) => n.toLowerCase() == lower)) {
     return '쓸 수 없는 닉네임이에요';

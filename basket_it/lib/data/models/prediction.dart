@@ -47,7 +47,10 @@ class PredictionVote {
     final gameId = data['gameId'];
     final uid = data['uid'];
     final dateStr = data['gameDate'];
-    if (pick == null || gameId is! String || uid is! String || dateStr is! String) {
+    if (pick == null ||
+        gameId is! String ||
+        uid is! String ||
+        dateStr is! String) {
       return null;
     }
     return PredictionVote(
@@ -119,6 +122,18 @@ class LeaderboardEntry {
   });
 
   double get accuracy => settled == 0 ? 0 : correct / settled;
+
+  /// 서버 랭킹 문서의 한 줄. 형식이 어긋나면 null.
+  static LeaderboardEntry? fromMap(Map<String, Object?> m) {
+    final uid = m['uid'];
+    if (uid is! String) return null;
+    return LeaderboardEntry(
+      uid: uid,
+      displayName: m['displayName'] as String? ?? '사용자',
+      correct: (m['correct'] as num?)?.toInt() ?? 0,
+      settled: (m['settled'] as num?)?.toInt() ?? 0,
+    );
+  }
 }
 
 String _dateKey(DateTime d) =>

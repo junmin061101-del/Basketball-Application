@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/utils/profanity.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_theme.dart';
 import '../../data/models/community_post.dart';
@@ -36,6 +37,11 @@ class _WritePostScreenState extends ConsumerState<WritePostScreen> {
     final user = ref.read(currentUserProvider);
     final title = _titleController.text.trim();
     if (user == null || title.isEmpty || _submitting) return;
+    if (containsProfanity('$title ${_bodyController.text}')) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text(profanityMessage)));
+      return;
+    }
 
     setState(() => _submitting = true);
     try {

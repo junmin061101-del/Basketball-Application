@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/utils/profanity.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_theme.dart';
 import '../../data/models/community_post.dart';
@@ -36,6 +37,11 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
     final text = _controller.text.trim();
     final user = ref.read(currentUserProvider);
     if (text.isEmpty || user == null || _sending) return;
+    if (containsProfanity(text)) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text(profanityMessage)));
+      return;
+    }
     setState(() => _sending = true);
     try {
       final name = await readDisplayName(ref);
@@ -308,7 +314,11 @@ class _LikeButton extends ConsumerWidget {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(30),
           ),
-          textStyle: const TextStyle(fontFamily: AppTheme.font, fontWeight: FontWeight.w800, fontSize: 13),
+          textStyle: const TextStyle(
+            fontFamily: AppTheme.font,
+            fontWeight: FontWeight.w800,
+            fontSize: 13,
+          ),
         ),
       ),
     );

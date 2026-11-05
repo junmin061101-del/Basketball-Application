@@ -18,8 +18,8 @@ abstract class PredictionRepository {
 
   Future<void> addComment(PredictionComment comment);
 
-  /// 랭킹 계산용 전체 투표.
-  Future<List<PredictionVote>> getAllVotes();
+  /// 서버가 채점해 둔 랭킹(맞힌 수 → 이름 순).
+  Future<List<LeaderboardEntry>> getLeaderboard();
 }
 
 class FirestorePredictionRepository implements PredictionRepository {
@@ -35,12 +35,15 @@ class FirestorePredictionRepository implements PredictionRepository {
 
   @override
   Stream<List<PredictionVote>> watchVotes(String gameId) {
-    return _votes.where('gameId', isEqualTo: gameId).snapshots().map(
-      (snap) => snap.docs
-          .map((d) => PredictionVote.fromMap(d.data()))
-          .whereType<PredictionVote>()
-          .toList(),
-    );
+    return _votes
+        .where('gameId', isEqualTo: gameId)
+        .snapshots()
+        .map(
+          (snap) => snap.docs
+              .map((d) => PredictionVote.fromMap(d.data()))
+              .whereType<PredictionVote>()
+              .toList(),
+        );
   }
 
   @override
@@ -54,9 +57,7 @@ class FirestorePredictionRepository implements PredictionRepository {
   @override
   Stream<List<PredictionComment>> watchComments(String gameId) {
     // gameId + createdAt 복합 인덱스 없이 쓰기 위해 정렬은 클라이언트에서 한다.
-    return _comments.where('gameId', isEqualTo: gameId).snapshots().map((
-      snap,
-    ) {
+    return _comments.where('gameId', isEqualTo: gameId).snapshots().map((snap) {
       final list = snap.docs
           .map((d) => PredictionComment.fromMap(d.id, d.data()))
           .whereType<PredictionComment>()
@@ -82,11 +83,14 @@ class FirestorePredictionRepository implements PredictionRepository {
   }
 
   @override
-  Future<List<PredictionVote>> getAllVotes() async {
-    final snap = await _votes.get();
-    return snap.docs
-        .map((d) => PredictionVote.fromMap(d.data()))
-        .whereType<PredictionVote>()
+  Future<List<LeaderboardEntry>> getLeaderboard() async {
+    final doc = await _db.collection('leaderboard').doc('kbl').get();
+    final raw = doc.data()?['entries'];
+    if (raw is! List) return const [];
+    return raw
+        .whereType<Map>()
+        .map((e) => LeaderboardEntry.fromMap(e.cast<String, Object?>()))
+        .whereType<LeaderboardEntry>()
         .toList();
   }
 }

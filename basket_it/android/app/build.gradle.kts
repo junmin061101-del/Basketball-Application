@@ -1,3 +1,17 @@
+import java.io.FileInputStream
+import java.util.Properties
+
+// 출시 서명 키. android/key.properties(깃에 올리지 않는다)에 적는다:
+//   storeFile=/절대경로/upload-keystore.jks
+//   storePassword=...
+//   keyAlias=upload
+//   keyPassword=...
+// 만드는 법은 docs/RELEASE.md.
+val keystoreProperties = Properties().apply {
+    val file = rootProject.file("key.properties")
+    if (file.exists()) FileInputStream(file).use { load(it) }
+}
+
 plugins {
     id("com.android.application")
     // START: FlutterFire Configuration
@@ -33,11 +47,20 @@ android {
         versionName = flutter.versionName
     }
 
+    signingConfigs {
+        create("release") {
+            keystoreProperties["storeFile"]?.let { storeFile = file(it as String) }
+            storePassword = keystoreProperties["storePassword"] as String?
+            keyAlias = keystoreProperties["keyAlias"] as String?
+            keyPassword = keystoreProperties["keyPassword"] as String?
+        }
+    }
+
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            // 전에는 debug 키로 서명했다(Play가 받지 않는다). key.properties가 없으면
+            // 서명하지 않아, 잘못 서명된 번들이 업로드되는 일이 없게 한다.
+            signingConfig = if (keystoreProperties.isEmpty) null else signingConfigs.getByName("release")
         }
     }
 }

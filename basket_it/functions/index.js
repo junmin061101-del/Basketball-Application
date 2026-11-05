@@ -29,6 +29,7 @@ const {
   extractOgImage,
 } = require('./news-source');
 const { runLivePush } = require('./live-score');
+const { updateLeaderboard } = require('./leaderboard');
 
 admin.initializeApp();
 const db = admin.firestore();
@@ -360,5 +361,25 @@ exports.pushLiveScores = onSchedule(
     if (sent > 0 || rounds[0].live > 0) {
       logger.info('실시간 스코어 푸시', { rounds });
     }
+  },
+);
+
+/**
+ * 승부예측 랭킹을 30분마다 다시 채점해 leaderboard/kbl 문서 하나에 적는다.
+ * 앱은 이 문서만 읽는다. 채점 규칙은 leaderboard.js에 있다.
+ */
+exports.updatePredictionLeaderboard = onSchedule(
+  {
+    schedule: 'every 30 minutes',
+    region: 'asia-northeast3',
+    timeZone: 'Asia/Seoul',
+    timeoutSeconds: 120,
+    memory: '256MiB',
+    cpu: 'gcf_gen1',
+    retryCount: 0,
+  },
+  async () => {
+    const count = await updateLeaderboard({ db });
+    logger.info('승부예측 랭킹 갱신', { count });
   },
 );

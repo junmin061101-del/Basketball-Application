@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/utils/profanity.dart';
 import '../../core/theme/app_colors.dart';
 import '../../data/models/game.dart';
 import '../../data/models/moderation.dart';
@@ -45,6 +46,11 @@ class _PredictionDetailScreenState
     final text = _controller.text.trim();
     final user = ref.read(currentUserProvider);
     if (text.isEmpty || user == null || _sending) return;
+    if (containsProfanity(text)) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text(profanityMessage)));
+      return;
+    }
     setState(() => _sending = true);
     try {
       final name = await readDisplayName(ref);
