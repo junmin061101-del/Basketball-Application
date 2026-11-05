@@ -11,8 +11,12 @@ service cloud.firestore {
     // 자기 uid로만 만들거나 바꿀 수 있다. 문서 id는 "{gameId}_{uid}".
     // createdAt은 서버 시각만 받는다. 랭킹(서버 채점)은 이 시각이 경기 시작
     // 1시간 전보다 늦은 투표를 채점하지 않으므로, 결과를 보고 쓴 투표가 걸러진다.
+    // 투표 목록은 읽지 못한다(내 투표 하나만). 비율은 서버가 센
+    // predictionTallies를 읽는다. 목록을 열어 두면 투표 수 × 화면 수만큼 읽혀
+    // 비용이 커지고, 스크립트로 통째로 긁어 갈 수도 있다.
     match /predictionVotes/{voteId} {
-      allow read: if request.auth != null;
+      allow get: if request.auth != null;
+      allow list: if false;
       allow create, update: if request.auth != null
         && request.resource.data.keys().hasOnly(['gameId', 'uid', 'displayName', 'pick', 'gameDate', 'createdAt'])
         && request.resource.data.uid == request.auth.uid
@@ -26,6 +30,12 @@ service cloud.firestore {
       allow delete: if request.auth != null && resource.data.uid == request.auth.uid;
     }
 
+    // 경기별 투표 수. 서버(tallyPredictionVote)만 쓴다.
+    match /predictionTallies/{gameId} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+
     // 승부예측 랭킹. 서버(updatePredictionLeaderboard)만 쓰고 앱은 읽기만 한다.
     match /leaderboard/{docId} {
       allow read: if request.auth != null;
@@ -34,7 +44,8 @@ service cloud.firestore {
 
     // 승부예측 토론 댓글: 로그인한 사용자는 읽기/작성, 본인 것만 삭제.
     match /predictionComments/{commentId} {
-      allow read: if request.auth != null;
+      allow get: if request.auth != null;
+      allow list: if request.auth != null && request.query.limit <= 500;
       allow create: if request.auth != null
         && request.resource.data.keys().hasOnly(['gameId', 'uid', 'displayName', 'text', 'createdAt'])
         && request.resource.data.uid == request.auth.uid
@@ -54,7 +65,8 @@ service cloud.firestore {
     // 없다. 다른 사람이 바꿀 수 있는 건 좋아요(내 uid 하나 넣기/빼기)와
     // 댓글 수(1씩)뿐이다. 새 글은 좋아요·댓글 0개, 서버 시각으로만 만든다.
     match /communityPosts/{postId} {
-      allow read: if request.auth != null;
+      allow get: if request.auth != null;
+      allow list: if request.auth != null && request.query.limit <= 100;
       allow create: if request.auth != null
         && request.resource.data.keys().hasOnly(['uid', 'displayName', 'category', 'league', 'title', 'body', 'commentCount', 'likedBy', 'createdAt'])
         && request.resource.data.uid == request.auth.uid
@@ -172,7 +184,8 @@ service cloud.firestore {
 
     // 커뮤니티 댓글: 로그인한 사용자는 읽기/작성, 본인 것만 삭제.
     match /communityComments/{commentId} {
-      allow read: if request.auth != null;
+      allow get: if request.auth != null;
+      allow list: if request.auth != null && request.query.limit <= 500;
       allow create: if request.auth != null
         && request.resource.data.keys().hasOnly(['postId', 'uid', 'displayName', 'text', 'createdAt'])
         && request.resource.data.uid == request.auth.uid

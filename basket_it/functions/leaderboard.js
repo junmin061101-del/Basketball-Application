@@ -13,8 +13,12 @@
  */
 
 const PAGES_BASE = 'https://junmin061101-del.github.io/Basketball-Application';
+const crypto = require('crypto');
+
 const VOTES = 'predictionVotes';
 const LEADERBOARD = 'leaderboard';
+/** 경기별 투표 수(홈·원정). 앱은 투표 목록 대신 이 문서 하나를 읽는다. */
+const TALLIES = 'predictionTallies';
 const DEADLINE_MS = 60 * 60 * 1000;
 /** 문서 하나(1MB)에 담는 최대 인원. */
 const MAX_ENTRIES = 500;
@@ -46,13 +50,37 @@ function scoreLeaderboard(votes, games) {
   );
 }
 
+/** 경기별 홈·원정 투표 수. { gameId: { home, away } } */
+function tallyVotes(votes) {
+  const tallies = {};
+  for (const v of votes) {
+    if (v.pick !== 'home' && v.pick !== 'away') continue;
+    const t = (tallies[v.gameId] ??= { home: 0, away: 0 });
+    t[v.pick] += 1;
+  }
+  return tallies;
+}
+
+/**
+ * 새로 끝난 경기가 있을 때만 투표 전체를 읽어 다시 채점한다. 그 사이에는
+ * 문서 하나만 읽고 끝난다(30분마다 투표 N건을 읽으면 투표가 늘수록 비용이
+ * 그대로 불어난다). 다시 채점할 때 경기별 투표 수(predictionTallies)도 새로
+ * 적어, 트리거가 놓친 증감이 있으면 바로잡는다.
+ * 반환: 채점한 인원 수, 건너뛰면 null.
+ */
 async function updateLeaderboard({ db, fetchImpl = fetch }) {
   const res = await fetchImpl(`${PAGES_BASE}/kbl/games.json`, { signal: AbortSignal.timeout(20000) });
   if (!res.ok) throw new Error(`games.json HTTP ${res.status}`);
   const { games = [] } = await res.json();
 
-  // ponytail: 매번 투표 전체를 읽는다(30분마다 N건). 투표가 수십만 건이 되면
-  // 경기가 끝날 때만 그 경기 투표를 읽어 누적하는 방식으로 바꾼다.
+  const finished = games.filter((g) => g.status === 'finished').map((g) => g.id).sort();
+  const finishedKey = crypto.createHash('sha1').update(finished.join(',')).digest('hex');
+  const boardRef = db.collection(LEADERBOARD).doc('kbl');
+  const board = await boardRef.get();
+  if (board.exists && board.get('finishedKey') === finishedKey) return null;
+
+  // ponytail: 다시 채점할 때는 투표 전체를 읽는다(경기가 끝날 때마다 N건).
+  // 투표가 수백만 건이 되면 끝난 경기의 투표만 읽어 누적하는 방식으로 바꾼다.
   const snap = await db.collection(VOTES).get();
   const votes = snap.docs.map((d) => {
     const x = d.data();
@@ -65,8 +93,33 @@ async function updateLeaderboard({ db, fetchImpl = fetch }) {
     };
   });
   const entries = scoreLeaderboard(votes, games).slice(0, MAX_ENTRIES);
-  await db.collection(LEADERBOARD).doc('kbl').set({ updatedAt: new Date(), entries });
+  const tallies = Object.entries(tallyVotes(votes));
+  for (let i = 0; i < tallies.length; i += 500) {
+    const batch = db.batch();
+    for (const [gameId, t] of tallies.slice(i, i + 500)) batch.set(db.collection(TALLIES).doc(gameId), t);
+    await batch.commit();
+  }
+  await boardRef.set({ updatedAt: new Date(), finishedKey, entries });
   return entries.length;
 }
 
-module.exports = { scoreLeaderboard, updateLeaderboard, DEADLINE_MS };
+/**
+ * 투표 하나가 생기거나 바뀌거나 지워질 때 그 경기의 투표 수를 고친다.
+ * before/after는 문서 데이터(없으면 undefined).
+ */
+function tallyChange(before, after) {
+  const changes = [];
+  const pickOf = (d) => (d && (d.pick === 'home' || d.pick === 'away') ? d.pick : null);
+  const [b, a] = [pickOf(before), pickOf(after)];
+  if (b && (b !== a || before.gameId !== after?.gameId)) changes.push([before.gameId, b, -1]);
+  if (a && (a !== b || before?.gameId !== after.gameId)) changes.push([after.gameId, a, 1]);
+  return changes;
+}
+
+async function applyTallyChange(db, FieldValue, before, after) {
+  for (const [gameId, side, delta] of tallyChange(before, after)) {
+    await db.collection(TALLIES).doc(gameId).set({ [side]: FieldValue.increment(delta) }, { merge: true });
+  }
+}
+
+module.exports = { scoreLeaderboard, updateLeaderboard, tallyVotes, tallyChange, applyTallyChange, DEADLINE_MS };

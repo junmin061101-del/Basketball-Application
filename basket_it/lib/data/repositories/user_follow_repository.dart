@@ -44,9 +44,7 @@ class FirestoreUserFollowRepository implements UserFollowRepository {
     final data = snapshot.data();
     if (data == null) return const UserFollows();
     return UserFollows(
-      teamIds: Set<String>.from(
-        (data['followedTeamIds'] as List?) ?? const [],
-      ),
+      teamIds: Set<String>.from((data['followedTeamIds'] as List?) ?? const []),
       playerIds: Set<String>.from(
         (data['followedPlayerIds'] as List?) ?? const [],
       ),

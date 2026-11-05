@@ -15,6 +15,7 @@ const {
 } = require('@firebase/rules-unit-testing');
 const {
   doc, setDoc, updateDoc, addDoc, collection, serverTimestamp, arrayUnion, increment, getDoc,
+  getDocs, query, where, limit,
 } = require('firebase/firestore');
 
 const PROJECT = 'demo-basket';
@@ -82,6 +83,19 @@ test('승부예측 투표: 서버 시각·정해진 값만, 랭킹은 읽기만'
   await assertFails(setDoc(doc(bob, 'predictionVotes/g1_bob'), v({ pick: 'draw' })));
   await assertFails(setDoc(doc(bob, 'leaderboard/kbl'), { entries: [] }));
   await assertSucceeds(getDoc(doc(bob, 'leaderboard/kbl')));
+});
+
+test('목록 읽기: 투표 목록은 막고, 글·댓글은 개수 제한이 있어야 읽힌다', async () => {
+  const bob = as('bob');
+  await assertSucceeds(getDoc(doc(bob, 'predictionVotes/g1_bob')));
+  await assertFails(getDocs(query(collection(bob, 'predictionVotes'), where('gameId', '==', 'g1'))));
+  await assertSucceeds(getDoc(doc(bob, 'predictionTallies/g1')));
+  await assertFails(setDoc(doc(bob, 'predictionTallies/g1'), { home: 999 }));
+  await assertSucceeds(getDocs(query(collection(bob, 'communityPosts'), limit(100))));
+  await assertFails(getDocs(collection(bob, 'communityPosts')));
+  await assertFails(getDocs(query(collection(bob, 'communityPosts'), limit(1000))));
+  await assertSucceeds(getDocs(query(collection(bob, 'communityComments'), where('postId', '==', 'p1'), limit(500))));
+  await assertFails(getDocs(query(collection(bob, 'predictionComments'), where('gameId', '==', 'g1'))));
 });
 
 test('강제 업데이트 설정은 로그인 전에도 읽고, 아무도 쓰지 못한다', async () => {

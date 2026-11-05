@@ -23,12 +23,23 @@ final predictionGamesProvider = FutureProvider<List<Game>>((ref) async {
   return games;
 });
 
-/// 특정 경기의 실시간 투표 목록.
-final gameVotesProvider = StreamProvider.family<List<PredictionVote>, String>((
+/// 특정 경기의 홈·원정 투표 수(서버 집계).
+final gameTallyProvider = StreamProvider.family<({int home, int away}), String>(
+  (ref, gameId) {
+    return ref.watch(predictionRepositoryProvider).watchTally(gameId);
+  },
+);
+
+/// 이 경기에 내가 한 투표. 로그인 전이거나 안 했으면 null.
+final myVoteProvider = StreamProvider.family<PredictionVote?, String>((
   ref,
   gameId,
 ) {
-  return ref.watch(predictionRepositoryProvider).watchVotes(gameId);
+  final uid = ref.watch(currentUserProvider)?.uid;
+  if (uid == null) return Stream.value(null);
+  return ref
+      .watch(predictionRepositoryProvider)
+      .watchMyVote(gameId: gameId, uid: uid);
 });
 
 /// 특정 경기의 실시간 토론 댓글.

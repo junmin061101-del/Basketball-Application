@@ -31,15 +31,13 @@ class PredictionGameCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final votesAsync = ref.watch(gameVotesProvider(game.id));
+    final tally =
+        ref.watch(gameTallyProvider(game.id)).valueOrNull ?? (home: 0, away: 0);
     final now = ref.watch(minuteTickProvider).valueOrNull ?? DateTime.now();
     final user = ref.watch(currentUserProvider);
-    final votes = votesAsync.valueOrNull ?? const <PredictionVote>[];
-    final homeCount = votes.where((v) => v.pick == TeamSide.home).length;
-    final awayCount = votes.length - homeCount;
-    final myVote = user == null
-        ? null
-        : votes.where((v) => v.uid == user.uid).firstOrNull;
+    final homeCount = tally.home;
+    final awayCount = tally.away;
+    final myVote = ref.watch(myVoteProvider(game.id)).valueOrNull;
     final open = game.isPredictionOpen(now);
     final winner = _winner(game);
 
@@ -136,7 +134,7 @@ class PredictionGameCard extends ConsumerWidget {
                   );
                 },
                 icon: const Icon(Icons.forum_outlined, size: 18),
-                label: Text('토론 · 참여 ${votes.length}명'),
+                label: Text('토론 · 참여 ${homeCount + awayCount}명'),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: AppColors.textPrimary,
                   side: const BorderSide(color: AppColors.border),
@@ -144,7 +142,8 @@ class PredictionGameCard extends ConsumerWidget {
                     borderRadius: BorderRadius.circular(12),
                   ),
                   padding: const EdgeInsets.symmetric(vertical: 11),
-                  textStyle: const TextStyle(fontFamily: AppTheme.font, 
+                  textStyle: const TextStyle(
+                    fontFamily: AppTheme.font,
                     fontWeight: FontWeight.w700,
                     fontSize: 13,
                   ),
@@ -180,7 +179,6 @@ class PredictionGameCard extends ConsumerWidget {
     if (game.homeScore == game.awayScore) return null;
     return game.homeScore > game.awayScore ? TeamSide.home : TeamSide.away;
   }
-
 }
 
 class _StatusLine extends StatelessWidget {

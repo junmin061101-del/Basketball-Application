@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../models/community_post.dart';
 import '../models/league.dart';
+import 'prediction_repository.dart' show commentPageSize;
 
 /// 커뮤니티(자유게시판) 데이터 접근을 추상화한 Repository.
 abstract class CommunityRepository {
@@ -117,21 +118,25 @@ class FirestoreCommunityRepository implements CommunityRepository {
 
   @override
   Stream<List<PostComment>> watchComments(String postId) {
-    return _comments.where('postId', isEqualTo: postId).snapshots().map((snap) {
-      final list = snap.docs
-          .map((d) => PostComment.fromMap(d.id, d.data()))
-          .whereType<PostComment>()
-          .toList();
-      list.sort((a, b) {
-        final ta = a.createdAt;
-        final tb = b.createdAt;
-        if (ta == null && tb == null) return 0;
-        if (ta == null) return 1; // 서버 확인 전(방금 쓴 댓글)은 맨 뒤
-        if (tb == null) return -1;
-        return ta.compareTo(tb);
-      });
-      return list;
-    });
+    return _comments
+        .where('postId', isEqualTo: postId)
+        .limit(commentPageSize)
+        .snapshots()
+        .map((snap) {
+          final list = snap.docs
+              .map((d) => PostComment.fromMap(d.id, d.data()))
+              .whereType<PostComment>()
+              .toList();
+          list.sort((a, b) {
+            final ta = a.createdAt;
+            final tb = b.createdAt;
+            if (ta == null && tb == null) return 0;
+            if (ta == null) return 1; // 서버 확인 전(방금 쓴 댓글)은 맨 뒤
+            if (tb == null) return -1;
+            return ta.compareTo(tb);
+          });
+          return list;
+        });
   }
 
   @override

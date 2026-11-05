@@ -158,5 +158,6 @@ class LiveOverlayGameRepository implements GameRepository {
   }
 
   @override
-  Future<List<PlayerGameStats>> getBoxScore(Game game) => inner.getBoxScore(game);
+  Future<List<PlayerGameStats>> getBoxScore(Game game) =>
+      inner.getBoxScore(game);
 }

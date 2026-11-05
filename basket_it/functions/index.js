@@ -17,7 +17,8 @@ const logger = require('firebase-functions/logger');
 const admin = require('firebase-admin');
 
 const { runLivePush } = require('./live-score');
-const { updateLeaderboard } = require('./leaderboard');
+const { updateLeaderboard, applyTallyChange } = require('./leaderboard');
+const { onDocumentWritten } = require('firebase-functions/v2/firestore');
 const { cleanUpDeletedUser } = require('./account-cleanup');
 
 admin.initializeApp();
@@ -64,8 +65,30 @@ exports.updatePredictionLeaderboard = onSchedule(
   },
   async () => {
     const count = await updateLeaderboard({ db });
-    logger.info('승부예측 랭킹 갱신', { count });
+    if (count !== null) logger.info('승부예측 랭킹 갱신', { count });
   },
+);
+
+/**
+ * 투표가 바뀌면 그 경기의 홈·원정 투표 수(predictionTallies/{gameId})를 고친다.
+ * 앱은 투표 목록 대신 이 문서 하나를 읽는다. 재시도는 켜지 않는다(두 번 세지
+ * 않게). 놓친 증감은 랭킹을 다시 채점할 때 바로잡힌다.
+ */
+exports.tallyPredictionVote = onDocumentWritten(
+  {
+    document: 'predictionVotes/{voteId}',
+    region: 'asia-northeast3',
+    memory: '256MiB',
+    cpu: 'gcf_gen1',
+    maxInstances: 10,
+  },
+  (event) =>
+    applyTallyChange(
+      db,
+      admin.firestore.FieldValue,
+      event.data?.before?.data(),
+      event.data?.after?.data(),
+    ),
 );
 
 /**
