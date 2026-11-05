@@ -27,11 +27,16 @@ key.properties가 없으면 release 빌드는 서명되지 않는다(잘못 서�
 
 ```bash
 cd basket_it
-flutter build appbundle --release --obfuscate --split-debug-info=build/symbols
+flutter build appbundle --release --obfuscate --split-debug-info=build/symbols --strip
 flutter build ipa --release --obfuscate --split-debug-info=build/symbols   # Mac
 ```
 
 `build/symbols`는 버전마다 보관한다. 난독화된 크래시를 읽는 데 필요하다.
+`--strip`을 빼면 앱 안에 디버그 정보(DWARF)가 남아 난독화가 반쯤 풀린다.
+
+Codespace(메모리 8GB)에서는 Gradle이 중간에 꺼질 수 있어 `~/.gradle/gradle.properties`에
+`org.gradle.jvmargs=-Xmx2560m -XX:MaxMetaspaceSize=768m`, `org.gradle.workers.max=1`,
+`kotlin.compiler.execution.strategy=in-process`, `org.gradle.daemon=false`를 둔다(이 기기 전용).
 
 ## 3. Crashlytics 심볼 올리기
 
