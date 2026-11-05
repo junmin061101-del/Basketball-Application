@@ -9,7 +9,6 @@ import '../../data/models/player_bio.dart';
 import '../../data/models/player_game_stats.dart';
 import '../../data/models/player_season_stats.dart';
 import '../../data/models/team.dart';
-import '../../data/player_photos.dart';
 import '../../providers/follow_actions.dart';
 import '../../providers/onboarding_providers.dart';
 import '../../providers/repository_providers.dart';
@@ -260,9 +259,7 @@ class _HeaderPhoto extends StatelessWidget {
       topLeft: Radius.circular(16),
       topRight: Radius.circular(16),
     );
-    // 넣어 둔 사진이 있으면 그걸 쓴다(웹에서 KBL 사진은 브라우저가 그려야 한다).
-    final asset = playerPhotoAsset(player.id);
-    final url = player.photoUrl;
+    // 선수 사진은 사용 허가를 받기 전까지 쓰지 않는다.
     return Container(
       width: 92,
       height: 108,
@@ -271,25 +268,7 @@ class _HeaderPhoto extends StatelessWidget {
         borderRadius: radius,
         border: Border.all(color: Colors.white.withValues(alpha: 0.25)),
       ),
-      child: asset == null && url == null
-          ? initial
-          : ClipRRect(
-              borderRadius: radius,
-              child: asset != null
-                  ? Image.asset(
-                      asset,
-                      fit: BoxFit.cover,
-                      cacheWidth: (92 * MediaQuery.devicePixelRatioOf(context))
-                          .round(),
-                      errorBuilder: (context, error, stackTrace) => initial,
-                    )
-                  : Image.network(
-                      url!,
-                      fit: BoxFit.cover,
-                      webHtmlElementStrategy: WebHtmlElementStrategy.fallback,
-                      errorBuilder: (context, error, stackTrace) => initial,
-                    ),
-            ),
+      child: initial,
     );
   }
 }

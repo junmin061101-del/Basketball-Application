@@ -4,21 +4,23 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/game_time.dart';
 import '../../../data/models/game.dart';
-import '../../../data/models/player_game_stats.dart';
+import '../../../data/models/player_season_stats.dart';
 import '../../../data/models/team.dart';
-import '../../../providers/game_providers.dart';
+import '../../../data/models/team_standing.dart';
 import '../../../providers/my_team_providers.dart';
 import '../../../providers/onboarding_providers.dart';
 import '../../../providers/repository_providers.dart';
+import '../../explore/standings_screen.dart';
 import '../../explore/team_list_screen.dart';
 import '../../follow/team_hub_screen.dart';
 import '../../games/game_detail_screen.dart';
+import '../../player/player_detail_screen.dart';
 import '../my_team_summary.dart';
 
 /// 홈 맨 위 "내 팀" 영역.
 ///
-/// 지금 리그에서 팔로우한 팀의 순위·연승/연패·앞뒤 팀과의 게임차·최근 5경기와
-/// 오늘(없으면 최근) 경기를 뉴스보다 먼저 보여준다. 팔로우한 팀이 여럿이면
+/// 지금 리그에서 팔로우한 팀의 순위와 경기 일정·앞뒤 순위·주요 선수를
+/// 뉴스보다 먼저 보여준다. 팔로우한 팀이 여럿이면
 /// 위에서 고르고, 없으면 팀을 고르라는 카드를 띄운다.
 class MyTeamSection extends ConsumerWidget {
   const MyTeamSection({super.key});
@@ -108,14 +110,23 @@ class _TeamSelector extends ConsumerWidget {
   }
 }
 
-/// 팀 하나의 카드.
-class MyTeamCard extends ConsumerWidget {
+/// 팀 하나의 카드: 팀색 머리 + [경기 | 순위 | 선수] 전환.
+class MyTeamCard extends ConsumerStatefulWidget {
   final Team team;
 
   const MyTeamCard({super.key, required this.team});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<MyTeamCard> createState() => _MyTeamCardState();
+}
+
+class _MyTeamCardState extends ConsumerState<MyTeamCard> {
+  static const _tabs = ['경기', '순위', '선수'];
+  var _tab = 0;
+
+  @override
+  Widget build(BuildContext context) {
+    final team = widget.team;
     final summaryAsync = ref.watch(myTeamSummaryProvider(team.id));
     final season = ref.watch(standingsSeasonProvider).valueOrNull;
     final teamById = {
@@ -124,6 +135,7 @@ class MyTeamCard extends ConsumerWidget {
     };
 
     return Container(
+      clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         color: AppColors.background,
         borderRadius: BorderRadius.circular(20),
@@ -136,15 +148,21 @@ class MyTeamCard extends ConsumerWidget {
           ),
         ],
       ),
-      padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _Header(team: team),
-          const SizedBox(height: 14),
+          _Header(team: team, summary: summaryAsync.valueOrNull),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 4),
+            child: _Segmented(
+              labels: _tabs,
+              index: _tab,
+              onChanged: (i) => setState(() => _tab = i),
+            ),
+          ),
           summaryAsync.when(
             loading: () => const SizedBox(
-              height: 160,
+              height: 200,
               child: Center(
                 child: CircularProgressIndicator(color: AppColors.primary),
               ),
@@ -165,91 +183,27 @@ class MyTeamCard extends ConsumerWidget {
                 ],
               ),
             ),
-            data: (summary) => Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                _RankRow(
-                  summary: summary,
-                  teamById: teamById,
-                  seasonCaption: season?.caption,
-                ),
-                if (summary.featuredGame != null) ...[
-                  const SizedBox(height: 16),
-                  _FeaturedGame(
-                    team: team,
-                    game: summary.featuredGame!,
-                    isToday: summary.featuredIsToday,
-                    teamById: teamById,
-                  ),
-                ],
-                if (summary.nextGame != null) ...[
-                  const SizedBox(height: 12),
-                  _NextGameLine(
-                    team: team,
-                    game: summary.nextGame!,
-                    teamById: teamById,
-                  ),
-                ],
-              ],
-            ),
+            data: (summary) => switch (_tab) {
+              0 => _ScheduleList(
+                team: team,
+                games: summary.schedule,
+                teamById: teamById,
+              ),
+              1 => _NearbyStandings(
+                summary: summary,
+                teamById: teamById,
+                seasonCaption: season?.caption,
+              ),
+              _ => _TopPlayers(team: team),
+            },
           ),
-        ],
-      ),
-    );
-  }
-}
-
-class _Header extends StatelessWidget {
-  final Team team;
-
-  const _Header({required this.team});
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      borderRadius: BorderRadius.circular(12),
-      onTap: () => Navigator.of(context)
-          .push(MaterialPageRoute(builder: (_) => TeamHubScreen(team: team))),
-      child: Row(
-        children: [
-          TeamCrest(team: team, size: 40),
-          const SizedBox(width: 10),
-          // 이름이 길어도(애틀랜타 호크스) 배지 자리만 남기고 끝까지 쓴다.
-          Expanded(
-            child: Row(
-              children: [
-                Flexible(
-                  child: Text(
-                    team.fullName,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w800,
-                      color: AppColors.textPrimary,
-                    ),
-                  ),
-                ),
-                const Icon(
-                  Icons.chevron_right,
-                  size: 22,
-                  color: AppColors.textTertiary,
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 8),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-            decoration: BoxDecoration(
-              color: team.primaryColor.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Text(
-              '내 팀',
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w800,
-                color: team.primaryColor,
+          _FooterLink(
+            label: const ['전체 일정', '전체 순위', '선수단 전체'][_tab],
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => _tab == 1
+                    ? const StandingsScreen()
+                    : TeamHubScreen(team: team),
               ),
             ),
           ),
@@ -259,12 +213,304 @@ class _Header extends StatelessWidget {
   }
 }
 
-class _RankRow extends StatelessWidget {
+/// 팀색 띠: "2위 · 35승 19패 · 3연승" / 팀 이름 / 팀 정보 바로가기.
+class _Header extends StatelessWidget {
+  final Team team;
+  final MyTeamSummary? summary;
+
+  const _Header({required this.team, required this.summary});
+
+  @override
+  Widget build(BuildContext context) {
+    // 팀색이 밝으면(노랑 등) 흰 글자가 안 보인다.
+    final onColor =
+        ThemeData.estimateBrightnessForColor(team.primaryColor) ==
+            Brightness.dark
+        ? Colors.white
+        : Colors.black;
+    final s = summary;
+    final caption = s == null
+        ? '내 팀'
+        : [
+            s.rankLabel ?? '순위 집계 전',
+            if (s.rank != null) '${s.wins}승 ${s.losses}패',
+            ?s.streakLabel,
+          ].join(' · ');
+
+    return Material(
+      color: team.primaryColor,
+      child: InkWell(
+        onTap: () => Navigator.of(context)
+            .push(MaterialPageRoute(builder: (_) => TeamHubScreen(team: team))),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                caption,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: onColor.withValues(alpha: 0.85),
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                team.fullName,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 24,
+                  height: 1.15,
+                  fontWeight: FontWeight.w900,
+                  color: onColor,
+                ),
+              ),
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  Text(
+                    '팀 정보',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: onColor,
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  Icon(Icons.chevron_right, size: 18, color: onColor),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// 회색 바탕 위 흰 알약이 고른 칸을 표시하는 전환.
+class _Segmented extends StatelessWidget {
+  final List<String> labels;
+  final int index;
+  final ValueChanged<int> onChanged;
+
+  const _Segmented({
+    required this.labels,
+    required this.index,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(3),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceElevated,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Row(
+        children: [
+          for (var i = 0; i < labels.length; i++)
+            Expanded(
+              child: Semantics(
+                button: true,
+                selected: i == index,
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () => onChanged(i),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 150),
+                    height: 34,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: i == index
+                          ? AppColors.background
+                          : Colors.transparent,
+                      borderRadius: BorderRadius.circular(8),
+                      boxShadow: i == index
+                          ? [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.08),
+                                blurRadius: 4,
+                                offset: const Offset(0, 1),
+                              ),
+                            ]
+                          : null,
+                    ),
+                    child: Text(
+                      labels[i],
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: i == index
+                            ? FontWeight.w800
+                            : FontWeight.w500,
+                        color: i == index
+                            ? AppColors.textPrimary
+                            : AppColors.textSecondary,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+/// 표 머리줄. 첫 칸은 왼쪽, 나머지는 (제목, 폭)으로 오른쪽 정렬.
+class _TableHead extends StatelessWidget {
+  final String first;
+  final List<(String, double)> rest;
+
+  const _TableHead(this.first, this.rest);
+
+  static const _style = TextStyle(
+    fontSize: 12,
+    fontWeight: FontWeight.w600,
+    color: AppColors.textTertiary,
+  );
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 4),
+      child: Row(
+        children: [
+          Expanded(child: Text(first, style: _style)),
+          for (final (label, width) in rest)
+            SizedBox(
+              width: width,
+              child: Text(label, textAlign: TextAlign.right, style: _style),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+const _rowText = TextStyle(
+  fontSize: 15,
+  color: AppColors.textPrimary,
+  fontFeatures: [FontFeature.tabularFigures()],
+);
+
+/// 최근 경기 결과와 다가오는 경기.
+class _ScheduleList extends StatelessWidget {
+  final Team team;
+  final List<Game> games;
+  final Map<String, Team> teamById;
+
+  const _ScheduleList({
+    required this.team,
+    required this.games,
+    required this.teamById,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (games.isEmpty) return const _Empty('경기 일정이 아직 없어요');
+    return Column(
+      children: [
+        const _TableHead('경기', [('결과', 60)]),
+        for (final game in games) _gameRow(context, game),
+      ],
+    );
+  }
+
+  Widget _gameRow(BuildContext context, Game game) {
+    final home = teamById[game.homeTeamId];
+    final away = teamById[game.awayTeamId];
+    final isHome = game.homeTeamId == team.id;
+    final opponent = isHome ? away : home;
+    final t = game.startTime;
+    final mine = isHome ? game.homeScore : game.awayScore;
+    final theirs = isHome ? game.awayScore : game.homeScore;
+    final won = MyTeamSummary.won(game, team.id);
+
+    Widget scoreWith(String tag, Color color) => Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text('$mine - $theirs', style: _rowText),
+        const SizedBox(width: 8),
+        Text(
+          tag,
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w800,
+            color: color,
+          ),
+        ),
+      ],
+    );
+
+    final status = switch (game.status) {
+      GameStatus.scheduled => Text(timeLabel(t), style: _rowText),
+      GameStatus.live => scoreWith('LIVE', AppColors.live),
+      GameStatus.finished => scoreWith(
+        won ? '승' : '패',
+        won ? AppColors.positive : AppColors.negative,
+      ),
+    };
+
+    return InkWell(
+      onTap: home == null || away == null
+          ? null
+          : () => Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => GameDetailScreen(
+                  game: game,
+                  homeTeam: home,
+                  awayTeam: away,
+                ),
+              ),
+            ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 11),
+        child: Row(
+          children: [
+            SizedBox(
+              width: 52,
+              child: Text('${t.month}.${t.day}', style: _rowText),
+            ),
+            SizedBox(
+              width: 28,
+              child: Text(
+                isHome ? 'vs' : '@',
+                style: const TextStyle(
+                  fontSize: 14,
+                  color: AppColors.textSecondary,
+                ),
+              ),
+            ),
+            Expanded(
+              child: Text(
+                opponent?.shortName ?? '',
+                overflow: TextOverflow.ellipsis,
+                style: _rowText.copyWith(fontWeight: FontWeight.w800),
+              ),
+            ),
+            const SizedBox(width: 8),
+            status,
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// 순위표에서 내 팀 앞뒤 다섯 줄. 내 팀 줄은 팀색으로 옅게 칠한다.
+class _NearbyStandings extends StatelessWidget {
   final MyTeamSummary summary;
   final Map<String, Team> teamById;
+
+  /// "2025-26 시즌 최종". 개막 전 지난 시즌 순위를 지금 순위로 오해하지 않게.
   final String? seasonCaption;
 
-  const _RankRow({
+  const _NearbyStandings({
     required this.summary,
     required this.teamById,
     required this.seasonCaption,
@@ -272,370 +518,165 @@ class _RankRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final rank = summary.rankLabel;
-    final streak = summary.streakLabel;
-    final caption = [
-      ?seasonCaption,
-      if (summary.rank != null) '${summary.wins}승 ${summary.losses}패',
-    ].join(' · ');
-
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    if (summary.nearby.isEmpty) return const _Empty('순위 정보가 아직 없어요');
+    final mineColor = teamById[summary.teamId]?.primaryColor;
+    return Column(
       children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (rank == null)
-                Text(
-                  '순위 정보가 아직 없어요',
-                  style: Theme.of(context).textTheme.bodyMedium,
-                )
-              else
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.baseline,
-                  textBaseline: TextBaseline.alphabetic,
-                  children: [
-                    Text(
-                      rank,
-                      style: const TextStyle(
-                        fontSize: 28,
-                        height: 1.1,
-                        fontWeight: FontWeight.w900,
-                        color: AppColors.textPrimary,
-                      ),
-                    ),
-                    if (streak != null) ...[
-                      const SizedBox(width: 8),
-                      Text(
-                        streak,
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w800,
-                          color: summary.streak > 0
-                              ? AppColors.positive
-                              : AppColors.negative,
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              if (summary.above != null)
-                _NeighborLine(neighbor: summary.above!, teamById: teamById),
-              if (summary.below != null)
-                _NeighborLine(neighbor: summary.below!, teamById: teamById),
-              if (caption.isNotEmpty) ...[
-                const SizedBox(height: 4),
-                Text(
-                  caption,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: AppColors.textTertiary,
-                  ),
-                ),
-              ],
-            ],
+        _TableHead(seasonCaption ?? '${summary.scope} 순위'.trim(), const [
+          ('승', 40),
+          ('패', 40),
+          ('승차', 52),
+        ]),
+        for (final (rank, row) in summary.nearby)
+          _standingRow(rank, row, row.teamId == summary.teamId, mineColor),
+      ],
+    );
+  }
+
+  Widget _standingRow(int rank, TeamStanding row, bool mine, Color? color) {
+    final style = _rowText.copyWith(
+      fontWeight: mine ? FontWeight.w800 : FontWeight.w400,
+    );
+    Widget cell(String text, double width) => SizedBox(
+      width: width,
+      child: Text(text, textAlign: TextAlign.right, style: style),
+    );
+    return Container(
+      color: mine ? color?.withValues(alpha: 0.08) : null,
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 11),
+      child: Row(
+        children: [
+          SizedBox(width: 28, child: Text('$rank', style: style)),
+          Expanded(
+            child: Text(
+              teamById[row.teamId]?.shortName ?? '',
+              overflow: TextOverflow.ellipsis,
+              style: style,
+            ),
           ),
+          cell('${row.wins}', 40),
+          cell('${row.losses}', 40),
+          cell(
+            row.gamesBehind == 0 ? '-' : row.gamesBehind.toStringAsFixed(1),
+            52,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// 이번 시즌 경기당 득점 상위 다섯 명.
+class _TopPlayers extends ConsumerWidget {
+  final Team team;
+
+  const _TopPlayers({required this.team});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final statsAsync = ref.watch(currentSeasonStatsAllProvider);
+    final players = {
+      for (final p in ref.watch(allPlayersProvider).valueOrNull ?? const [])
+        p.id: p,
+    };
+    if (statsAsync.isLoading) {
+      return const SizedBox(
+        height: 200,
+        child: Center(
+          child: CircularProgressIndicator(color: AppColors.primary),
         ),
-        if (summary.lastFive.isNotEmpty)
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              const Text(
-                '최근 5경기',
-                style: TextStyle(fontSize: 12, color: AppColors.textTertiary),
+      );
+    }
+    final top =
+        (statsAsync.valueOrNull ?? const <PlayerSeasonStats>[])
+            .where((s) => s.teamId == team.id && players[s.playerId] != null)
+            .toList()
+          ..sort((a, b) => b.points.compareTo(a.points));
+    if (top.isEmpty) return const _Empty('이번 시즌 기록이 아직 없어요');
+
+    Widget cell(double v) => SizedBox(
+      width: 48,
+      child: Text(
+        v.toStringAsFixed(1),
+        textAlign: TextAlign.right,
+        style: _rowText,
+      ),
+    );
+
+    return Column(
+      children: [
+        const _TableHead('선수', [('득점', 48), ('리바', 48), ('어시', 48)]),
+        for (final s in top.take(5))
+          InkWell(
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) =>
+                    PlayerDetailScreen(player: players[s.playerId]!),
               ),
-              const SizedBox(height: 6),
-              Row(
+            ),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 11),
+              child: Row(
                 children: [
-                  for (final won in summary.lastFive)
-                    Padding(
-                      padding: const EdgeInsets.only(left: 4),
-                      child: _ResultPill(won: won),
+                  Expanded(
+                    child: Text(
+                      players[s.playerId]!.name,
+                      overflow: TextOverflow.ellipsis,
+                      style: _rowText.copyWith(fontWeight: FontWeight.w700),
                     ),
+                  ),
+                  cell(s.points),
+                  cell(s.reb),
+                  cell(s.ast),
                 ],
               ),
-            ],
+            ),
           ),
       ],
     );
   }
 }
 
-class _NeighborLine extends StatelessWidget {
-  final RankNeighbor neighbor;
-  final Map<String, Team> teamById;
+class _Empty extends StatelessWidget {
+  final String text;
 
-  const _NeighborLine({required this.neighbor, required this.teamById});
+  const _Empty(this.text);
 
   @override
   Widget build(BuildContext context) {
-    final name = teamById[neighbor.teamId]?.shortName ?? '';
     return Padding(
-      padding: const EdgeInsets.only(top: 2),
-      child: Text.rich(
-        TextSpan(
-          style: const TextStyle(fontSize: 13, color: AppColors.textSecondary),
-          children: [
-            TextSpan(text: '${neighbor.rank}위 ${withWaGwa(name)} '),
-            TextSpan(
-              text: gamesBehindLabel(neighbor.gamesBehind),
-              style: const TextStyle(
-                fontWeight: FontWeight.w800,
-                color: AppColors.textPrimary,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _ResultPill extends StatelessWidget {
-  final bool won;
-
-  const _ResultPill({required this.won});
-
-  @override
-  Widget build(BuildContext context) {
-    final color = won ? AppColors.positive : AppColors.negative;
-    return Container(
-      width: 26,
-      height: 26,
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(7),
-      ),
+      padding: const EdgeInsets.symmetric(vertical: 36),
       child: Text(
-        won ? '승' : '패',
-        style: TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.w800,
-          color: color,
-        ),
+        text,
+        textAlign: TextAlign.center,
+        style: const TextStyle(fontSize: 14, color: AppColors.textSecondary),
       ),
     );
   }
 }
 
-/// 오늘(없으면 최근) 경기 박스.
-class _FeaturedGame extends ConsumerWidget {
-  final Team team;
-  final Game game;
-  final bool isToday;
-  final Map<String, Team> teamById;
+class _FooterLink extends StatelessWidget {
+  final String label;
+  final VoidCallback onTap;
 
-  const _FeaturedGame({
-    required this.team,
-    required this.game,
-    required this.isToday,
-    required this.teamById,
-  });
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final home = teamById[game.homeTeamId];
-    final away = teamById[game.awayTeamId];
-    if (home == null || away == null) return const SizedBox.shrink();
-
-    final started = game.status != GameStatus.scheduled;
-    final title = isToday ? '오늘 경기' : '최근 경기 · ${dayLabel(game.startTime)}';
-    final boxScore = started
-        ? ref.watch(boxScoreProvider(game)).valueOrNull ?? const []
-        : const <PlayerGameStats>[];
-    final players = {
-      for (final p in ref.watch(allPlayersProvider).valueOrNull ?? const [])
-        p.id: p.name,
-    };
-    final topHome = _topScorer(boxScore, home.id);
-    final topAway = _topScorer(boxScore, away.id);
-
-    return InkWell(
-      borderRadius: BorderRadius.circular(16),
-      onTap: () => Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (_) =>
-              GameDetailScreen(game: game, homeTeam: home, awayTeam: away),
-        ),
-      ),
-      child: Container(
-        padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
-        decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.border),
-        ),
-        child: Column(
-          children: [
-            Text(
-              title,
-              style: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
-                color: AppColors.textSecondary,
-              ),
-            ),
-            const SizedBox(height: 10),
-            Row(
-              children: [
-                Expanded(child: _Side(team: home)),
-                Column(
-                  children: [
-                    if (started)
-                      Text(
-                        '${game.homeScore} : ${game.awayScore}',
-                        style: const TextStyle(
-                          fontSize: 28,
-                          fontWeight: FontWeight.w900,
-                          color: AppColors.textPrimary,
-                          fontFeatures: [FontFeature.tabularFigures()],
-                        ),
-                      )
-                    else
-                      Text(
-                        timeLabel(game.startTime),
-                        style: const TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w800,
-                          color: AppColors.textPrimary,
-                        ),
-                      ),
-                    const SizedBox(height: 4),
-                    _StatusChip(game: game),
-                  ],
-                ),
-                Expanded(child: _Side(team: away)),
-              ],
-            ),
-            if (topHome != null || topAway != null) ...[
-              const SizedBox(height: 12),
-              Divider(
-                height: 1,
-                color: team.primaryColor.withValues(alpha: 0.2),
-              ),
-              const SizedBox(height: 10),
-              Text(
-                [
-                  '최다 득점',
-                  if (topHome != null)
-                    '${players[topHome.playerId] ?? home.shortName} ${topHome.points}점',
-                  if (topAway != null)
-                    '${players[topAway.playerId] ?? away.shortName} ${topAway.points}점',
-                ].join(' · '),
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 12,
-                  color: AppColors.textSecondary,
-                ),
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-
-  static PlayerGameStats? _topScorer(
-    List<PlayerGameStats> lines,
-    String teamId,
-  ) {
-    PlayerGameStats? best;
-    for (final line in lines) {
-      if (line.teamId != teamId) continue;
-      if (best == null || line.points > best.points) best = line;
-    }
-    return best;
-  }
-}
-
-class _Side extends StatelessWidget {
-  final Team team;
-
-  const _Side({required this.team});
+  const _FooterLink({required this.label, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        TeamCrest(team: team, size: 44),
-        const SizedBox(height: 6),
-        Text(
-          team.shortName,
-          overflow: TextOverflow.ellipsis,
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        child: Text(
+          label,
+          textAlign: TextAlign.center,
           style: const TextStyle(
-            fontSize: 14,
+            fontSize: 15,
             fontWeight: FontWeight.w800,
             color: AppColors.textPrimary,
           ),
         ),
-      ],
-    );
-  }
-}
-
-class _StatusChip extends StatelessWidget {
-  final Game game;
-
-  const _StatusChip({required this.game});
-
-  @override
-  Widget build(BuildContext context) {
-    final (label, color) = switch (game.status) {
-      GameStatus.live => (game.liveClock ?? 'LIVE', AppColors.live),
-      GameStatus.scheduled => ('경기 예정', AppColors.textSecondary),
-      GameStatus.finished => ('경기 종료', AppColors.textSecondary),
-    };
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(10),
       ),
-      child: Text(
-        label,
-        style: TextStyle(
-          fontSize: 11,
-          fontWeight: FontWeight.w800,
-          color: color,
-        ),
-      ),
-    );
-  }
-}
-
-class _NextGameLine extends StatelessWidget {
-  final Team team;
-  final Game game;
-  final Map<String, Team> teamById;
-
-  const _NextGameLine({
-    required this.team,
-    required this.game,
-    required this.teamById,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final isHome = game.homeTeamId == team.id;
-    final opponent = teamById[isHome ? game.awayTeamId : game.homeTeamId];
-    return Row(
-      children: [
-        const Icon(Icons.event, size: 16, color: AppColors.textTertiary),
-        const SizedBox(width: 6),
-        Expanded(
-          child: Text(
-            '다음 경기 · ${dayLabel(game.startTime)} ${timeLabel(game.startTime)}'
-            '${opponent == null ? '' : ' · ${isHome ? 'vs' : '@'} ${opponent.shortName}'}',
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              fontSize: 13,
-              color: AppColors.textSecondary,
-            ),
-          ),
-        ),
-      ],
     );
   }
 }

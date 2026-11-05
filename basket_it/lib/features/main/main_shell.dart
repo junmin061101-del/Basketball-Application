@@ -1,4 +1,7 @@
+import 'dart:math' as math;
+
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -46,6 +49,8 @@ class _MainShellState extends ConsumerState<MainShell> {
     ref.listenManual(livePushEnabledProvider, (_, _) => sync());
   }
 
+  static const _homeIndicator = 34.0;
+
   static const _tabs = [
     HomeTab(),
     GamesTab(),
@@ -78,6 +83,17 @@ class _MainShellState extends ConsumerState<MainShell> {
         decoration: const BoxDecoration(
           color: AppColors.background,
           border: Border(top: BorderSide(color: AppColors.border)),
+        ),
+        // 아이폰 홈 화면 앱(웹)에서는 Flutter가 아래 안전영역을 0으로 받아 탭이
+        // 홈 인디케이터 위에 깔렸다. 인디케이터 높이(34)만큼 올린다. 앱(네이티브)은
+        // 값을 제대로 받으므로 빼면 0이 된다.
+        padding: EdgeInsets.only(
+          bottom: kIsWeb && defaultTargetPlatform == TargetPlatform.iOS
+              ? math.max(
+                  0,
+                  _homeIndicator - MediaQuery.viewPaddingOf(context).bottom,
+                )
+              : 0,
         ),
         child: Theme(
           data: Theme.of(context).copyWith(

@@ -93,18 +93,18 @@ Player player(String id, {String teamId = 'kcc'}) => Player(
 );
 
 void main() {
-  test('선수 이름·사진·포지션을 읽는다', () async {
+  test('선수 이름·포지션을 읽고, 사진은 쓰지 않는다(사용 허가 전)', () async {
     final heo = (await source().players()).firstWhere((p) => p.id == '290776');
     expect(heo.name, '허웅');
     expect(heo.positionText, '가드');
-    expect(heo.photoUrl, endsWith('290776.png'));
+    expect(heo.photoUrl, isNull);
     expect(heo.matchesQuery('허'), isTrue);
   });
 
-  test('팀은 공식 엠블럼 주소를 갖는다', () async {
+  test('팀 로고는 쓰지 않는다(사용 허가 전)', () async {
     final kcc = (await source().teams()).single;
     expect(kcc.fullName, '부산 KCC');
-    expect(kcc.logoUrl, contains('kbl.or.kr'));
+    expect((kcc.logoAsset, kcc.logoUrl), (null, null));
   });
 
   group('시즌별 기록', () {

@@ -123,7 +123,7 @@ private struct StatusText: View {
   }
 }
 
-/// 위젯 확장에 넣어 둔 공식 로고("nba_13", "kbl_sk"). 없으면 팀 이름 첫 글자.
+/// 팀 이름 첫 글자. 로고는 사용 허가 전이라 넣지 않는다(이름이 "kbl_sk"인 이미지를 넣으면 그걸 쓴다).
 private struct TeamLogo: View {
   let league: String?
   let teamId: String?

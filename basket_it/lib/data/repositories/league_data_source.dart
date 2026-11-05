@@ -10,7 +10,6 @@ import '../models/player_season_stats.dart';
 import '../models/team.dart';
 import '../models/team_season_stats.dart';
 import '../models/team_standing.dart';
-import '../team_logo_assets.dart';
 
 /// GitHub Actions가 모아 GitHub Pages에 올려둔 리그 데이터를 읽는다.
 ///
@@ -175,8 +174,6 @@ class LeagueDataSource {
         // 두 원본 모두 팔로워 수를 주지 않는다. 없는 값을 지어내지 않고 0으로 둔다.
         followerCount: 0,
         positionLabel: r['positionLabel'] as String?,
-        // KBL이 함께 주는 영문 표기. 영문으로도 검색할 수 있게 들고 있는다.
-        photoUrl: r['headshot'] as String?,
       );
     }).toList();
   }
@@ -328,9 +325,7 @@ class LeagueDataSource {
       name: row['name'] as String? ?? '',
       shortName: row['shortName'] as String? ?? '',
       primaryColor: Color(int.parse('FF$hex', radix: 16)),
-      // KBL은 앱에 넣어 둔 공식 아이콘을 쓴다. NBA는 원격 ESPN 로고만 있다.
-      logoAsset: kblLogoAssets[row['id']],
-      logoUrl: row['logo'] as String?,
+      // 팀 로고는 사용 허가를 받기 전까지 쓰지 않는다. 화면은 팀색 + 이름 글자로 그린다.
     );
   }
 }

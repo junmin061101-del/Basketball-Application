@@ -1604,10 +1604,7 @@ class _LineupRow extends StatelessWidget {
   }
 }
 
-/// 선수 얼굴. 사진이 없으면 이름 첫 글자로 대신한다.
-///
-/// 사진은 앱에 넣어 둔 것만 쓴다. KBL 서버에서 바로 불러오면 웹에서는 브라우저가
-/// 직접 그리게 되는데, 목록을 넘길 때 앞 선수의 얼굴이 남아 이름과 어긋났다.
+/// 선수 동그라미. 사진 사용 허가 전이라 이름 첫 글자로 그린다.
 class _PlayerFace extends StatelessWidget {
   final GamePlayer player;
   final double size;
@@ -1624,7 +1621,6 @@ class _PlayerFace extends StatelessWidget {
         color: AppColors.textSecondary,
       ),
     );
-    final asset = player.photoAsset;
     return Container(
       width: size,
       height: size,
@@ -1633,21 +1629,7 @@ class _PlayerFace extends StatelessWidget {
         color: AppColors.surfaceElevated,
         shape: BoxShape.circle,
       ),
-      child: asset == null
-          ? initial
-          : ClipOval(
-              child: Image.asset(
-                asset,
-                // 줄이 재사용돼도 다른 선수 사진이 남지 않도록 선수마다 따로 둔다.
-                key: ValueKey(player.id),
-                width: size,
-                height: size,
-                fit: BoxFit.cover,
-                filterQuality: FilterQuality.medium,
-                errorBuilder: (context, error, stackTrace) =>
-                    Center(child: initial),
-              ),
-            ),
+      child: initial,
     );
   }
 }

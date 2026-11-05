@@ -91,7 +91,7 @@ function parseKblGame(row, clock = '') {
   const side = (id, score, name) => ({
     teamId: id,
     name: name ?? id,
-    // 앱에 넣어 둔 KBL 공식 아이콘(lib/data/team_logo_assets.dart와 같은 경로).
+    // 앱은 이 값을 읽지 않는다(로고는 사용 허가 전이라 앱에서 뺐다).
     logo: `asset:assets/logos/kbl/${id}.png`,
     score: Number(score) || 0,
   });

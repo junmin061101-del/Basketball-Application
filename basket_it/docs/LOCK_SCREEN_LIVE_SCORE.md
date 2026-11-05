@@ -80,7 +80,7 @@ Live Activity는 Xcode에서 위젯 확장 타깃을 추가해야 해서, 한 �
 
 - 경기 시작 시 서버가 Live Activity를 자동으로 띄우는 기능(push-to-start)은 **iOS 17.2 이상**에서 됩니다.
 - 사용자가 설정 → Baskit → **실시간 현황**을 끄면 뜨지 않습니다.
-- 팀 로고를 새로 받아야 하면: `node tools/build-ios-widget-logos.js`
+- 팀 로고는 사용 허가 전이라 넣지 않았습니다. 위젯은 팀 이름 첫 글자를 보여줍니다.
 
 ## 확인 방법
 

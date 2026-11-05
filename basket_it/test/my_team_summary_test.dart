@@ -32,7 +32,7 @@ void main() {
   ];
   final now = DateTime(2026, 4, 10, 12);
 
-  test('순위와 바로 위·아래 팀과의 게임차', () {
+  test('순위와 앞뒤 순위표 다섯 줄', () {
     final s = MyTeamSummary.build(
       teamId: 'kgc',
       standings: kbl,
@@ -42,13 +42,10 @@ void main() {
     expect(s.rank, 2);
     expect(s.rankLabel, '2위');
     expect((s.wins, s.losses), (35, 19));
+    // 네 팀뿐이면 네 줄 다, 순위 그대로.
     expect(
-      (s.above!.teamId, s.above!.rank, s.above!.gamesBehind),
-      ('lg', 1, 1.0),
-    );
-    expect(
-      (s.below!.teamId, s.below!.rank, s.below!.gamesBehind),
-      ('db', 3, 2.0),
+      [for (final (r, t) in s.nearby) '$r${t.teamId}'],
+      ['1lg', '2kgc', '3db', '4sk'],
     );
 
     final top = MyTeamSummary.build(
@@ -57,14 +54,25 @@ void main() {
       games: const [],
       now: now,
     );
-    expect(top.above, isNull);
-    final last = MyTeamSummary.build(
-      teamId: 'sk',
-      standings: kbl,
-      games: const [],
-      now: now,
-    );
-    expect(last.below, isNull);
+    expect(top.nearby.first.$1, 1);
+
+    // 열 팀이면 내 팀을 가운데 두고, 끝에 붙으면 한쪽으로 민다.
+    final ten = [
+      for (var i = 0; i < 10; i++)
+        TeamStanding(teamId: 't$i', wins: 20 - i, losses: i, gamesBehind: 0),
+    ];
+    List<int> ranks(String id) => [
+      for (final (r, _) in MyTeamSummary.build(
+        teamId: id,
+        standings: ten,
+        games: const [],
+        now: now,
+      ).nearby)
+        r,
+    ];
+    expect(ranks('t4'), [3, 4, 5, 6, 7]);
+    expect(ranks('t0'), [1, 2, 3, 4, 5]);
+    expect(ranks('t9'), [6, 7, 8, 9, 10]);
   });
 
   test('NBA는 컨퍼런스 안 시드로 매기고 "동부 2위"로 쓴다', () {
@@ -109,10 +117,7 @@ void main() {
       now: now,
     );
     expect(s.rankLabel, '동부 2위');
-    expect(s.above!.teamId, '8');
-    expect(s.above!.gamesBehind, 4);
-    expect(s.below!.teamId, '18');
-    expect(s.below!.gamesBehind, 3);
+    expect([for (final (_, t) in s.nearby) t.teamId], ['8', '2', '18']);
   });
 
   test('아무도 경기를 안 한 순위표(개막 전)는 순위를 내지 않는다', () {
@@ -128,10 +133,10 @@ void main() {
     );
     expect(s.rank, isNull);
     expect(s.rankLabel, isNull);
-    expect(s.above, isNull);
+    expect(s.nearby, isEmpty);
   });
 
-  test('최근 5경기(오래된 순)와 연승·연패', () {
+  test('일정은 끝난 경기로 다섯 칸을 채우고, 연승·연패를 센다', () {
     final games = [
       game('1', DateTime(2026, 3, 1, 19), 'kgc', 80, 'lg', 70), // 승
       game('2', DateTime(2026, 3, 3, 19), 'sk', 60, 'kgc', 75), // 승
@@ -148,7 +153,7 @@ void main() {
       games: games,
       now: now,
     );
-    expect(s.lastFive, [false, true, false, false, false]);
+    expect([for (final g in s.schedule) g.id], ['3', '4', '5', '6', '7']);
     expect(s.streak, -3);
     expect(s.streakLabel, '3연패');
 
@@ -177,28 +182,30 @@ void main() {
     expect(s.streak, 2);
   });
 
-  test('오늘 경기가 있으면 그 경기, 없으면 가장 최근 경기를 크게 보여준다', () {
+  test('일정은 최근 경기 뒤에 진행중·예정 경기를 최대 3개 붙인다', () {
     final today = DateTime(2026, 4, 10);
     final games = [
-      game('past', DateTime(2026, 4, 8, 19), 'kgc', 80, 'lg', 70),
+      for (var d = 1; d <= 6; d++)
+        game('p$d', DateTime(2026, 4, d, 19), 'kgc', 80, 'lg', 70),
       game(
-        'today',
-        today.add(const Duration(hours: 19)),
+        'live',
+        today.add(const Duration(hours: 11)),
         'kgc',
-        0,
+        40,
         'db',
-        0,
-        status: GameStatus.scheduled,
+        38,
+        status: GameStatus.live,
       ),
-      game(
-        'next',
-        DateTime(2026, 4, 12, 14),
-        'sk',
-        0,
-        'kgc',
-        0,
-        status: GameStatus.scheduled,
-      ),
+      for (var d = 12; d <= 16; d++)
+        game(
+          'n$d',
+          DateTime(2026, 4, d, 19),
+          'sk',
+          0,
+          'kgc',
+          0,
+          status: GameStatus.scheduled,
+        ),
     ];
     final s = MyTeamSummary.build(
       teamId: 'kgc',
@@ -206,32 +213,9 @@ void main() {
       games: games,
       now: today.add(const Duration(hours: 12)),
     );
-    expect(s.featuredGame!.id, 'today');
-    expect(s.featuredIsToday, isTrue);
-    expect(s.nextGame!.id, 'next'); // 오늘 경기는 다음 경기로 또 보여주지 않는다
-
-    final noToday = MyTeamSummary.build(
-      teamId: 'kgc',
-      standings: kbl,
-      games: [games.first, games.last],
-      now: today.add(const Duration(hours: 12)),
+    expect(
+      [for (final g in s.schedule) g.id],
+      ['p5', 'p6', 'live', 'n12', 'n13'],
     );
-    expect(noToday.featuredGame!.id, 'past');
-    expect(noToday.featuredIsToday, isFalse);
-    expect(noToday.nextGame!.id, 'next');
-  });
-
-  test('게임차 표기와 조사', () {
-    expect(gamesBehindLabel(6), '6게임차');
-    expect(gamesBehindLabel(0.5), '0.5게임차');
-    expect(gamesBehindLabel(0), '승차 없음');
-    expect(withWaGwa('NC'), 'NC와');
-    expect(withWaGwa('LG'), 'LG와');
-    expect(withWaGwa('KCC'), 'KCC와');
-    expect(withWaGwa('정관장'), '정관장과');
-    expect(withWaGwa('소노'), '소노와');
-    expect(withWaGwa('삼성'), '삼성과');
-    expect(withWaGwa('보스턴'), '보스턴과');
-    expect(withWaGwa('디트로이트'), '디트로이트와');
   });
 }

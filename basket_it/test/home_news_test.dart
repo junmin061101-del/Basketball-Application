@@ -17,10 +17,34 @@ import 'support/fake_repositories.dart';
 
 /// 칩 테스트에 쓰는 팀. 실제 KBL 데이터는 네트워크에서 오므로 여기서 넣어 준다.
 const testTeams = [
-  Team(id: 'sk', city: '서울', name: 'SK', shortName: 'SK', primaryColor: Color(0xFFAB0028)),
-  Team(id: 'lg', city: '창원', name: 'LG', shortName: 'LG', primaryColor: Color(0xFF550E10)),
-  Team(id: 'kgc', city: '안양', name: '정관장', shortName: '정관장', primaryColor: Color(0xFFCF1F25)),
-  Team(id: 'kcc', city: '부산', name: 'KCC', shortName: 'KCC', primaryColor: Color(0xFF07215A)),
+  Team(
+    id: 'sk',
+    city: '서울',
+    name: 'SK',
+    shortName: 'SK',
+    primaryColor: Color(0xFFAB0028),
+  ),
+  Team(
+    id: 'lg',
+    city: '창원',
+    name: 'LG',
+    shortName: 'LG',
+    primaryColor: Color(0xFF550E10),
+  ),
+  Team(
+    id: 'kgc',
+    city: '안양',
+    name: '정관장',
+    shortName: '정관장',
+    primaryColor: Color(0xFFCF1F25),
+  ),
+  Team(
+    id: 'kcc',
+    city: '부산',
+    name: 'KCC',
+    shortName: 'KCC',
+    primaryColor: Color(0xFF07215A),
+  ),
 ];
 
 /// 카테고리별로 무엇을 요청받았는지 기록하는 가짜 Repository.
@@ -224,11 +248,15 @@ void main() {
     expect(card.dy, lessThan(news.dy));
   });
 
-  testWidgets('내 팀 카드: 순위·연승·앞뒤 팀 게임차·최근 5경기·최근 경기', (tester) async {
+  testWidgets('내 팀 카드: 팀색 머리 + 경기·순위 전환', (tester) async {
     final now = DateTime.now();
     Game g(String id, int daysAgo, String home, int hs, String away, int as) {
-      final start = DateTime(now.year, now.month, now.day, 19)
-          .subtract(Duration(days: daysAgo));
+      final start = DateTime(
+        now.year,
+        now.month,
+        now.day,
+        19,
+      ).subtract(Duration(days: daysAgo));
       return Game(
         id: id,
         date: DateTime(start.year, start.month, start.day),
@@ -259,23 +287,32 @@ void main() {
       ],
     );
 
-    expect(find.text('내 팀'), findsOneWidget);
-    expect(find.text('2위'), findsOneWidget);
-    expect(find.text('2연승'), findsOneWidget);
-    expect(find.text('1위 LG와 1게임차', findRichText: true), findsOneWidget);
-    expect(find.text('3위 정관장과 2게임차', findRichText: true), findsOneWidget);
-    expect(find.text('2025-26 시즌 최종 · 35승 19패'), findsOneWidget);
-    expect(find.text('최근 5경기'), findsOneWidget);
+    // 팀색 머리: 순위·전적·연승
+    expect(find.text('2위 · 35승 19패 · 2연승'), findsOneWidget);
+
+    // 경기 칸(기본): 내 점수 - 상대 점수 + 승패, 날짜순
+    final scores = ['70 - 80', '75 - 60', '80 - 70'];
+    for (final s in scores) {
+      expect(find.text(s), findsOneWidget);
+    }
+    expect(
+      tester.getTopLeft(find.text(scores.first)).dy,
+      lessThan(tester.getTopLeft(find.text(scores.last)).dy),
+    );
     expect(find.text('승'), findsNWidgets(2));
     expect(find.text('패'), findsOneWidget);
-    // 오늘 경기가 없으니 가장 최근 경기를 크게 보여준다
-    expect(find.textContaining('최근 경기 · '), findsOneWidget);
-    expect(find.text('80 : 70'), findsOneWidget);
-    expect(find.text('경기 종료'), findsOneWidget);
+
+    // 순위 칸: 시즌 표시와 앞뒤 팀
+    await tester.tap(find.text('순위'));
+    await tester.pumpAndSettle(const Duration(milliseconds: 300));
+    expect(find.text('2025-26 시즌 최종'), findsOneWidget);
+    expect(find.text('정관장'), findsOneWidget);
+    expect(find.text('KCC'), findsOneWidget);
+    expect(find.text('전체 순위'), findsOneWidget);
 
     // 내 팀 카드가 뉴스보다 위에 있다
     expect(
-      tester.getTopLeft(find.text('2위')).dy,
+      tester.getTopLeft(find.text('전체 순위')).dy,
       lessThan(tester.getTopLeft(find.text('KBL 뉴스')).dy),
     );
   });

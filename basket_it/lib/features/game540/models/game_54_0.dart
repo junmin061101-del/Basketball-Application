@@ -1,7 +1,5 @@
 import 'package:flutter/foundation.dart';
 
-import '../../../data/player_photos.dart';
-
 /// 라인업의 다섯 자리.
 enum LineupSlot {
   pg('PG', '포인트 가드'),
@@ -94,9 +92,6 @@ class GamePlayer {
       bpg: d('bpg'),
     );
   }
-
-  /// 앱에 넣어 둔 얼굴 사진. 없으면 null(이름 첫 글자를 보여준다).
-  String? get photoAsset => playerPhotoAsset(id);
 
   /// 기록 한 줄: "22.6점 11.9리바 4.4어시".
   String get statLine =>
