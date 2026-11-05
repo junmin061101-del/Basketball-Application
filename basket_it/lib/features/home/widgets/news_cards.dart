@@ -109,7 +109,7 @@ class NewsRow extends ConsumerWidget {
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
                       fontSize: 14.5,
-                      fontWeight: FontWeight.w800,
+                      fontWeight: FontWeight.w500,
                       height: 1.35,
                       color: AppColors.textPrimary,
                     ),
@@ -252,7 +252,7 @@ class NewsTeamBadge extends StatelessWidget {
         style: const TextStyle(
           color: Colors.white,
           fontSize: 12,
-          fontWeight: FontWeight.w800,
+          fontWeight: FontWeight.w500,
           letterSpacing: 0.3,
         ),
       ),
@@ -281,7 +281,7 @@ class NewsMetaLine extends StatelessWidget {
             article.category.label,
             style: TextStyle(
               fontSize: 10,
-              fontWeight: FontWeight.w800,
+              fontWeight: FontWeight.w500,
               color: accent,
             ),
           ),

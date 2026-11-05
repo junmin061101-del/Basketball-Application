@@ -232,7 +232,7 @@ class _CommentTile extends StatelessWidget {
                   comment.displayName.substring(0, 1),
                   style: const TextStyle(
                     fontSize: 11,
-                    fontWeight: FontWeight.w800,
+                    fontWeight: FontWeight.w500,
                     color: AppColors.textPrimary,
                   ),
                 ),
@@ -242,7 +242,7 @@ class _CommentTile extends StatelessWidget {
                 comment.displayName,
                 style: const TextStyle(
                   fontSize: 12,
-                  fontWeight: FontWeight.w800,
+                  fontWeight: FontWeight.w500,
                   color: AppColors.textPrimary,
                 ),
               ),

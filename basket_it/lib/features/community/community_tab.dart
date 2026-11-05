@@ -154,7 +154,7 @@ class _Chip extends StatelessWidget {
           label,
           style: TextStyle(
             fontSize: 13,
-            fontWeight: FontWeight.w700,
+            fontWeight: FontWeight.w500,
             color: active ? Colors.white : AppColors.textSecondary,
           ),
         ),
@@ -204,7 +204,7 @@ class _PostRow extends ConsumerWidget {
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(
                 fontSize: 15.5,
-                fontWeight: FontWeight.w800,
+                fontWeight: FontWeight.w500,
                 height: 1.35,
                 color: AppColors.textPrimary,
               ),
@@ -264,7 +264,7 @@ class _PostRow extends ConsumerWidget {
 
   static const _metaStyle = TextStyle(
     fontSize: 12,
-    fontWeight: FontWeight.w700,
+    fontWeight: FontWeight.w500,
     color: AppColors.textSecondary,
   );
 }
@@ -298,7 +298,7 @@ class _CategoryBadge extends StatelessWidget {
         category.label,
         style: TextStyle(
           fontSize: 10.5,
-          fontWeight: FontWeight.w800,
+          fontWeight: FontWeight.w500,
           color: foreground,
         ),
       ),

@@ -108,7 +108,7 @@ class _Side extends StatelessWidget {
           overflow: TextOverflow.ellipsis,
           style: const TextStyle(
             fontSize: 13.5,
-            fontWeight: FontWeight.w800,
+            fontWeight: FontWeight.w500,
             height: 1.1,
             color: AppColors.textPrimary,
           ),
@@ -147,7 +147,7 @@ class _StatusLabel extends StatelessWidget {
         textAlign: TextAlign.center,
         style: TextStyle(
           fontSize: 11,
-          fontWeight: FontWeight.w800,
+          fontWeight: FontWeight.w500,
           height: 1.1,
           color: AppColors.textTertiary,
         ),
@@ -161,7 +161,7 @@ class _StatusLabel extends StatelessWidget {
           textAlign: TextAlign.center,
           style: TextStyle(
             fontSize: 11,
-            fontWeight: FontWeight.w900,
+            fontWeight: FontWeight.w500,
             height: 1.1,
             color: AppColors.live,
           ),
@@ -173,7 +173,7 @@ class _StatusLabel extends StatelessWidget {
             maxLines: 2,
             style: const TextStyle(
               fontSize: 9.5,
-              fontWeight: FontWeight.w700,
+              fontWeight: FontWeight.w500,
               height: 1.15,
               color: AppColors.live,
             ),

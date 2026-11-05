@@ -91,7 +91,7 @@ class _NicknameScreenState extends ConsumerState<NicknameScreen> {
                 ],
                 style: const TextStyle(
                   fontSize: 16,
-                  fontWeight: FontWeight.w700,
+                  fontWeight: FontWeight.w500,
                   color: AppColors.textPrimary,
                 ),
                 decoration: InputDecoration(

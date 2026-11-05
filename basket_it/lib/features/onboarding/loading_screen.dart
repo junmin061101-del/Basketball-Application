@@ -43,7 +43,7 @@ class _LoadingScreenState extends State<LoadingScreen> {
               '준비하는 중...',
               style: TextStyle(
                 color: AppColors.textSecondary,
-                fontWeight: FontWeight.w600,
+                fontWeight: FontWeight.w500,
               ),
             ),
           ],

@@ -59,12 +59,12 @@ class _RecentGamesTable extends StatelessWidget {
     const headerStyle = TextStyle(
       fontSize: 11,
       height: 1.15,
-      fontWeight: FontWeight.w700,
+      fontWeight: FontWeight.w500,
       color: AppColors.textTertiary,
     );
     const valueStyle = TextStyle(
       fontSize: 13,
-      fontWeight: FontWeight.w600,
+      fontWeight: FontWeight.w500,
       color: AppColors.textPrimary,
     );
 
@@ -171,7 +171,7 @@ class _RecentGamesTable extends StatelessWidget {
                                   textAlign: TextAlign.center,
                                   style: col.emphasize
                                       ? valueStyle.copyWith(
-                                          fontWeight: FontWeight.w800,
+                                          fontWeight: FontWeight.w600,
                                         )
                                       : valueStyle,
                                 ),
@@ -263,7 +263,7 @@ class _OpponentCell extends StatelessWidget {
           won ? '승' : '패',
           style: TextStyle(
             fontSize: 11,
-            fontWeight: FontWeight.w900,
+            fontWeight: FontWeight.w500,
             color: won ? AppColors.positive : AppColors.negative,
           ),
         ),
@@ -275,7 +275,7 @@ class _OpponentCell extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
             style: const TextStyle(
               fontSize: 12.5,
-              fontWeight: FontWeight.w700,
+              fontWeight: FontWeight.w500,
               color: AppColors.textPrimary,
             ),
           ),

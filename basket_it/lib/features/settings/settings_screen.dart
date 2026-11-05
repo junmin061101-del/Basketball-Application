@@ -174,7 +174,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             child: Text(
               action,
               style: TextStyle(
-                fontWeight: FontWeight.w800,
+                fontWeight: FontWeight.w500,
                 color: danger ? AppColors.negative : AppColors.primary,
               ),
             ),
@@ -215,7 +215,7 @@ class _PushToggle extends ConsumerWidget {
         '실시간 경기 알림',
         style: TextStyle(
           fontSize: 15,
-          fontWeight: FontWeight.w700,
+          fontWeight: FontWeight.w500,
           color: AppColors.textPrimary,
         ),
       ),
@@ -240,7 +240,7 @@ class _SectionLabel extends StatelessWidget {
         text,
         style: const TextStyle(
           fontSize: 13,
-          fontWeight: FontWeight.w800,
+          fontWeight: FontWeight.w500,
           color: AppColors.textTertiary,
         ),
       ),
@@ -284,7 +284,7 @@ class _AccountRow extends StatelessWidget {
             title,
             style: const TextStyle(
               fontSize: 15.5,
-              fontWeight: FontWeight.w800,
+              fontWeight: FontWeight.w500,
               color: AppColors.textPrimary,
             ),
           ),
@@ -329,7 +329,7 @@ class _ValueRow extends StatelessWidget {
               label,
               style: const TextStyle(
                 fontSize: 15,
-                fontWeight: FontWeight.w700,
+                fontWeight: FontWeight.w500,
                 color: AppColors.textPrimary,
               ),
             ),
@@ -342,7 +342,7 @@ class _ValueRow extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   fontSize: 14.5,
-                  fontWeight: FontWeight.w700,
+                  fontWeight: FontWeight.w500,
                   color: dim ? AppColors.textTertiary : AppColors.primary,
                 ),
               ),
@@ -429,7 +429,7 @@ class _NicknameDialogState extends State<_NicknameDialog> {
           child: const Text(
             '저장',
             style: TextStyle(
-              fontWeight: FontWeight.w800,
+              fontWeight: FontWeight.w500,
               color: AppColors.primary,
             ),
           ),
@@ -463,7 +463,7 @@ class _MenuRow extends StatelessWidget {
                 label,
                 style: TextStyle(
                   fontSize: 15,
-                  fontWeight: FontWeight.w700,
+                  fontWeight: FontWeight.w500,
                   color: danger ? AppColors.negative : AppColors.textPrimary,
                 ),
               ),

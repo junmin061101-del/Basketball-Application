@@ -84,7 +84,7 @@ class _LeagueButton extends StatelessWidget {
           league.label,
           style: TextStyle(
             fontSize: expanded ? 16 : 13,
-            fontWeight: FontWeight.w800,
+            fontWeight: FontWeight.w500,
             color: active ? AppColors.textPrimary : Colors.white,
           ),
         ),

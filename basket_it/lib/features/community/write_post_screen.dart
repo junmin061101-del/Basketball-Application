@@ -109,7 +109,7 @@ class _WritePostScreenState extends ConsumerState<WritePostScreen> {
                 : Text(
                     '등록',
                     style: TextStyle(
-                      fontWeight: FontWeight.w800,
+                      fontWeight: FontWeight.w500,
                       fontSize: 15,
                       color: _canSubmit
                           ? AppColors.primary
@@ -142,7 +142,7 @@ class _WritePostScreenState extends ConsumerState<WritePostScreen> {
                     labelStyle: TextStyle(
                       fontFamily: AppTheme.font,
                       fontSize: 13,
-                      fontWeight: FontWeight.w700,
+                      fontWeight: FontWeight.w500,
                       color: _category == c
                           ? Colors.white
                           : AppColors.textSecondary,

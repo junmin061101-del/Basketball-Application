@@ -65,7 +65,7 @@ class PredictionGameCard extends ConsumerWidget {
                 '${timeLabel(game.startTime)} 시작',
                 style: const TextStyle(
                   fontSize: 12,
-                  fontWeight: FontWeight.w700,
+                  fontWeight: FontWeight.w500,
                   color: AppColors.textSecondary,
                 ),
               ),
@@ -91,7 +91,7 @@ class PredictionGameCard extends ConsumerWidget {
                   'VS',
                   style: TextStyle(
                     color: AppColors.textTertiary,
-                    fontWeight: FontWeight.w800,
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
               ),
@@ -145,7 +145,7 @@ class PredictionGameCard extends ConsumerWidget {
                   ),
                   padding: const EdgeInsets.symmetric(vertical: 11),
                   textStyle: const TextStyle(fontFamily: AppTheme.font, 
-                    fontWeight: FontWeight.w700,
+                    fontWeight: FontWeight.w500,
                     fontSize: 13,
                   ),
                 ),
@@ -222,7 +222,7 @@ class _StatusLine extends StatelessWidget {
             style: TextStyle(
               color: color,
               fontSize: 12,
-              fontWeight: FontWeight.w800,
+              fontWeight: FontWeight.w500,
             ),
           ),
         ),
@@ -300,7 +300,7 @@ class _SideButton extends StatelessWidget {
               isWinner ? '$label · 승' : label,
               style: TextStyle(
                 fontSize: 11,
-                fontWeight: FontWeight.w700,
+                fontWeight: FontWeight.w500,
                 color: isWinner ? AppColors.positive : AppColors.textTertiary,
               ),
             ),
@@ -337,7 +337,7 @@ class _RatioBar extends StatelessWidget {
             Text(
               '$homePct%',
               style: const TextStyle(
-                fontWeight: FontWeight.w900,
+                fontWeight: FontWeight.w500,
                 fontSize: 16,
                 color: AppColors.textPrimary,
               ),
@@ -349,7 +349,7 @@ class _RatioBar extends StatelessWidget {
             Text(
               '$awayPct%',
               style: const TextStyle(
-                fontWeight: FontWeight.w900,
+                fontWeight: FontWeight.w500,
                 fontSize: 16,
                 color: AppColors.textPrimary,
               ),
@@ -423,7 +423,7 @@ class _ResultLine extends StatelessWidget {
           hit ? '적중! $pickLabel 승 예측 성공' : '아쉽… $pickLabel 승 예측 실패',
           style: TextStyle(
             fontSize: 12,
-            fontWeight: FontWeight.w700,
+            fontWeight: FontWeight.w500,
             color: hit ? AppColors.positive : AppColors.negative,
           ),
         ),

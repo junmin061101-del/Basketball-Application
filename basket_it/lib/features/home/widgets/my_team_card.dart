@@ -95,7 +95,7 @@ class _TeamSelector extends ConsumerWidget {
                     team.shortName,
                     style: TextStyle(
                       fontSize: 13,
-                      fontWeight: active ? FontWeight.w800 : FontWeight.w600,
+                      fontWeight: active ? FontWeight.w500 : FontWeight.w500,
                       color: active
                           ? AppColors.textPrimary
                           : AppColors.textSecondary,
@@ -209,7 +209,7 @@ class _GameDayCard extends ConsumerWidget {
                         badge,
                         style: const TextStyle(
                           fontSize: 12,
-                          fontWeight: FontWeight.w800,
+                          fontWeight: FontWeight.w500,
                           color: Colors.white,
                         ),
                       ),
@@ -276,7 +276,7 @@ class _GameDayCard extends ConsumerWidget {
                                   textAlign: TextAlign.center,
                                   style: const TextStyle(
                                     fontSize: 13,
-                                    fontWeight: FontWeight.w700,
+                                    fontWeight: FontWeight.w500,
                                     color: AppColors.textSecondary,
                                   ),
                                 ),
@@ -303,7 +303,7 @@ class _GameDayCard extends ConsumerWidget {
                       '문자중계 · 기록 보기',
                       style: TextStyle(
                         fontSize: 14,
-                        fontWeight: FontWeight.w700,
+                        fontWeight: FontWeight.w500,
                         color: AppColors.textPrimary,
                       ),
                     ),
@@ -341,7 +341,7 @@ class _Side extends StatelessWidget {
           overflow: TextOverflow.ellipsis,
           style: const TextStyle(
             fontSize: 15,
-            fontWeight: FontWeight.w800,
+            fontWeight: FontWeight.w500,
             color: AppColors.textPrimary,
           ),
         ),
@@ -499,7 +499,7 @@ class _Header extends StatelessWidget {
                 caption,
                 style: TextStyle(
                   fontSize: 13,
-                  fontWeight: FontWeight.w600,
+                  fontWeight: FontWeight.w500,
                   color: onColor.withValues(alpha: 0.85),
                 ),
               ),
@@ -522,7 +522,7 @@ class _Header extends StatelessWidget {
                     '팀 정보',
                     style: TextStyle(
                       fontSize: 13,
-                      fontWeight: FontWeight.w700,
+                      fontWeight: FontWeight.w500,
                       color: onColor,
                     ),
                   ),
@@ -592,7 +592,7 @@ class _Segmented extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: i == index
-                            ? FontWeight.w800
+                            ? FontWeight.w500
                             : FontWeight.w500,
                         color: i == index
                             ? AppColors.textPrimary
@@ -618,7 +618,7 @@ class _TableHead extends StatelessWidget {
 
   static const _style = TextStyle(
     fontSize: 12,
-    fontWeight: FontWeight.w600,
+    fontWeight: FontWeight.w500,
     color: AppColors.textTertiary,
   );
 
@@ -688,7 +688,7 @@ class _ScheduleList extends StatelessWidget {
           tag,
           style: TextStyle(
             fontSize: 13,
-            fontWeight: FontWeight.w800,
+            fontWeight: FontWeight.w500,
             color: color,
           ),
         ),
@@ -738,7 +738,7 @@ class _ScheduleList extends StatelessWidget {
               child: Text(
                 opponent?.shortName ?? '',
                 overflow: TextOverflow.ellipsis,
-                style: _rowText.copyWith(fontWeight: FontWeight.w800),
+                style: _rowText.copyWith(fontWeight: FontWeight.w500),
               ),
             ),
             const SizedBox(width: 8),
@@ -783,7 +783,7 @@ class _NearbyStandings extends StatelessWidget {
 
   Widget _standingRow(int rank, TeamStanding row, bool mine, Color? color) {
     final style = _rowText.copyWith(
-      fontWeight: mine ? FontWeight.w800 : FontWeight.w400,
+      fontWeight: mine ? FontWeight.w600 : FontWeight.w400,
     );
     Widget cell(String text, double width) => SizedBox(
       width: width,
@@ -870,7 +870,7 @@ class _TopPlayers extends ConsumerWidget {
                     child: Text(
                       players[s.playerId]!.name,
                       overflow: TextOverflow.ellipsis,
-                      style: _rowText.copyWith(fontWeight: FontWeight.w700),
+                      style: _rowText.copyWith(fontWeight: FontWeight.w500),
                     ),
                   ),
                   cell(s.points),
@@ -920,7 +920,7 @@ class _FooterLink extends StatelessWidget {
           textAlign: TextAlign.center,
           style: const TextStyle(
             fontSize: 15,
-            fontWeight: FontWeight.w800,
+            fontWeight: FontWeight.w500,
             color: AppColors.textPrimary,
           ),
         ),
@@ -948,7 +948,7 @@ class _PickMyTeamCard extends StatelessWidget {
           const SizedBox(height: 10),
           const Text(
             '내 팀을 정해 보세요',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
           ),
           const SizedBox(height: 4),
           const Text(
