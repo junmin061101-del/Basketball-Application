@@ -17,7 +17,8 @@ void main() async {
       options: DefaultFirebaseOptions.currentPlatform,
     );
     firebaseReady = true;
-    if (!kIsWeb) await _setUpMobileServices();
+    if (!kIsWeb) await _setUpCrashlytics();
+    await _setUpAppCheck();
   } catch (e) {
     // firebase_options.dart가 아직 플레이스홀더 상태이거나(flutterfire configure
     // 미실행), 네트워크 문제 등으로 초기화에 실패한 경우. 온보딩 화면까지는
@@ -31,9 +32,12 @@ void main() async {
   runApp(ProviderScope(child: BasketItApp(firebaseReady: firebaseReady)));
 }
 
-/// 휴대폰 앱에서만 켜는 것들. 웹은 Crashlytics를 지원하지 않고, App Check는
-/// reCAPTCHA 사이트 키를 따로 받아야 해서 아직 켜지 않는다.
-Future<void> _setUpMobileServices() async {
+/// 웹 App Check용 reCAPTCHA Enterprise 사이트 키. 사이트 키는 웹페이지에
+/// 공개되는 값이다(비밀 키가 아니다). 허용 도메인은 reCAPTCHA 콘솔에서 정한다.
+const _recaptchaSiteKey = '6Lfqgh8uAAAAAJBozuNtCHZ2wRA9GeytLhNXqOhg';
+
+/// 휴대폰 앱의 크래시를 Crashlytics로 보낸다(웹은 지원하지 않는다).
+Future<void> _setUpCrashlytics() async {
   // 크래시를 Crashlytics로 보낸다. 개발 중(debug)에는 보내지 않는다.
   final crashlytics = FirebaseCrashlytics.instance;
   await crashlytics.setCrashlyticsCollectionEnabled(!kDebugMode);
@@ -42,11 +46,15 @@ Future<void> _setUpMobileServices() async {
     crashlytics.recordError(error, stack, fatal: true);
     return true;
   };
+}
 
-  // 정품 앱에서 온 요청인지 Firebase가 확인하게 한다. 콘솔에서 "적용"을 켜기
-  // 전까지는 확인만 하고 막지는 않는다. debug 빌드는 콘솔에 등록한 디버그 토큰을 쓴다.
+/// 정품 앱(웹·Android·iOS)에서 온 요청인지 Firebase가 확인하게 한다. 콘솔에서
+/// "적용"을 켜기 전까지는 확인만 하고 막지는 않는다. debug 빌드는 콘솔에 등록한
+/// 디버그 토큰을 쓴다.
+Future<void> _setUpAppCheck() async {
   try {
     await FirebaseAppCheck.instance.activate(
+      webProvider: ReCaptchaEnterpriseProvider(_recaptchaSiteKey),
       androidProvider: kDebugMode
           ? AndroidProvider.debug
           : AndroidProvider.playIntegrity,
@@ -56,6 +64,10 @@ Future<void> _setUpMobileServices() async {
     );
   } catch (e, stack) {
     // App Check가 안 켜져도 앱은 쓸 수 있어야 한다(콘솔에서 적용을 켜기 전까지).
-    crashlytics.recordError(e, stack);
+    if (kIsWeb) {
+      debugPrint('App Check 시작 실패: $e');
+    } else {
+      FirebaseCrashlytics.instance.recordError(e, stack);
+    }
   }
 }
