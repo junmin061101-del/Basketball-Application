@@ -15,6 +15,12 @@ abstract class UserProfileRepository {
   Future<bool> hasAgreedTerms(String uid);
 
   Future<void> agreeTerms(String uid);
+
+  /// 닉네임을 이미 정했거나, 물어봤는데 "나중에"를 골랐는지.
+  /// 한 번 물어본 사람에게는 다시 묻지 않는다(설정에서 정할 수 있다).
+  Future<bool> nicknameAsked(String uid);
+
+  Future<void> markNicknameAsked(String uid);
 }
 
 /// 약관 판. 약관을 크게 바꿔 다시 동의를 받아야 하면 올린다.
@@ -40,6 +46,21 @@ class FirestoreUserProfileRepository implements UserProfileRepository {
     final snapshot = await _db.collection('users').doc(uid).get();
     final agreed = snapshot.data()?['termsVersion'];
     return agreed is num && agreed >= termsVersion;
+  }
+
+  @override
+  Future<bool> nicknameAsked(String uid) async {
+    final data = (await _db.collection('users').doc(uid).get()).data();
+    final name = data?['nickname'];
+    return (name is String && name.trim().isNotEmpty) ||
+        data?['nicknameAsked'] == true;
+  }
+
+  @override
+  Future<void> markNicknameAsked(String uid) async {
+    await _db.collection('users').doc(uid).set({
+      'nicknameAsked': true,
+    }, SetOptions(merge: true));
   }
 
   @override

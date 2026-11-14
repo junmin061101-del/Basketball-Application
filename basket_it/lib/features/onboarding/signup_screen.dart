@@ -43,12 +43,10 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
         email: _emailController.text.trim(),
         password: _passwordController.text,
       );
-      await authRepository.signOut();
-
+      // 가입하면 그대로 로그인된 채 들어간다(다시 로그인시키지 않는다).
+      // 뒤 화면은 맨 아래 AuthGate가 로그인 상태를 보고 바꾼다.
       if (!mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('가입이 완료됐어요. 로그인해주세요.')));
-      Navigator.of(context).pop();
+      Navigator.of(context).popUntil((route) => route.isFirst);
     } on AuthException catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context)

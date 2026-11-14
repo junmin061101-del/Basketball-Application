@@ -9,7 +9,10 @@ import 'features/auth/auth_gate.dart';
 import 'features/onboarding/splash_screen.dart';
 import 'features/update/update_gate.dart';
 
-class BasketItApp extends StatelessWidget {
+/// 맨 아래 Navigator. 웹 뒤로 가기가 닫을 화면이 있는지 볼 때 쓴다.
+final rootNavigatorKey = GlobalKey<NavigatorState>();
+
+class BasketItApp extends StatefulWidget {
   /// main()에서 Firebase.initializeApp()이 성공했는지 여부.
   ///
   /// false면(테스트 환경, 또는 flutterfire configure를 아직 안 한 상태)
@@ -19,8 +22,38 @@ class BasketItApp extends StatelessWidget {
   const BasketItApp({super.key, this.firebaseReady = false});
 
   @override
+  State<BasketItApp> createState() => _BasketItAppState();
+}
+
+class _BasketItAppState extends State<BasketItApp> with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    // MaterialApp보다 먼저 등록해야 뒤로 가기를 먼저 받는다.
+    if (kIsWeb) WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  /// 웹(홈 화면에 올린 앱 포함)에서 손가락으로 밀어 뒤로 가면 브라우저의 뒤로
+  /// 가기가 온다. 닫을 화면이 없을 때 Flutter는 "앱 종료"로 브라우저 기록을
+  /// 거슬러 앱 밖으로 나가 버려, 앱을 처음부터 다시 불러왔다(긴 로딩 화면).
+  /// 웹에서는 닫을 화면이 없으면 뒤로 가기를 무시한다. 닫을 화면이 있으면
+  /// false를 돌려 MaterialApp이 평소대로 닫게 둔다. 빠르게 여러 번 밀 때는
+  /// web/index.html이 깔아 둔 여분 기록이 앱 밖으로 나가는 걸 막는다.
+  @override
+  Future<bool> didPopRoute() async =>
+      !(rootNavigatorKey.currentState?.canPop() ?? false);
+
+  @override
   Widget build(BuildContext context) {
+    final firebaseReady = widget.firebaseReady;
     return MaterialApp(
+      navigatorKey: rootNavigatorKey,
       title: 'Baskit',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,

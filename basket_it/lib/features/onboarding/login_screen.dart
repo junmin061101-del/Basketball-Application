@@ -5,14 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/errors/auth_exception.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_theme.dart';
-import '../../data/models/app_user.dart';
 import '../../data/repositories/credential_store.dart';
 import '../../providers/auth_providers.dart';
-import '../../providers/onboarding_providers.dart';
-import '../../providers/profile_providers.dart';
-import '../main/main_shell.dart';
-import 'nickname_screen.dart';
-import 'terms_consent_screen.dart';
 import 'signup_screen.dart';
 
 /// 온보딩 - 로그인 화면.
@@ -58,58 +52,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   bool get _busy => _submitting || _guestSubmitting;
 
-  Future<void> _finishLogin(AppUser user) async {
-    final followRepo = ref.read(userFollowRepositoryProvider);
-    final localTeams = ref.read(followedTeamIdsProvider);
-    final localPlayers = ref.read(followedPlayerIdsProvider);
-
-    // 온보딩을 건너뛴 재로그인이면 서버에 저장된 팔로우를 그대로 불러오고,
-    // 온보딩에서 새로 고른 게 있으면 기존 값과 합쳐서 저장한다.
-    // (그냥 덮어쓰면 재로그인 때 기존 팔로우가 지워진다)
-    final saved = await followRepo.loadFollows(user.uid);
-    final teamIds = {...saved.teamIds, ...localTeams};
-    final playerIds = {...saved.playerIds, ...localPlayers};
-
-    if (localTeams.isNotEmpty || localPlayers.isNotEmpty) {
-      await followRepo.saveFollows(
-        uid: user.uid,
-        teamIds: teamIds,
-        playerIds: playerIds,
-      );
-    }
-    ref.read(followedTeamIdsProvider.notifier).state = teamIds;
-    ref.read(followedPlayerIdsProvider.notifier).state = playerIds;
-
-    // 처음 들어온 사람에게는 약관 동의와 닉네임을 한 번 묻는다.
-    final profile = ref.read(userProfileRepositoryProvider);
-    final agreed = await profile.hasAgreedTerms(user.uid);
-    final nickname = await profile.loadNickname(user.uid);
-
-    // 로그인 화면은 이 길로 사라지므로, 다음 화면의 context로 넘어간다.
-    Widget afterTerms(BuildContext routeContext) => nickname == null
-        ? NicknameScreen(onDone: () => _openMain(routeContext))
-        : const MainShell();
-
+  /// 로그인 뒤 화면(약관·닉네임·메인)은 맨 아래 AuthGate가 로그인 상태를 보고
+  /// 바꾼다. 여기서는 온보딩 중 위에 쌓인 화면만 걷어 낸다.
+  void _finishLogin() {
     if (!mounted) return;
-    Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(
-        builder: (routeContext) => agreed
-            ? afterTerms(routeContext)
-            : TermsConsentScreen(
-                onAgree: () => profile.agreeTerms(user.uid),
-                onDone: () => Navigator.of(routeContext)
-                    .pushReplacement(MaterialPageRoute(builder: afterTerms)),
-              ),
-      ),
-      (route) => false,
-    );
-  }
-
-  static void _openMain(BuildContext context) {
-    Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(builder: (_) => const MainShell()),
-      (route) => false,
-    );
+    Navigator.of(context).popUntil((route) => route.isFirst);
   }
 
   void _showError(AuthException e) {
@@ -123,7 +70,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     try {
       final email = _emailController.text.trim();
       final password = _passwordController.text;
-      final user = await ref
+      await ref
           .read(authRepositoryProvider)
           .signIn(email: email, password: password);
 
@@ -134,7 +81,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       } else {
         await store.clear();
       }
-      await _finishLogin(user);
+      _finishLogin();
     } on AuthException catch (e) {
       if (mounted) _showError(e);
     } finally {
@@ -145,8 +92,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   Future<void> _continueAsGuest() async {
     setState(() => _guestSubmitting = true);
     try {
-      final user = await ref.read(authRepositoryProvider).signInAnonymously();
-      await _finishLogin(user);
+      await ref.read(authRepositoryProvider).signInAnonymously();
+      _finishLogin();
     } on AuthException catch (e) {
       if (mounted) _showError(e);
     } finally {

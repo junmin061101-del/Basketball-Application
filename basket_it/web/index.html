@@ -63,6 +63,22 @@
   </style>
 </head>
 <body>
+  <script>
+    // 손가락으로 밀어 뒤로 가면 브라우저 뒤로 가기가 온다. Flutter는 기록을
+    // "시작 지점" 한 칸 위에 "앱" 한 칸만 두고, 뒤로 가기가 오면 앱 칸을 다시
+    // 쌓으며 화면 하나를 닫는다. 빠르게 두 번 밀면 다시 쌓기 전에 시작 지점
+    // 아래로 내려가 앱 밖으로 나가 버려 앱을 처음부터 다시 불러왔다.
+    // 시작 지점 아래에 Flutter가 시작 지점으로 알아보는 칸을 여럿 깔아, 빠르게
+    // 밀어도 앱 안에 머물며 화면만 하나씩 닫히게 한다. 새로고침이면(이미 앱 칸)
+    // 다시 깔지 않는다.
+    (function () {
+      var s = history.state;
+      if (s && (s.flutter || s.origin)) return;
+      var origin = { origin: true, state: null };
+      history.replaceState(origin, '');
+      for (var i = 0; i < 12; i++) history.pushState(origin, '');
+    })();
+  </script>
   <div id="splash" role="progressbar" aria-label="Baskit 불러오는 중">
     <div class="logo"><img src="icons/Icon-192.png" alt=""></div>
     <div class="spinner"></div>
