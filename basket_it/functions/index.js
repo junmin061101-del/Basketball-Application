@@ -70,6 +70,35 @@ exports.updatePredictionLeaderboard = onSchedule(
 );
 
 /**
+ * 커뮤니티 댓글이 생기거나 지워지면 게시글의 댓글 수(commentCount)를 고친다.
+ * 앱은 댓글 수를 바꾸지 못한다(보안 규칙). 게시글이 먼저 지워졌으면 넘어간다.
+ * 재시도는 켜지 않는다(두 번 세지 않게).
+ */
+exports.countPostComments = onDocumentWritten(
+  {
+    document: 'communityComments/{commentId}',
+    region: 'asia-northeast3',
+    memory: '256MiB',
+    cpu: 'gcf_gen1',
+    maxInstances: 10,
+  },
+  async (event) => {
+    const before = event.data?.before?.data();
+    const after = event.data?.after?.data();
+    const delta = (after ? 1 : 0) - (before ? 1 : 0);
+    const postId = (after ?? before)?.postId;
+    if (!delta || typeof postId !== 'string') return;
+    await db
+      .collection('communityPosts')
+      .doc(postId)
+      .update({ commentCount: admin.firestore.FieldValue.increment(delta) })
+      .catch((e) => {
+        if (e.code !== 5) throw e; // 5 = NOT_FOUND(게시글이 이미 지워짐)
+      });
+  },
+);
+
+/**
  * 투표가 바뀌면 그 경기의 홈·원정 투표 수(predictionTallies/{gameId})를 고친다.
  * 앱은 투표 목록 대신 이 문서 하나를 읽는다. 재시도는 켜지 않는다(두 번 세지
  * 않게). 놓친 증감은 랭킹을 다시 채점할 때 바로잡힌다.

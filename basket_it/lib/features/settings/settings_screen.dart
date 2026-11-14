@@ -136,7 +136,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       action: '로그아웃',
     );
     if (!yes) return;
-    await _run(() => ref.read(authRepositoryProvider).signOut());
+    await _run(() async {
+      // 이 기기의 실시간 알림 구독을 먼저 지운다(로그아웃하면 지울 권한이 없다).
+      await LiveScorePushService.instance?.unsubscribe().catchError((_) {});
+      await ref.read(authRepositoryProvider).signOut();
+    });
   }
 
   Future<void> _confirmDelete() async {

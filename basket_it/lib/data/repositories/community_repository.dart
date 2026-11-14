@@ -145,10 +145,7 @@ class FirestoreCommunityRepository implements CommunityRepository {
       ...comment.toMap(),
       'createdAt': FieldValue.serverTimestamp(),
     });
-    // 목록에서 댓글 수를 보여주기 위해 게시글에 카운터를 올린다.
-    await _posts.doc(comment.postId).update({
-      'commentCount': FieldValue.increment(1),
-    });
+    // 게시글의 댓글 수는 서버(countPostComments)가 센다.
   }
 
   @override
@@ -156,8 +153,8 @@ class FirestoreCommunityRepository implements CommunityRepository {
     required String postId,
     required String commentId,
   }) async {
+    // 게시글의 댓글 수는 서버(countPostComments)가 줄인다.
     await _comments.doc(commentId).delete();
-    await _posts.doc(postId).update({'commentCount': FieldValue.increment(-1)});
   }
 
   int _newestFirst(CommunityPost a, CommunityPost b) {

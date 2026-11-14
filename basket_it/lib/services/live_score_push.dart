@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
@@ -151,7 +152,8 @@ class LiveScorePushService {
     _guard('팔로우 팀 저장', () => _subscription.setTeams(teamIds));
   }
 
-  /// 이 기기의 구독 문서를 지운다. 회원 탈퇴할 때 쓴다.
+  /// 이 기기의 구독 문서를 지운다. 로그아웃·회원 탈퇴할 때 쓴다(구독 문서는
+  /// 주인만 지울 수 있어, 같은 기기에 다른 사람이 로그인하면 새로 만든다).
   Future<void> unsubscribe() async {
     final token = _subscription.fcmToken;
     if (token == null) return;
@@ -165,8 +167,12 @@ class LiveScorePushService {
     String fcmToken,
     Map<String, Object?> fields,
   ) {
+    // 문서 주인. 보안 규칙이 본인만 이 기기의 구독을 고치거나 지우게 한다.
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return Future.value();
     final data = <String, Object?>{
       ...fields,
+      'uid': uid,
       'platform': _isIos ? 'ios' : 'android',
       'fcmToken': fcmToken,
       'updatedAt': FieldValue.serverTimestamp(),

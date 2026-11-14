@@ -15,7 +15,9 @@ service cloud.firestore {
     // predictionTallies를 읽는다. 목록을 열어 두면 투표 수 × 화면 수만큼 읽혀
     // 비용이 커지고, 스크립트로 통째로 긁어 갈 수도 있다.
     match /predictionVotes/{voteId} {
-      allow get: if request.auth != null;
+      // 내 투표만(아직 없으면 없다는 것까지) 읽는다.
+      allow get: if request.auth != null
+        && (resource == null || resource.data.uid == request.auth.uid);
       allow list: if false;
       allow create, update: if request.auth != null
         && request.resource.data.keys().hasOnly(['gameId', 'uid', 'displayName', 'pick', 'gameDate', 'createdAt'])
@@ -62,8 +64,7 @@ service cloud.firestore {
     }
 
     // 커뮤니티 게시글: 로그인한 사용자는 모두 읽고 쓸 수 있다. 앱에 글 수정은
-    // 없다. 다른 사람이 바꿀 수 있는 건 좋아요(내 uid 하나 넣기/빼기)와
-    // 댓글 수(1씩)뿐이다. 새 글은 좋아요·댓글 0개, 서버 시각으로만 만든다.
+    // 없다. 다른 사람이 바꿀 수 있는 건 좋아요(내 uid 하나 넣기/빼기)뿐이다. 새 글은 좋아요·댓글 0개, 서버 시각으로만 만든다.
     match /communityPosts/{postId} {
       allow get: if request.auth != null;
       allow list: if request.auth != null && request.query.limit <= 100;
@@ -81,8 +82,9 @@ service cloud.firestore {
         && request.resource.data.commentCount == 0
         && request.resource.data.likedBy == []
         && request.resource.data.createdAt == request.time;
+      // 댓글 수(commentCount)는 서버(countPostComments)만 바꾼다.
       allow update: if request.auth != null
-        && (togglingMyLike() || stepCommentCount() || anonymizingOwn());
+        && (togglingMyLike() || anonymizingOwn());
       allow delete: if request.auth != null && resource.data.uid == request.auth.uid;
     }
 
@@ -95,13 +97,6 @@ service cloud.firestore {
         && request.resource.data.likedBy.size() == after.size()
         && ((after.difference(before) == me && before.difference(after).size() == 0)
           || (before.difference(after) == me && after.difference(before).size() == 0));
-    }
-
-    /// 댓글을 달거나 지울 때 댓글 수를 1만큼 바꾼다.
-    function stepCommentCount() {
-      let delta = request.resource.data.commentCount - resource.data.commentCount;
-      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['commentCount'])
-        && (delta == 1 || (delta == -1 && request.resource.data.commentCount >= 0));
     }
 
     /// 글쓴이 표시 이름. 닉네임(10자)이나 가린 이름이 들어온다.
@@ -144,23 +139,30 @@ service cloud.firestore {
     }
 
     // 잠금화면 실시간 스코어 구독. 문서 id는 기기의 FCM 토큰이다.
-    // 토큰은 남에게 보이면 안 되므로 읽기는 막고(서버만 읽는다), 로그인한
-    // 기기가 자기 토큰 문서의 팔로우 팀·Live Activity 토큰만 쓸 수 있다.
-    // startedActivities(서버가 기록)는 앱이 바꾸지 못한다.
+    // 토큰은 남에게 보이면 안 되므로 읽기는 막고(서버만 읽는다), 문서 주인(uid)만
+    // 자기 기기의 팔로우 팀·Live Activity 토큰을 쓰고 지울 수 있다.
+    // startedActivities(서버가 기록)는 앱이 바꾸지 못한다. uid가 없는 예전 문서는
+    // 앱이 다음에 열릴 때 주인이 채운다.
     match /liveSubscribers/{token} {
       allow read: if false;
       allow create: if request.auth != null
-        && request.resource.data.keys().hasOnly(['platform', 'fcmToken', 'teamKeys', 'pushToStartToken', 'activityTokens', 'updatedAt'])
+        && request.resource.data.keys().hasOnly(['uid', 'platform', 'fcmToken', 'teamKeys', 'pushToStartToken', 'activityTokens', 'updatedAt'])
         && validLiveSubscriber(token);
       allow update: if request.auth != null
+        && ownsSubscriber()
         && request.resource.data.diff(resource.data).affectedKeys()
-             .hasOnly(['platform', 'fcmToken', 'teamKeys', 'pushToStartToken', 'activityTokens', 'updatedAt'])
+             .hasOnly(['uid', 'platform', 'fcmToken', 'teamKeys', 'pushToStartToken', 'activityTokens', 'updatedAt'])
         && validLiveSubscriber(token);
-      allow delete: if request.auth != null;
+      allow delete: if request.auth != null && ownsSubscriber();
+    }
+
+    function ownsSubscriber() {
+      return !('uid' in resource.data) || resource.data.uid == request.auth.uid;
     }
 
     function validLiveSubscriber(token) {
       return request.resource.data.fcmToken == token
+        && request.resource.data.uid == request.auth.uid
         && request.resource.data.platform in ['android', 'ios']
         && request.resource.data.teamKeys is list
         && request.resource.data.teamKeys.size() <= 60

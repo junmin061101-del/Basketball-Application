@@ -11,6 +11,7 @@
  * - 글·댓글·예측 토론: 지우지 않고 글쓴이만 "탈퇴한 사용자"로 (대화 맥락 유지)
  * - 승부예측 투표, users/{uid}(팔로우·닉네임·약관 동의): 삭제
  * - 남의 글 좋아요(likedBy)에서 빼고, 내가 낸 신고의 신고자 표시를 지운다
+ * - 이 사람 기기의 실시간 알림 구독(liveSubscribers)을 지운다
  */
 
 const ANONYMOUS_UID = 'deleted';
@@ -45,6 +46,8 @@ async function cleanUpDeletedUser(db, FieldValue, uid) {
   await inBatches(db, await mine('reports', 'reporterUid'), (b, d) =>
     b.update(d.ref, { reporterUid: ANONYMOUS_UID }),
   );
+  // 실시간 스코어 알림 구독(기기 토큰). 앱이 탈퇴할 때 지우지만 남은 게 있으면.
+  await inBatches(db, await mine('liveSubscribers'), (b, d) => b.delete(d.ref));
   await db.collection('users').doc(uid).delete();
 }
 

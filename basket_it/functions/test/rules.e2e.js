@@ -58,12 +58,20 @@ test('좋아요: 내 uid 하나만 넣고 뺄 수 있다', async () => {
   await assertFails(updateDoc(doc(as('alice'), 'communityPosts/p1'), { uid: 'bob' })); // 작성자 바꾸기
 });
 
-test('댓글 수는 1씩만 바뀐다', async () => {
+test('댓글 수는 앱이 바꾸지 못한다(서버 트리거가 센다)', async () => {
   await seedPost({ commentCount: 3 });
-  const bob = as('bob');
-  await assertSucceeds(updateDoc(doc(bob, 'communityPosts/p1'), { commentCount: increment(1) }));
-  await assertSucceeds(updateDoc(doc(bob, 'communityPosts/p1'), { commentCount: increment(-1) }));
-  await assertFails(updateDoc(doc(bob, 'communityPosts/p1'), { commentCount: 999 }));
+  await assertFails(updateDoc(doc(as('bob'), 'communityPosts/p1'), { commentCount: increment(1) }));
+  await assertFails(updateDoc(doc(as('alice'), 'communityPosts/p1'), { commentCount: increment(-1) }));
+});
+
+test('알림 구독: 주인만 고치고 지운다', async () => {
+  const sub = (uid, over = {}) => ({ uid, platform: 'ios', fcmToken: 'tok1', teamKeys: ['kbl_sk'], updatedAt: serverTimestamp(), ...over });
+  const { deleteDoc } = require('firebase/firestore');
+  await assertSucceeds(setDoc(doc(as('alice'), 'liveSubscribers/tok1'), sub('alice')));
+  await assertFails(setDoc(doc(as('bob'), 'liveSubscribers/tok2'), sub('alice', { fcmToken: 'tok2' }))); // 남의 uid로 만들기
+  await assertFails(updateDoc(doc(as('bob'), 'liveSubscribers/tok1'), { teamKeys: [] }));
+  await assertFails(deleteDoc(doc(as('bob'), 'liveSubscribers/tok1')));
+  await assertSucceeds(deleteDoc(doc(as('alice'), 'liveSubscribers/tok1')));
 });
 
 test('댓글: 있는 글에만, 서버 시각으로만 단다', async () => {
@@ -78,7 +86,9 @@ test('댓글: 있는 글에만, 서버 시각으로만 단다', async () => {
 test('승부예측 투표: 서버 시각·정해진 값만, 랭킹은 읽기만', async () => {
   const bob = as('bob');
   const v = (over = {}) => ({ gameId: 'g1', uid: 'bob', displayName: '밥', pick: 'home', gameDate: '2026-11-05', createdAt: serverTimestamp(), ...over });
+  await assertSucceeds(getDoc(doc(bob, 'predictionVotes/g9_bob'))); // 아직 없는 내 투표
   await assertSucceeds(setDoc(doc(bob, 'predictionVotes/g1_bob'), v()));
+  await assertFails(getDoc(doc(as('alice'), 'predictionVotes/g1_bob'))); // 남의 투표
   await assertFails(setDoc(doc(bob, 'predictionVotes/g1_bob'), v({ createdAt: new Date(2000, 0, 1) })));
   await assertFails(setDoc(doc(bob, 'predictionVotes/g1_bob'), v({ pick: 'draw' })));
   await assertFails(setDoc(doc(bob, 'leaderboard/kbl'), { entries: [] }));
@@ -117,6 +127,7 @@ test('탈퇴 정리: 글은 비식별, 투표·사용자 문서는 삭제, 남�
   await db.doc('predictionVotes/g1_bob').set({ uid: 'bob', gameId: 'g1' });
   await db.doc('reports/x_bob').set({ reporterUid: 'bob', targetId: 'x' });
   await db.doc('users/bob').set({ nickname: '밥' });
+  await db.doc('liveSubscribers/tokB').set({ uid: 'bob', fcmToken: 'tokB' });
 
   await cleanUpDeletedUser(db, admin.firestore.FieldValue, 'bob');
 
@@ -129,4 +140,5 @@ test('탈퇴 정리: 글은 비식별, 투표·사용자 문서는 삭제, 남�
   assert.strictEqual((await db.doc('predictionVotes/g1_bob').get()).exists, false);
   assert.strictEqual((await db.doc('reports/x_bob').get()).data().reporterUid, 'deleted');
   assert.strictEqual((await db.doc('users/bob').get()).exists, false);
+  assert.strictEqual((await db.doc('liveSubscribers/tokB').get()).exists, false);
 });
