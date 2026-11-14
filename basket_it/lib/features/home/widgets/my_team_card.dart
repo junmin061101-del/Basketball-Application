@@ -252,37 +252,20 @@ class _GameDayCard extends ConsumerWidget {
                                 color: AppColors.textPrimary,
                               ),
                             ),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              if (game.status == GameStatus.live) ...[
-                                Container(
-                                  width: 6,
-                                  height: 6,
-                                  decoration: const BoxDecoration(
-                                    color: AppColors.live,
-                                    shape: BoxShape.circle,
-                                  ),
-                                ),
-                                const SizedBox(width: 5),
-                              ],
-                              Flexible(
-                                child: Text(
-                                  switch (game.status) {
-                                    GameStatus.live => game.liveClock ?? '경기 중',
-                                    GameStatus.scheduled => '경기 예정',
-                                    GameStatus.finished => '종료',
-                                  },
-                                  textAlign: TextAlign.center,
-                                  style: const TextStyle(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w700,
-                                    color: AppColors.textSecondary,
-                                  ),
-                                ),
+                          if (game.status == GameStatus.live)
+                            _LiveClock(game.liveClock)
+                          else
+                            Text(
+                              game.status == GameStatus.scheduled
+                                  ? '경기 예정'
+                                  : '종료',
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.textSecondary,
                               ),
-                            ],
-                          ),
+                            ),
                         ],
                       ),
                     ),
@@ -319,6 +302,64 @@ class _GameDayCard extends ConsumerWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// 라이브 카드 가운데: 빨간 점 + 쿼터("4쿼터"), 그 아래 남은 시간("02:53").
+/// 서버는 "4쿼터 02:53"처럼 한 줄로 주므로 마지막 띄어쓰기에서 나눈다.
+class _LiveClock extends StatelessWidget {
+  final String? label;
+
+  const _LiveClock(this.label);
+
+  @override
+  Widget build(BuildContext context) {
+    final text = label ?? '';
+    final cut = text.lastIndexOf(' ');
+    final hasClock =
+        cut > 0 && RegExp(r'^\d+:\d+$').hasMatch(text.substring(cut + 1));
+    final period = hasClock ? text.substring(0, cut) : text;
+    final clock = hasClock ? text.substring(cut + 1) : '';
+    return Column(
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 6,
+              height: 6,
+              decoration: const BoxDecoration(
+                color: AppColors.live,
+                shape: BoxShape.circle,
+              ),
+            ),
+            const SizedBox(width: 5),
+            Flexible(
+              child: Text(
+                period.isEmpty ? 'LIVE' : period,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.live,
+                ),
+              ),
+            ),
+          ],
+        ),
+        if (clock.isNotEmpty)
+          Text(
+            clock,
+            style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: AppColors.textSecondary,
+              fontFeatures: [FontFeature.tabularFigures()],
+            ),
+          ),
+      ],
     );
   }
 }

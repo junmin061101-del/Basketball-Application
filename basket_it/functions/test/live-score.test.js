@@ -11,6 +11,7 @@ const {
   toLiveBoxLine,
   planUpdates,
   quarterLabel,
+  kblQuarterLabel,
   runLivePush,
   uuidV5,
 } = require('../live-score');
@@ -26,6 +27,17 @@ test('KBL 팀 코드 표가 수집기와 같다', () => {
   const { TEAMS } = require('../../tools/fetch-kbl');
   const fromCollector = Object.fromEntries(Object.entries(TEAMS).map(([code, t]) => [code, t.id]));
   assert.deepEqual(KBL_TEAM_IDS, fromCollector);
+});
+
+test('KBL 쿼터 표기: "Q4"(실제 응답), 숫자, 연장, 끝난 경기', () => {
+  assert.equal(kblQuarterLabel('Q4'), '4쿼터');
+  assert.equal(kblQuarterLabel('q1'), '1쿼터');
+  assert.equal(kblQuarterLabel('3'), '3쿼터');
+  assert.equal(kblQuarterLabel('Q5'), '연장');
+  assert.equal(kblQuarterLabel('OT2'), '2차 연장');
+  assert.equal(kblQuarterLabel('E1'), '연장');
+  assert.equal(kblQuarterLabel('X'), '');
+  assert.equal(kblQuarterLabel(null), '');
 });
 
 test('쿼터 표기: 1~4쿼터, 연장, 2차 연장', () => {
@@ -50,7 +62,7 @@ const kblRows = [
 ];
 
 test('KBL 경기: 앱 로고 경로, 쿼터, 문자중계 남은 시간', () => {
-  const row = { gmkey: 'S49G01N7', tcodeH: '50', tcodeA: '55', scoreH: 70, scoreA: 68, isStarted: 1, isEnded: 0, playingQuarter: '4' };
+  const row = { gmkey: 'S49G01N7', tcodeH: '50', tcodeA: '55', scoreH: 70, scoreA: 68, isStarted: 1, isEnded: 0, playingQuarter: 'Q4' };
   const game = parseKblGame(row, kblClock([{ n: 1, m: 9, s: 30 }, { n: 2, m: 7, s: 5 }]));
   assert.equal(game.key, 'kbl:S49G01N7');
   assert.equal(game.homeTeamKey, 'kbl:lg');

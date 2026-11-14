@@ -75,6 +75,21 @@ function quarterLabel(period) {
   return p === 5 ? '연장' : `${p - 4}차 연장`;
 }
 
+/**
+ * KBL 일정의 playingQuarter → "4쿼터" / "연장" / "2차 연장". 모르면 "".
+ * KBL은 "Q1"~"Q4"를 보내고 끝나면 "X"를 보낸다. 예전 코드는 숫자("4")만 기대해
+ * 쿼터가 늘 비어 남은 시간만 보였다. 연장은 표기를 확인하지 못해 "Q5", "OT1",
+ * "E1"을 모두 받는다. 수집기(tools/fetch-kbl.js)도 이 함수를 쓴다.
+ */
+function kblQuarterLabel(raw) {
+  const s = String(raw ?? '').trim().toUpperCase();
+  const q = s.match(/^Q?(\d+)$/);
+  if (q) return quarterLabel(Number(q[1]));
+  const ot = s.match(/^(?:OT|E)(\d*)$/);
+  if (ot) return quarterLabel(4 + (Number(ot[1]) || 1));
+  return '';
+}
+
 /** KBL 일정 한 건 → 경기. KBL 10개 구단끼리가 아니면 null. */
 function parseKblGame(row, clock = '') {
   const homeId = KBL_TEAM_IDS[row?.tcodeH];
@@ -83,11 +98,7 @@ function parseKblGame(row, clock = '') {
   let status = 'scheduled';
   if (row.isEnded === 1) status = 'final';
   else if (row.isStarted === 1) status = 'live';
-  const q = String(row.playingQuarter ?? '');
-  let period = '';
-  if (status === 'final') period = '경기 종료';
-  else if (/^[1-4]$/.test(q)) period = `${q}쿼터`;
-  else if (/^(OT|E)\d*$/i.test(q)) period = '연장';
+  const period = status === 'final' ? '경기 종료' : kblQuarterLabel(row.playingQuarter);
   const side = (id, score, name) => ({
     teamId: id,
     name: name ?? id,
@@ -510,6 +521,7 @@ module.exports = {
   planUpdates,
   pushOnce,
   quarterLabel,
+  kblQuarterLabel,
   runLivePush,
   uuidV5,
 };

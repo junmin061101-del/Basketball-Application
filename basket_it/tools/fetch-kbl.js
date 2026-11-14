@@ -169,12 +169,9 @@ function toPlayer(p) {
   };
 }
 
-function quarterLabel(q) {
-  const s = String(q ?? '');
-  if (/^[1-4]$/.test(s)) return `${s}쿼터`;
-  if (/^(OT|E)\d*$/i.test(s)) return '연장';
-  return null;
-}
+// KBL은 "Q1"~"Q4"를 보낸다. 실시간 함수와 같은 해석을 쓴다.
+const { kblQuarterLabel } = require('../functions/live-score');
+const quarterLabel = (q) => kblQuarterLabel(q) || null;
 
 /** 일정 한 건 → 앱 경기. KBL 10개 구단끼리가 아닌 경기(국제 대회 등)는 null. */
 function toGame(m) {

@@ -337,14 +337,16 @@ void main() {
           awayScore: 54,
           status: GameStatus.live,
           startTime: now.subtract(const Duration(hours: 1)),
-          liveClock: '2쿼터 종료',
+          liveClock: '4쿼터 02:53',
         ),
       ],
     );
 
     expect(find.text('SK vs LG'), findsOneWidget);
     expect(find.text('LIVE'), findsWidgets);
-    expect(find.text('2쿼터 종료'), findsOneWidget);
+    // 쿼터와 남은 시간을 두 줄로
+    expect(find.text('4쿼터'), findsOneWidget);
+    expect(find.text('02:53'), findsOneWidget);
     expect(find.text('61'), findsOneWidget);
     expect(find.text('6승 2패'), findsOneWidget);
     // 중계 카드가 내 팀 카드보다 위
