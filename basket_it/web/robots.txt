@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://basket-it-kbl.web.app/sitemap.xml

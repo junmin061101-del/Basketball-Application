@@ -18,7 +18,24 @@
 
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
-  <meta name="description" content="KBL 팬을 위한 앱 — 경기 일정·결과, 실시간 점수, 선수 기록, 승부예측, 커뮤니티">
+  <!-- 검색 결과에 보이는 설명. 앱은 화면을 캔버스에 그려 구글이 글을 못 읽으므로
+       소개·구단·선수 명단은 /about/, /kbl/ 정적 페이지(tools/build-seo-pages.js)로 둔다. -->
+  <meta name="description" content="Baskit(바스킷)은 KBL 농구 팬을 위한 무료 농구 앱이에요. 농구 실시간 경기 점수, 경기 일정·결과, KBL 순위, 선수 기록, 승부예측, 농구 커뮤니티, KBL·NBA 뉴스를 한곳에서.">
+  <link rel="canonical" href="https://basket-it-kbl.web.app/">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Baskit">
+  <meta property="og:title" content="Baskit 바스킷 — KBL 농구 실시간 경기·순위·선수 기록·승부예측">
+  <meta property="og:description" content="농구 실시간 경기 점수, KBL 일정·순위, 선수 기록, 승부예측, 농구 커뮤니티를 한곳에서.">
+  <meta property="og:url" content="https://basket-it-kbl.web.app/">
+  <meta property="og:image" content="https://basket-it-kbl.web.app/icons/Icon-512.png">
+  <meta property="og:locale" content="ko_KR">
+  <meta name="twitter:card" content="summary">
+  <!-- 검색 결과의 사이트 이름(Baskit / 바스킷)과 로고. -->
+  <script type="application/ld+json">
+  [{"@context":"https://schema.org","@type":"WebSite","name":"Baskit","alternateName":["바스킷","Baskit 바스킷"],"url":"https://basket-it-kbl.web.app/"},
+   {"@context":"https://schema.org","@type":"Organization","name":"Baskit","url":"https://basket-it-kbl.web.app/","logo":"https://basket-it-kbl.web.app/icons/Icon-512.png"},
+   {"@context":"https://schema.org","@type":"WebApplication","name":"Baskit","alternateName":"바스킷","url":"https://basket-it-kbl.web.app/","applicationCategory":"SportsApplication","operatingSystem":"Web, Android, iOS","inLanguage":"ko","description":"KBL 농구 실시간 경기 점수, 경기 일정, 순위, 선수 기록, 승부예측, 농구 커뮤니티 앱","offers":{"@type":"Offer","price":"0","priceCurrency":"KRW"}}]
+  </script>
 
   <!-- 홈 화면에 추가하면 주소창 없이 앱처럼 뜬다. viewport-fit=cover는 아이폰
        노치 아래까지 화면을 쓰고, 안전 영역은 앱이 SafeArea로 피한다. -->
@@ -30,10 +47,12 @@
   <meta name="theme-color" content="#FFFFFF">
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 
-  <!-- Favicon -->
-  <link rel="icon" type="image/png" href="favicon.png"/>
+  <!-- Favicon. 구글 검색 결과 왼쪽 로고는 48px의 배수여야 한다. -->
+  <link rel="icon" type="image/png" sizes="48x48" href="favicon-48.png">
+  <link rel="icon" type="image/png" sizes="96x96" href="favicon-96.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/Icon-192.png">
 
-  <title>Baskit</title>
+  <title>Baskit 바스킷 — KBL 농구 실시간 경기·순위·선수 기록·승부예측</title>
   <link rel="manifest" href="manifest.json">
 
   <!-- 앱(Flutter)을 받는 동안 보여주는 로딩 화면. 앱의 켜질 때 로딩 화면
@@ -79,6 +98,12 @@
       for (var i = 0; i < 12; i++) history.pushState(origin, '');
     })();
   </script>
+  <!-- 자바스크립트 없이 읽는 검색엔진·사용자용. -->
+  <noscript>
+    <h1>Baskit(바스킷) — KBL 농구 실시간 경기·순위·선수 기록·승부예측</h1>
+    <p>KBL 농구 실시간 경기 점수, 경기 일정·결과, 순위, 선수 기록, 승부예측, 농구 커뮤니티, KBL·NBA 뉴스를 한곳에서 보는 무료 농구 앱이에요.</p>
+    <p><a href="/about/">Baskit 소개</a> · <a href="/kbl/">KBL 10개 구단·선수 명단</a></p>
+  </noscript>
   <div id="splash" role="progressbar" aria-label="Baskit 불러오는 중">
     <div class="logo"><img src="icons/Icon-192.png" alt=""></div>
     <div class="spinner"></div>
