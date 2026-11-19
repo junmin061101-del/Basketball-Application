@@ -4,12 +4,13 @@
 /**
  * 인스타그램 카드(1080×1350 PNG)를 만든다.
  *
- *   node tools/instagram/cards.js game [경기 id]      경기 결과(빼면 가장 최근 경기)
+ *   node tools/instagram/cards.js game [경기 id]      경기 결과 한 장(빼면 가장 최근 경기)
+ *   node tools/instagram/cards.js kbl-night [날짜]   KBL 하룻밤 결과 캐러셀(표지 + 경기별)
+ *   node tools/instagram/cards.js nba-night [날짜]   NBA 하룻밤 결과 캐러셀(미국 날짜)
  *   node tools/instagram/cards.js today [YYYY-MM-DD]  오늘의 경기(빼면 오늘)
  *   node tools/instagram/cards.js standings           KBL 순위
  *   node tools/instagram/cards.js leaders             득점·리바운드·어시스트 TOP 5(3장)
  *   node tools/instagram/cards.js news                KBL 뉴스 브리핑
- *   node tools/instagram/cards.js nba [YYYY-MM-DD]    NBA 경기 결과(미국 날짜, 빼면 가장 최근 경기일)
  *
  * 우리가 모은 데이터(GitHub Pages)로만 만든다. 팀 로고·선수 사진·기사 사진은 사용
  * 허가 전이라 쓰지 않고 팀색으로 구분한다. 배경은 두 색을 대각선으로 나눈다(앱의
@@ -123,48 +124,48 @@ function teamTotals(lines, teamId) {
   ];
 }
 
-async function gameCards(wantId) {
-  const [{ games }, { teams }, standings] = await Promise.all([getJson('kbl/games'), getJson('kbl/teams'), getJson('kbl/standings')]);
-  const finished = games.filter((g) => g.status === 'finished').sort((a, b) => a.startTime.localeCompare(b.startTime));
-  const game = wantId ? games.find((g) => g.id === wantId) : finished.at(-1);
-  if (!game) throw new Error('경기를 찾지 못했어요');
-  const box = await getJson(`kbl/boxscores/${game.id}`).catch(() => ({ lines: [] }));
-  const teamById = Object.fromEntries(teams.map((t) => [t.id, t]));
-  const rankOf = Object.fromEntries(rankTable(standings).map((r) => [r.teamId, r]));
-  const [home, away] = [teamById[game.homeTeamId], teamById[game.awayTeamId]];
-  const homeWon = game.homeScore > game.awayScore;
-
-  const side = (team, score, won) => {
-    const top = topPlayer(box.lines, team.id);
-    const totals = teamTotals(box.lines, team.id);
-    const rank = rankOf[team.id];
-    return `
+/**
+ * 경기 한 장. home/away: { name, color, city?, rec? }. extra(team side): 팀 기록 줄
+ * [[이름, 값]]과 최다 득점 선수(KBL만, NBA 무료 데이터엔 없다). quarters: 쿼터별 점수.
+ */
+function gameSlide({ name, meta, home, away, homeScore, awayScore, homeExtra = {}, awayExtra = {}, quarters = null }) {
+  const homeWon = homeScore > awayScore;
+  const side = (team, score, won, { stats, top }) => `
     <div class="side">
       <div class="band">
-        <div class="city">${esc(team.city)}</div>
-        <div class="name">${esc(short(team))}</div>
-        ${rank ? `<div class="rec">${rank.rank}위 · ${rank.wins}승 ${rank.losses}패</div>` : ''}
+        ${team.city ? `<div class="city">${esc(team.city)}</div>` : ''}
+        <div class="name">${esc(team.name)}</div>
+        ${team.rec ? `<div class="rec">${esc(team.rec)}</div>` : ''}
       </div>
       <div class="score num ${won ? '' : 'lose'}">${score}</div>
       <div class="tag ${won ? '' : 'ghost'}">${won ? 'WIN' : '&nbsp;'}</div>
-      ${totals ? `<div class="stats">${totals.map(([k, v]) => `<div><span>${k}</span><b class="num">${v}</b></div>`).join('')}</div>` : ''}
+      ${stats ? `<div class="stats">${stats.map(([k, v]) => `<div><span>${k}</span><b class="num">${v}</b></div>`).join('')}</div>` : ''}
       ${top ? `<div class="top"><div class="lbl">최다 득점</div><div class="pname">${esc(top.name)}</div>
         <div class="line"><b>${top.points}</b>점 <b>${top.oreb + top.dreb}</b>리바 <b>${top.ast}</b>어시</div></div>` : ''}
     </div>`;
-  };
-
-  const html = frame({
-    colors: [home.color, away.color],
-    meta: `KBL 정규시즌<br>${kstLabel(new Date(game.startTime))}`,
-    kicker: 'FINAL',
-    title: `${esc(short(home))} ${game.homeScore} : ${game.awayScore} ${esc(short(away))}`,
-    body: `<div class="board">${side(home, game.homeScore, homeWon)}${side(away, game.awayScore, !homeWon)}</div>`,
-    css: `
-.board{margin-top:44px;display:flex;gap:28px;flex:1}
+  return {
+    name,
+    html: frame({
+      colors: [home.color, away.color],
+      meta,
+      kicker: 'FINAL',
+      title: `${esc(home.short ?? home.name)} ${homeScore} : ${awayScore} ${esc(away.short ?? away.name)}`,
+      body: `<div class="board">${side(home, homeScore, homeWon, homeExtra)}${side(away, awayScore, !homeWon, awayExtra)}</div>
+        ${quarters ? lineScore(home, away, quarters, homeScore, awayScore) : ''}`,
+      css: `
+.board{margin-top:44px;display:flex;gap:28px;flex:${quarters ? '0 0 auto' : 1}}
+.side{padding-bottom:${quarters ? 34 : 0}px}
+.ls{margin-top:28px;background:rgba(15,23,42,.8);border-radius:32px;padding:30px 36px;flex:1;display:flex;flex-direction:column;justify-content:center}
+.ls table{width:100%;border-collapse:collapse}
+.ls th{font-size:24px;font-weight:600;color:#CBD5E1;padding-bottom:14px;text-align:center}
+.ls th:first-child,.ls td:first-child{text-align:left}
+.ls td{font-size:38px;font-weight:700;text-align:center;padding:12px 0;border-top:2px solid rgba(255,255,255,.12)}
+.ls td:first-child{font-size:32px;font-weight:800}
+.ls td.t{font-weight:800;color:${BRAND}}
 .side{flex:1;background:rgba(15,23,42,.8);border-radius:32px;overflow:hidden;display:flex;flex-direction:column;align-items:center}
 .band{width:100%;padding:30px 24px 26px;text-align:center}
 .city{font-size:28px;font-weight:600;opacity:.85}
-.name{font-size:56px;font-weight:800;line-height:1.15;letter-spacing:-1px}
+.name{font-size:52px;font-weight:800;line-height:1.15;letter-spacing:-1px}
 .rec{margin-top:6px;font-size:24px;font-weight:600;opacity:.85}
 .score{margin-top:34px;font-size:168px;font-weight:800;line-height:1;letter-spacing:-4px}
 .score.lose{color:rgba(255,255,255,.7)}
@@ -178,8 +179,167 @@ async function gameCards(wantId) {
 .pname{margin-top:6px;font-size:44px;font-weight:800}
 .line{margin-top:6px;font-size:28px;color:#F1F5F9}
 .line b{color:#fff;font-weight:800;font-size:34px}`,
+    }),
+  };
+}
+
+/** 쿼터별 점수 표(라인 스코어). */
+function lineScore(home, away, q, homeScore, awayScore) {
+  const heads = q.home.map((_, i) => (i < 4 ? `${i + 1}Q` : `OT${i > 4 ? i - 3 : ''}`));
+  const row = (team, pts, total) =>
+    `<tr><td>${esc(team.short ?? team.name)}</td>${pts.map((v) => `<td class="num">${v}</td>`).join('')}<td class="t num">${total}</td></tr>`;
+  return `<div class="ls"><table><tr><th></th>${heads.map((h) => `<th>${h}</th>`).join('')}<th>합계</th></tr>
+    ${row(home, q.home, homeScore)}${row(away, q.away, awayScore)}</table></div>`;
+}
+
+/** 하룻밤 결과 표지: 경기 목록 + 접전·대승. teamOf(id) → { name, color }. */
+function nightCover({ name, colors, meta, kicker, title, games, teamOf, pending }) {
+  const margin = (g) => Math.abs(g.homeScore - g.awayScore);
+  const closest = [...games].sort((a, b) => margin(a) - margin(b))[0];
+  const biggest = [...games].sort((a, b) => margin(b) - margin(a))[0];
+  const dense = games.length > 7;
+  const side = (id, score, won) => `<div class="s ${won ? 'w' : ''}"><span class="chip" style="background:${teamOf(id).color}"></span>
+    <span class="tn">${esc(teamOf(id).name)}</span><span class="sc num">${score}</span></div>`;
+  const rows = games.map((g) => {
+    const homeWon = g.homeScore > g.awayScore;
+    return `<div class="row">${side(g.homeTeamId, g.homeScore, homeWon)}<span class="at">vs</span>${side(g.awayTeamId, g.awayScore, !homeWon)}</div>`;
+  }).join('');
+  const note = (label, g) => {
+    const w = g.homeScore > g.awayScore ? g.homeTeamId : g.awayTeamId;
+    return `<div class="note"><b>${label}</b> ${esc(teamOf(w).name)} ${Math.max(g.homeScore, g.awayScore)}-${Math.min(g.homeScore, g.awayScore)} 승 (${margin(g)}점 차)</div>`;
+  };
+  return {
+    name,
+    html: frame({
+      colors,
+      meta,
+      kicker,
+      title,
+      body: `<div class="panel">${rows}
+        <div class="notes">${games.length > 1 ? note('접전', closest) : ''}${games.length > 1 && biggest !== closest && margin(biggest) >= 15 ? note('대승', biggest) : ''}
+        ${pending ? `<div class="note dim">${pending}경기는 아직 결과가 확정되지 않았어요</div>` : ''}
+        <div class="swipe">넘겨서 경기별로 보기 →</div></div></div>`,
+      css: `
+.panel{padding:16px 36px;justify-content:space-between;flex:${dense ? 1 : '0 0 auto'}}
+.row{display:flex;align-items:center;gap:10px;padding:${dense ? 9 : 26}px 0;border-bottom:2px solid rgba(255,255,255,.1)}
+.s{flex:1;display:flex;align-items:center;gap:12px;font-size:${dense ? 28 : 36}px;font-weight:600;color:rgba(255,255,255,.65)}
+.s.w{color:#fff;font-weight:800}
+.s .chip{width:10px;height:30px;flex:none}
+.tn{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sc{font-size:${dense ? 34 : 44}px;font-weight:800;min-width:72px;text-align:right}
+.at{width:44px;text-align:center;font-size:20px;color:rgba(255,255,255,.4)}
+.notes{padding-top:16px}
+.note{font-size:26px;margin-top:6px;color:#F1F5F9}
+.note b{display:inline-block;padding:2px 12px;margin-right:10px;border-radius:8px;background:${BRAND};color:#fff;font-size:22px}
+.swipe{margin-top:14px;text-align:right;font-size:24px;color:#CBD5E1;font-weight:700}`,
+    }),
+  };
+}
+
+/**
+ * 표지 + 경기별 카드를 인스타 캐러셀(최대 10장) 게시물로 나눈다.
+ * 경기가 9개를 넘으면 두 번째 게시물은 경기 카드만.
+ */
+function toPosts(prefix, cover, slides) {
+  // 한 경기뿐이면 표지는 그 경기 카드와 같은 말을 되풀이할 뿐이라 뺀다.
+  const posts = slides.length === 1 ? [slides] : [[cover, ...slides.slice(0, 9)]];
+  for (let i = 9; i < slides.length; i += 10) posts.push(slides.slice(i, i + 10));
+  return posts.flatMap((cards, p) =>
+    cards.map((c, i) => ({ ...c, name: `${prefix}-p${p + 1}-${String(i + 1).padStart(2, '0')}` })),
+  );
+}
+
+/** 그날 경기가 모두 끝났는지(취소 등으로 경기가 없으면 false). 자동 게시가 이걸 보고 올린다. */
+const nightComplete = (games) => games.length > 0 && games.every((g) => g.status === 'finished');
+
+/** 한 경기 카드(KBL). 날짜별 캐러셀은 kbl-night. */
+async function gameCards(wantId) {
+  const kbl = await loadKbl();
+  const finished = kbl.games.filter((g) => g.status === 'finished').sort((a, b) => a.startTime.localeCompare(b.startTime));
+  const game = wantId ? kbl.games.find((g) => g.id === wantId) : finished.at(-1);
+  if (!game) throw new Error('경기를 찾지 못했어요');
+  return [await kblSlide(kbl, game, `game-${game.id}`)];
+}
+
+async function loadKbl() {
+  const [{ games }, { teams }, standings] = await Promise.all([getJson('kbl/games'), getJson('kbl/teams'), getJson('kbl/standings')]);
+  const teamById = Object.fromEntries(teams.map((t) => [t.id, t]));
+  const rankOf = Object.fromEntries(rankTable(standings).map((r) => [r.teamId, r]));
+  return { games, teamById, rankOf };
+}
+
+async function kblSlide({ teamById, rankOf }, game, name) {
+  const box = await getJson(`kbl/boxscores/${game.id}`).catch(() => ({ lines: [] }));
+  const team = (id) => {
+    const t = teamById[id];
+    const r = rankOf[id];
+    return { city: t.city, name: short(t), color: t.color, rec: r ? `${r.rank}위 · ${r.wins}승 ${r.losses}패` : null };
+  };
+  const extra = (id) => ({ stats: teamTotals(box.lines, id), top: topPlayer(box.lines, id) });
+  return gameSlide({
+    name,
+    meta: `KBL 정규시즌<br>${kstLabel(new Date(game.startTime))}`,
+    home: team(game.homeTeamId),
+    away: team(game.awayTeamId),
+    homeScore: game.homeScore,
+    awayScore: game.awayScore,
+    homeExtra: extra(game.homeTeamId),
+    awayExtra: extra(game.awayTeamId),
   });
-  return [{ name: `game-${game.id}`, html }];
+}
+
+/** KBL 하룻밤 결과 캐러셀(한국 날짜, 빼면 가장 최근 경기일). */
+async function kblNightCards(day) {
+  const kbl = await loadKbl();
+  const date = day ?? [...new Set(kbl.games.filter((g) => g.status === 'finished').map((g) => kstDay(new Date(g.startTime))))].sort().at(-1);
+  const all = kbl.games.filter((g) => kstDay(new Date(g.startTime)) === date).sort((a, b) => a.startTime.localeCompare(b.startTime));
+  const done = all.filter((g) => g.status === 'finished');
+  if (!done.length) return [];
+  const cover = nightCover({
+    name: 'cover',
+    colors: [BRAND, NAVY],
+    meta: `KBL 정규시즌<br>${kstLabel(new Date(`${date}T12:00:00+09:00`))}`,
+    kicker: 'KBL RESULTS',
+    title: `오늘의 KBL 결과 ${done.length}경기`,
+    games: done,
+    teamOf: (id) => ({ name: short(kbl.teamById[id]), color: kbl.teamById[id].color }),
+    pending: all.length - done.length,
+  });
+  const slides = [];
+  for (const g of done) slides.push(await kblSlide(kbl, g, g.id));
+  return toPosts(`kbl-${date}`, cover, slides);
+}
+
+/** NBA 하룻밤 결과 캐러셀(미국 날짜, 빼면 가장 최근 경기일). 무료 데이터라 선수 기록은 없고 쿼터 점수가 있으면 넣는다. */
+async function nbaNightCards(wantDate) {
+  const [{ games }, { teams }] = await Promise.all([getJson('nba/games'), getJson('nba/teams')]);
+  const teamById = Object.fromEntries(teams.map((t) => [t.id, t]));
+  const date = wantDate ?? [...new Set(games.filter((g) => g.status === 'finished').map((g) => g.date))].sort().at(-1);
+  const all = games.filter((g) => g.date === date);
+  const done = all.filter((g) => g.status === 'finished');
+  if (!done.length) return [];
+  const [, m, d] = date.split('-').map(Number);
+  const meta = `NBA 정규시즌<br>${m}.${d} 경기 (미국 현지)`;
+  const cover = nightCover({
+    name: 'cover',
+    colors: ['#1D428A', NAVY],
+    meta,
+    kicker: 'NBA RESULTS',
+    title: `NBA 결과 ${done.length}경기`,
+    games: done,
+    teamOf: (id) => teamById[id],
+    pending: all.length - done.length,
+  });
+  const slides = done.map((g) => gameSlide({
+    name: g.id,
+    meta,
+    home: teamById[g.homeTeamId],
+    away: teamById[g.awayTeamId],
+    homeScore: g.homeScore,
+    awayScore: g.awayScore,
+    quarters: g.quarters,
+  }));
+  return toPosts(`nba-${date}`, cover, slides);
 }
 
 // ---------------------------------------------------------------- 오늘의 경기
@@ -364,64 +524,17 @@ async function newsCards() {
   }];
 }
 
-// ---------------------------------------------------------------- NBA 결과
-
-/** 하룻밤 NBA 결과 한 장. 끝난 경기만, 접전·대승을 따로 짚는다. */
-async function nbaCards(wantDate) {
-  const [{ games }, { teams }] = await Promise.all([getJson('nba/games'), getJson('nba/teams')]);
-  const team = Object.fromEntries(teams.map((t) => [t.id, t]));
-  const days = [...new Set(games.filter((g) => g.status === 'finished').map((g) => g.date))].sort();
-  const date = wantDate ?? days.at(-1);
-  const all = games.filter((g) => g.date === date);
-  const done = all.filter((g) => g.status === 'finished');
-  if (!done.length) return [];
-
-  const margin = (g) => Math.abs(g.homeScore - g.awayScore);
-  const closest = [...done].sort((a, b) => margin(a) - margin(b))[0];
-  const biggest = [...done].sort((a, b) => margin(b) - margin(a))[0];
-  const side = (id, score, won) => `<div class="s ${won ? 'w' : ''}"><span class="chip" style="background:${team[id].color}"></span>
-    <span class="tn">${esc(team[id].name)}</span><span class="sc num">${score}</span></div>`;
-  const rows = done.map((g) => {
-    const homeWon = g.homeScore > g.awayScore;
-    // 미국식: 원정 @ 홈. 원정팀을 왼쪽에.
-    return `<div class="row">${side(g.awayTeamId, g.awayScore, !homeWon)}<span class="at">@</span>${side(g.homeTeamId, g.homeScore, homeWon)}</div>`;
-  }).join('');
-  const note = (label, g) => {
-    const w = g.homeScore > g.awayScore ? g.homeTeamId : g.awayTeamId;
-    return `<div class="note"><b>${label}</b> ${esc(team[w].name)} ${Math.max(g.homeScore, g.awayScore)}-${Math.min(g.homeScore, g.awayScore)} 승 (${margin(g)}점 차)</div>`;
-  };
-  const [y, m, d] = date.split('-').map(Number);
-  const pending = all.length - done.length;
-
-  return [{
-    name: `nba-${date}`,
-    html: frame({
-      colors: ['#1D428A', NAVY],
-      meta: `NBA 정규시즌<br>${m}.${d} 경기 (미국 현지)`,
-      kicker: 'NBA RESULTS',
-      title: `NBA 결과 ${done.length}경기`,
-      body: `<div class="panel">${rows}
-        <div class="notes">${note('접전', closest)}${biggest.id !== closest.id ? note('대승', biggest) : ''}
-        ${pending ? `<div class="note dim">${pending}경기는 아직 결과가 확정되지 않았어요</div>` : ''}</div></div>`,
-      css: `
-.panel{padding:16px 36px;justify-content:space-between}
-.row{display:flex;align-items:center;gap:10px;padding:${done.length > 9 ? 9 : 14}px 0;border-bottom:2px solid rgba(255,255,255,.1)}
-.s{flex:1;display:flex;align-items:center;gap:12px;font-size:${done.length > 9 ? 28 : 32}px;font-weight:600;color:rgba(255,255,255,.65)}
-.s.w{color:#fff;font-weight:800}
-.s .chip{width:10px;height:30px;flex:none}
-.tn{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.sc{font-size:${done.length > 9 ? 34 : 40}px;font-weight:800;min-width:72px;text-align:right}
-.at{width:40px;text-align:center;font-size:22px;color:rgba(255,255,255,.4)}
-.notes{padding-top:16px}
-.note{font-size:26px;margin-top:6px;color:#F1F5F9}
-.note b{display:inline-block;padding:2px 12px;margin-right:10px;border-radius:8px;background:${BRAND};color:#fff;font-size:22px}`,
-    }),
-  }];
-}
-
 // ----------------------------------------------------------------
 
-const KINDS = { game: gameCards, today: todayCards, standings: standingsCards, leaders: leaderCards, news: newsCards, nba: nbaCards };
+const KINDS = {
+  game: gameCards,
+  'kbl-night': kblNightCards,
+  'nba-night': nbaNightCards,
+  today: todayCards,
+  standings: standingsCards,
+  leaders: leaderCards,
+  news: newsCards,
+};
 
 async function main() {
   const [kind, arg] = process.argv.slice(2);
@@ -442,4 +555,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { KINDS, render, frame, getJson, esc, short, kstLabel, kstDay, BRAND, NAVY };
+module.exports = { KINDS, render, frame, nightComplete, toPosts, getJson, esc, short, kstLabel, kstDay, BRAND, NAVY };

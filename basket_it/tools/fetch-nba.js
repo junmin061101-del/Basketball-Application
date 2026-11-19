@@ -50,7 +50,17 @@ function toGame(g) {
     awayScore: g.visitor_team_score ?? 0,
     status,
     postseason: Boolean(g.postseason),
+    quarters: quarters(g),
   };
+}
+
+/** 쿼터별 점수(1~4쿼터 + 연장). API가 주지 않으면 null(카드에서 뺀다). */
+function quarters(g) {
+  const pick = (side) =>
+    ['q1', 'q2', 'q3', 'q4', 'ot1', 'ot2', 'ot3'].map((k) => g[`${side}_${k}`]).filter((v) => typeof v === 'number');
+  const home = pick('home');
+  const away = pick('visitor');
+  return home.length >= 4 && home.length === away.length ? { home, away } : null;
 }
 
 async function main() {
