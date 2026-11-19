@@ -56,6 +56,20 @@ function teamTotals(lines, teamId) {
   ];
 }
 
+/**
+ * 배경 시안. CARD_THEME=light|split|brand (없으면 짙은 남색).
+ * split은 두 팀 색을 대각선으로 나눈다(앱의 경기 날 카드와 같은 느낌).
+ */
+const THEMES = {
+  light: `body{background:#F8FAFC;color:#0F172A}.side{background:#FFFFFF;box-shadow:0 8px 30px rgba(15,23,42,.08)}
+    .meta,.lbl,.stats div,.foot{color:#64748B}.line{color:#475569}.line b,.stats b,.foot b{color:#0F172A}
+    .score.lose{color:#CBD5E1}.top{border-top-color:#E2E8F0}`,
+  brand: `body{background:linear-gradient(160deg,#F97316 0%,#EA580C 55%,#9A3412 100%)}.final{color:#FFEDD5}
+    .meta,.foot{color:#FFEDD5}.logo{background:#fff}.logo svg{stroke:#F97316}.side{background:rgba(255,255,255,.12)}
+    .tag{background:#fff;color:#EA580C}.score.lose{color:rgba(255,255,255,.45)}.top{border-top-color:rgba(255,255,255,.2)}
+    .lbl,.stats div{color:#FED7AA}`,
+};
+
 function cardHtml({ game, home, away, homeTop, awayTop, rankOf, homeTotals, awayTotals }) {
   const d = new Date(game.startTime);
   const kst = new Date(d.getTime() + 9 * 3600e3);
@@ -112,6 +126,10 @@ body{width:1080px;height:1350px;font-family:P,sans-serif;background:#0F172A;colo
 .line b{color:#fff;font-weight:800;font-size:34px}
 .foot{margin-top:40px;display:flex;justify-content:space-between;align-items:center;font-size:26px;color:#94A3B8}
 .foot b{color:#fff}
+${THEMES[process.env.CARD_THEME] ?? ''}
+${process.env.CARD_THEME === 'split' ? `body{background:linear-gradient(135deg,${home.color} 0%,${home.color} 50%,${away.color} 50%,${away.color} 100%)}
+  .side{background:rgba(15,23,42,.78)}.band{background:transparent;color:#fff}.final{color:#fff}
+  .meta,.foot{color:rgba(255,255,255,.85)}` : ''}
 </style></head><body>
   <div class="head">
     <div class="brand"><div class="logo"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2v20M2 12h20M5 5c3 3 3 11 0 14M19 5c-3 3-3 11 0 14"/></svg></div>Baskit</div>
@@ -156,7 +174,7 @@ async function main() {
   const page = await browser.newPage({ viewport: { width: 1080, height: 1350 } });
   await page.goto(`file://${htmlFile}`);
   await page.evaluate(() => document.fonts.ready);
-  const png = path.join(outDir, `${game.id}.png`);
+  const png = path.join(outDir, `${game.id}${process.env.CARD_THEME ? `-${process.env.CARD_THEME}` : ''}.png`);
   await page.screenshot({ path: png });
   await browser.close();
   console.log(png);
