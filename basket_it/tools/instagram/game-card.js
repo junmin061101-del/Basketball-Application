@@ -28,13 +28,6 @@ const getJson = (p) => fetch(`${DATA}/${p}.json`).then((r) => {
   return r.json();
 });
 
-/** 팀색이 밝으면 검은 글자. */
-function onColor(hex) {
-  const n = parseInt(hex.replace('#', ''), 16);
-  const [r, g, b] = [n >> 16, (n >> 8) & 255, n & 255];
-  return 0.299 * r + 0.587 * g + 0.114 * b > 170 ? '#111827' : '#FFFFFF';
-}
-
 /** 팀에서 가장 활약한 선수: 득점 → 리바운드 → 어시스트 순. */
 function topPlayer(lines, teamId) {
   return lines
@@ -56,20 +49,6 @@ function teamTotals(lines, teamId) {
   ];
 }
 
-/**
- * 배경 시안. CARD_THEME=light|split|brand (없으면 짙은 남색).
- * split은 두 팀 색을 대각선으로 나눈다(앱의 경기 날 카드와 같은 느낌).
- */
-const THEMES = {
-  light: `body{background:#F8FAFC;color:#0F172A}.side{background:#FFFFFF;box-shadow:0 8px 30px rgba(15,23,42,.08)}
-    .meta,.lbl,.stats div,.foot{color:#64748B}.line{color:#475569}.line b,.stats b,.foot b{color:#0F172A}
-    .score.lose{color:#CBD5E1}.top{border-top-color:#E2E8F0}`,
-  brand: `body{background:linear-gradient(160deg,#F97316 0%,#EA580C 55%,#9A3412 100%)}.final{color:#FFEDD5}
-    .meta,.foot{color:#FFEDD5}.logo{background:#fff}.logo svg{stroke:#F97316}.side{background:rgba(255,255,255,.12)}
-    .tag{background:#fff;color:#EA580C}.score.lose{color:rgba(255,255,255,.45)}.top{border-top-color:rgba(255,255,255,.2)}
-    .lbl,.stats div{color:#FED7AA}`,
-};
-
 function cardHtml({ game, home, away, homeTop, awayTop, rankOf, homeTotals, awayTotals }) {
   const d = new Date(game.startTime);
   const kst = new Date(d.getTime() + 9 * 3600e3);
@@ -79,7 +58,7 @@ function cardHtml({ game, home, away, homeTop, awayTop, rankOf, homeTotals, away
     `@font-face{font-family:P;font-weight:${w};src:url("file://${path.join(FONTS, file)}")}`;
 
   const side = (team, score, won, top, rank, totals) => `
-    <div class="side" style="--c:${team.color};--on:${onColor(team.color)}">
+    <div class="side">
       <div class="band">
         <div class="city">${esc(team.city)}</div>
         <div class="name">${esc(SHORT[team.shortName] ?? team.shortName)}</div>
@@ -99,37 +78,33 @@ function cardHtml({ game, home, away, homeTop, awayTop, rankOf, homeTotals, away
   return `<!doctype html><html><head><meta charset="utf-8"><style>
 ${font(400, 'Pretendard-Regular.otf')}${font(600, 'Pretendard-SemiBold.otf')}${font(700, 'Pretendard-Bold.otf')}${font(800, 'Pretendard-ExtraBold.otf')}
 *{box-sizing:border-box;margin:0}
-body{width:1080px;height:1350px;font-family:P,sans-serif;background:#0F172A;color:#fff;display:flex;flex-direction:column;padding:64px 60px 56px}
+/* 배경: 홈팀 색과 원정팀 색을 대각선으로 나눈다(앱의 경기 날 카드와 같은 느낌). */
+body{width:1080px;height:1350px;font-family:P,sans-serif;color:#fff;display:flex;flex-direction:column;padding:64px 60px 60px;
+  background:linear-gradient(135deg,${home.color} 0%,${home.color} 50%,${away.color} 50%,${away.color} 100%)}
 .head{display:flex;align-items:center;justify-content:space-between}
 .brand{display:flex;align-items:center;gap:16px;font-size:40px;font-weight:800}
 .logo{width:64px;height:64px;border-radius:16px;background:#F97316;display:flex;align-items:center;justify-content:center}
-.meta{text-align:right;font-size:28px;font-weight:600;color:#94A3B8;line-height:1.35}
-.final{margin-top:56px;font-size:30px;font-weight:800;letter-spacing:6px;color:#F97316}
+.meta{text-align:right;font-size:28px;font-weight:600;color:rgba(255,255,255,.85);line-height:1.35}
+.final{margin-top:56px;font-size:30px;font-weight:800;letter-spacing:6px}
 .title{margin-top:8px;font-size:64px;font-weight:800;letter-spacing:-1px}
 .board{margin-top:44px;display:flex;gap:28px;flex:1}
-.side{flex:1;background:#1E293B;border-radius:32px;overflow:hidden;display:flex;flex-direction:column;align-items:center}
-.band{width:100%;background:var(--c);color:var(--on);padding:30px 24px 26px;text-align:center}
+.side{flex:1;background:rgba(15,23,42,.8);border-radius:32px;overflow:hidden;display:flex;flex-direction:column;align-items:center}
+.band{width:100%;padding:30px 24px 26px;text-align:center}
 .city{font-size:28px;font-weight:600;opacity:.85}
 .name{font-size:56px;font-weight:800;line-height:1.15;letter-spacing:-1px}
 .rec{margin-top:6px;font-size:24px;font-weight:600;opacity:.85}
 .score{margin-top:34px;font-size:168px;font-weight:800;line-height:1;letter-spacing:-4px;font-variant-numeric:tabular-nums}
-.score.lose{color:#64748B}
+.score.lose{color:rgba(255,255,255,.7)}
 .tag{margin-top:14px;padding:6px 20px;border-radius:999px;background:#F97316;font-size:24px;font-weight:800;letter-spacing:3px}
 .tag.ghost{background:transparent}
 .stats{margin-top:30px;width:100%;padding:0 40px;display:grid;grid-template-columns:1fr 1fr;gap:14px 24px}
-.stats div{display:flex;justify-content:space-between;align-items:baseline;font-size:26px;color:#94A3B8}
+.stats div{display:flex;justify-content:space-between;align-items:baseline;font-size:26px;color:#E2E8F0}
 .stats b{font-size:32px;font-weight:800;color:#fff;font-variant-numeric:tabular-nums}
-.top{margin-top:auto;width:100%;padding:28px 24px 34px;border-top:2px solid #334155;text-align:center}
-.lbl{font-size:24px;font-weight:600;color:#94A3B8}
+.top{margin-top:auto;width:100%;padding:28px 24px 34px;border-top:2px solid rgba(255,255,255,.18);text-align:center}
+.lbl{font-size:24px;font-weight:600;color:#E2E8F0}
 .pname{margin-top:6px;font-size:44px;font-weight:800}
-.line{margin-top:6px;font-size:28px;color:#CBD5E1}
+.line{margin-top:6px;font-size:28px;color:#F1F5F9}
 .line b{color:#fff;font-weight:800;font-size:34px}
-.foot{margin-top:40px;display:flex;justify-content:space-between;align-items:center;font-size:26px;color:#94A3B8}
-.foot b{color:#fff}
-${THEMES[process.env.CARD_THEME] ?? ''}
-${process.env.CARD_THEME === 'split' ? `body{background:linear-gradient(135deg,${home.color} 0%,${home.color} 50%,${away.color} 50%,${away.color} 100%)}
-  .side{background:rgba(15,23,42,.78)}.band{background:transparent;color:#fff}.final{color:#fff}
-  .meta,.foot{color:rgba(255,255,255,.85)}` : ''}
 </style></head><body>
   <div class="head">
     <div class="brand"><div class="logo"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2v20M2 12h20M5 5c3 3 3 11 0 14M19 5c-3 3-3 11 0 14"/></svg></div>Baskit</div>
@@ -141,7 +116,6 @@ ${process.env.CARD_THEME === 'split' ? `body{background:linear-gradient(135deg,$
     ${side(home, game.homeScore, homeWon, homeTop, rankOf[home.id], homeTotals)}
     ${side(away, game.awayScore, !homeWon, awayTop, rankOf[away.id], awayTotals)}
   </div>
-  <div class="foot"><span>홈 ${esc(SHORT[home.shortName] ?? home.shortName)} · 원정 ${esc(SHORT[away.shortName] ?? away.shortName)}</span><span>실시간 기록은 <b>Baskit</b> · basket-it-kbl.web.app</span></div>
 </body></html>`;
 }
 
@@ -174,7 +148,7 @@ async function main() {
   const page = await browser.newPage({ viewport: { width: 1080, height: 1350 } });
   await page.goto(`file://${htmlFile}`);
   await page.evaluate(() => document.fonts.ready);
-  const png = path.join(outDir, `${game.id}${process.env.CARD_THEME ? `-${process.env.CARD_THEME}` : ''}.png`);
+  const png = path.join(outDir, `${game.id}.png`);
   await page.screenshot({ path: png });
   await browser.close();
   console.log(png);
