@@ -1,0 +1,14 @@
+{
+  "name": "baskit-instagram-cards",
+  "private": true,
+  "description": "인스타그램 카드 생성(경기·순위·기록·뉴스·헤드라인)",
+  "scripts": {
+    "cards": "node cards.js",
+    "headlines": "node headlines.js"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^1.10.0",
+    "playwright": "1.55.0",
+    "zod": "^4.6.7"
+  }
+}

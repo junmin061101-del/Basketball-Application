@@ -385,4 +385,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { KINDS, render };
+module.exports = { KINDS, render, frame, getJson, esc, short, kstLabel, kstDay, BRAND, NAVY };
