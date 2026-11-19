@@ -9,6 +9,7 @@
  *   node tools/instagram/cards.js standings           KBL 순위
  *   node tools/instagram/cards.js leaders             득점·리바운드·어시스트 TOP 5(3장)
  *   node tools/instagram/cards.js news                KBL 뉴스 브리핑
+ *   node tools/instagram/cards.js nba [YYYY-MM-DD]    NBA 경기 결과(미국 날짜, 빼면 가장 최근 경기일)
  *
  * 우리가 모은 데이터(GitHub Pages)로만 만든다. 팀 로고·선수 사진·기사 사진은 사용
  * 허가 전이라 쓰지 않고 팀색으로 구분한다. 배경은 두 색을 대각선으로 나눈다(앱의
@@ -20,7 +21,8 @@ const fs = require('fs');
 const path = require('path');
 const { chromium } = require('playwright');
 
-const PAGES = 'https://junmin061101-del.github.io/Basketball-Application';
+// 시험할 때 CARDS_DATA_BASE로 다른 곳(로컬 서버)의 데이터를 쓸 수 있다.
+const PAGES = process.env.CARDS_DATA_BASE ?? 'https://junmin061101-del.github.io/Basketball-Application';
 const FONTS = path.join(__dirname, '..', '..', 'assets', 'fonts');
 const OUT = path.join(__dirname, '..', '..', 'build', 'cards');
 const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
@@ -362,9 +364,64 @@ async function newsCards() {
   }];
 }
 
+// ---------------------------------------------------------------- NBA 결과
+
+/** 하룻밤 NBA 결과 한 장. 끝난 경기만, 접전·대승을 따로 짚는다. */
+async function nbaCards(wantDate) {
+  const [{ games }, { teams }] = await Promise.all([getJson('nba/games'), getJson('nba/teams')]);
+  const team = Object.fromEntries(teams.map((t) => [t.id, t]));
+  const days = [...new Set(games.filter((g) => g.status === 'finished').map((g) => g.date))].sort();
+  const date = wantDate ?? days.at(-1);
+  const all = games.filter((g) => g.date === date);
+  const done = all.filter((g) => g.status === 'finished');
+  if (!done.length) return [];
+
+  const margin = (g) => Math.abs(g.homeScore - g.awayScore);
+  const closest = [...done].sort((a, b) => margin(a) - margin(b))[0];
+  const biggest = [...done].sort((a, b) => margin(b) - margin(a))[0];
+  const side = (id, score, won) => `<div class="s ${won ? 'w' : ''}"><span class="chip" style="background:${team[id].color}"></span>
+    <span class="tn">${esc(team[id].name)}</span><span class="sc num">${score}</span></div>`;
+  const rows = done.map((g) => {
+    const homeWon = g.homeScore > g.awayScore;
+    // 미국식: 원정 @ 홈. 원정팀을 왼쪽에.
+    return `<div class="row">${side(g.awayTeamId, g.awayScore, !homeWon)}<span class="at">@</span>${side(g.homeTeamId, g.homeScore, homeWon)}</div>`;
+  }).join('');
+  const note = (label, g) => {
+    const w = g.homeScore > g.awayScore ? g.homeTeamId : g.awayTeamId;
+    return `<div class="note"><b>${label}</b> ${esc(team[w].name)} ${Math.max(g.homeScore, g.awayScore)}-${Math.min(g.homeScore, g.awayScore)} 승 (${margin(g)}점 차)</div>`;
+  };
+  const [y, m, d] = date.split('-').map(Number);
+  const pending = all.length - done.length;
+
+  return [{
+    name: `nba-${date}`,
+    html: frame({
+      colors: ['#1D428A', NAVY],
+      meta: `NBA 정규시즌<br>${m}.${d} 경기 (미국 현지)`,
+      kicker: 'NBA RESULTS',
+      title: `NBA 결과 ${done.length}경기`,
+      body: `<div class="panel">${rows}
+        <div class="notes">${note('접전', closest)}${biggest.id !== closest.id ? note('대승', biggest) : ''}
+        ${pending ? `<div class="note dim">${pending}경기는 아직 결과가 확정되지 않았어요</div>` : ''}</div></div>`,
+      css: `
+.panel{padding:16px 36px;justify-content:space-between}
+.row{display:flex;align-items:center;gap:10px;padding:${done.length > 9 ? 9 : 14}px 0;border-bottom:2px solid rgba(255,255,255,.1)}
+.s{flex:1;display:flex;align-items:center;gap:12px;font-size:${done.length > 9 ? 28 : 32}px;font-weight:600;color:rgba(255,255,255,.65)}
+.s.w{color:#fff;font-weight:800}
+.s .chip{width:10px;height:30px;flex:none}
+.tn{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sc{font-size:${done.length > 9 ? 34 : 40}px;font-weight:800;min-width:72px;text-align:right}
+.at{width:40px;text-align:center;font-size:22px;color:rgba(255,255,255,.4)}
+.notes{padding-top:16px}
+.note{font-size:26px;margin-top:6px;color:#F1F5F9}
+.note b{display:inline-block;padding:2px 12px;margin-right:10px;border-radius:8px;background:${BRAND};color:#fff;font-size:22px}`,
+    }),
+  }];
+}
+
 // ----------------------------------------------------------------
 
-const KINDS = { game: gameCards, today: todayCards, standings: standingsCards, leaders: leaderCards, news: newsCards };
+const KINDS = { game: gameCards, today: todayCards, standings: standingsCards, leaders: leaderCards, news: newsCards, nba: nbaCards };
 
 async function main() {
   const [kind, arg] = process.argv.slice(2);
