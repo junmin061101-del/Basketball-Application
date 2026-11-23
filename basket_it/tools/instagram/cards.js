@@ -61,6 +61,8 @@ function frame({ colors: [a, b], meta, kicker, title, body, css = '' }) {
   return `<!doctype html><html><head><meta charset="utf-8"><style>
 ${font(400, 'Pretendard-Regular.otf')}${font(600, 'Pretendard-SemiBold.otf')}${font(700, 'Pretendard-Bold.otf')}${font(800, 'Pretendard-ExtraBold.otf')}
 *{box-sizing:border-box;margin:0}
+/* 한글은 낱말 중간에서 줄을 바꾸지 않는다 */
+body{word-break:keep-all;overflow-wrap:break-word}
 body{width:1080px;height:1350px;font-family:P,sans-serif;color:#fff;display:flex;flex-direction:column;padding:64px 60px 60px;
   background:linear-gradient(135deg,${a} 0%,${a} 50%,${b} 50%,${b} 100%)}
 .head{display:flex;justify-content:flex-end}

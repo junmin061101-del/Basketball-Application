@@ -12,6 +12,11 @@ on:
     workflows: ['데이터 수집']
     types: [completed]
   workflow_dispatch:
+    inputs:
+      dates:
+        description: '지난 날을 올릴 때만: kbl:2026-11-19,nba:2026-11-20 (적은 순서대로). 비우면 평소대로'
+        required: false
+        default: ''
 
 permissions:
   contents: write # instagram 브랜치에 카드와 게시 기록을 올린다
@@ -53,5 +58,6 @@ jobs:
         working-directory: basket_it
         env:
           IG_ACCESS_TOKEN: ${{ secrets.IG_ACCESS_TOKEN }}
+          POST_DATES: ${{ inputs.dates }}
           CARDS_CHROME_CHANNEL: chrome # 러너에 깔린 Chrome
         run: node tools/instagram/post.js ../ig

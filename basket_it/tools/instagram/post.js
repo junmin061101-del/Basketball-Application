@@ -67,6 +67,12 @@ function dueDate(league, { games, dayOf, today }, posted) {
   return nightComplete(games.filter((g) => dayOf(g) === day)) ? day : null;
 }
 
+/** 손으로 고른 날: 아직 안 올렸고 그날 경기가 다 끝났으면 그 날짜. */
+function wantedDate(league, date, { games, dayOf }, posted) {
+  if (posted[`${league}-${date}`]) return null;
+  return nightComplete(games.filter((g) => dayOf(g) === date)) ? date : null;
+}
+
 function caption(cfg, data, date, part, parts) {
   const lines = data.games
     .filter((g) => data.dayOf(g) === date && g.status === 'finished')
@@ -141,12 +147,16 @@ async function main() {
   };
 
   let failed = false;
-  for (const [league, cfg] of Object.entries(LEAGUES)) {
+  // 지난 날을 손으로 올릴 때: POST_DATES="kbl:2026-11-19,nba:2026-11-20"(적은 순서대로 올린다).
+  const manual = (process.env.POST_DATES ?? '').split(',').map((x) => x.trim()).filter(Boolean).map((x) => x.split(':'));
+  for (const [league, want] of manual.length ? manual : Object.keys(LEAGUES).map((l) => [l, null])) {
+    const cfg = LEAGUES[league];
     try {
+      if (!cfg) throw new Error(`모르는 리그 "${league}"`);
       const data = await cfg.load();
-      const date = dueDate(league, data, posted);
+      const date = want ? wantedDate(league, want, data, posted) : dueDate(league, data, posted);
       if (!date) {
-        console.log(`${league}: 올릴 게 없어요`);
+        console.log(`${league}${want ? ` ${want}` : ''}: 올릴 게 없어요`);
         continue;
       }
       const prefix = `${league}-${date}`;

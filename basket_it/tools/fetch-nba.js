@@ -6,7 +6,7 @@
  *
  * BALLDONTLIE API(무료 요금제: 경기·팀). 약관이 데이터 게시·상업 이용을 허용한다.
  * 리그 공식 데이터라고 말하거나 리그·팀 로고를 쓰면 안 된다. 무료는 1분에 5번이라
- * 실행마다 한 번(최근 3일 ~ 앞으로 2일)만 부른다. 무료 데이터는 늦게 갱신될 수 있어
+ * 실행마다 한 번(최근 5일 ~ 앞으로 2일)만 부른다. 무료 데이터는 늦게 갱신될 수 있어
  * 카드는 "Final"로 확정된 경기만 쓴다.
  *
  * 필요한 환경변수: NBA_API_KEY
@@ -71,7 +71,7 @@ async function main() {
     process.exit(1);
   }
   const now = Date.now();
-  const url = `${API}/games?start_date=${day(now - 3 * 864e5)}&end_date=${day(now + 2 * 864e5)}&per_page=100`;
+  const url = `${API}/games?start_date=${day(now - 5 * 864e5)}&end_date=${day(now + 2 * 864e5)}&per_page=100`;
   const res = await fetch(url, { headers: { Authorization: key }, signal: AbortSignal.timeout(20000) });
   if (!res.ok) throw new Error(`BALLDONTLIE HTTP ${res.status}`); // 키 값은 출력하지 않는다
   const { data = [] } = await res.json();
