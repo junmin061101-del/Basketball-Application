@@ -56,8 +56,6 @@ function rankTable(standings) {
 
 // ---------------------------------------------------------------- 공통 틀
 
-const LOGO = '<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2v20M2 12h20M5 5c3 3 3 11 0 14M19 5c-3 3-3 11 0 14"/></svg>';
-
 function frame({ colors: [a, b], meta, kicker, title, body, css = '' }) {
   const font = (w, file) => `@font-face{font-family:P;font-weight:${w};src:url("file://${path.join(FONTS, file)}")}`;
   return `<!doctype html><html><head><meta charset="utf-8"><style>
@@ -65,9 +63,7 @@ ${font(400, 'Pretendard-Regular.otf')}${font(600, 'Pretendard-SemiBold.otf')}${f
 *{box-sizing:border-box;margin:0}
 body{width:1080px;height:1350px;font-family:P,sans-serif;color:#fff;display:flex;flex-direction:column;padding:64px 60px 60px;
   background:linear-gradient(135deg,${a} 0%,${a} 50%,${b} 50%,${b} 100%)}
-.head{display:flex;align-items:center;justify-content:space-between}
-.brand{display:flex;align-items:center;gap:16px;font-size:40px;font-weight:800}
-.logo{width:64px;height:64px;border-radius:16px;background:${a === BRAND ? NAVY : BRAND};display:flex;align-items:center;justify-content:center}
+.head{display:flex;justify-content:flex-end}
 .meta{text-align:right;font-size:28px;font-weight:600;color:rgba(255,255,255,.85);line-height:1.35}
 .kicker{margin-top:56px;font-size:30px;font-weight:800;letter-spacing:6px}
 .title{margin-top:8px;font-size:64px;font-weight:800;letter-spacing:-1px}
@@ -77,7 +73,7 @@ body{width:1080px;height:1350px;font-family:P,sans-serif;color:#fff;display:flex
 .chip{display:inline-block;width:14px;height:44px;border-radius:7px;vertical-align:middle}
 ${css}
 </style></head><body>
-  <div class="head"><div class="brand"><div class="logo">${LOGO}</div>Baskit</div><div class="meta">${meta}</div></div>
+  <div class="head"><div class="meta">${meta}</div></div>
   <div class="kicker">${kicker}</div>
   <div class="title">${title}</div>
   ${body}
@@ -195,11 +191,8 @@ function lineScore(home, away, q, homeScore, awayScore) {
     ${row(home, q.home, homeScore)}${row(away, q.away, awayScore)}</table></div>`;
 }
 
-/** 하룻밤 결과 표지: 경기 목록 + 접전·대승. teamOf(id) → { name, color }. */
+/** 하룻밤 결과 표지: 경기 목록. teamOf(id) → { name, color }. */
 function nightCover({ name, colors, meta, kicker, title, games, teamOf, pending }) {
-  const margin = (g) => Math.abs(g.homeScore - g.awayScore);
-  const closest = [...games].sort((a, b) => margin(a) - margin(b))[0];
-  const biggest = [...games].sort((a, b) => margin(b) - margin(a))[0];
   const dense = games.length > 7;
   const side = (id, score, won) => `<div class="s ${won ? 'w' : ''}"><span class="chip" style="background:${teamOf(id).color}"></span>
     <span class="tn">${esc(teamOf(id).name)}</span><span class="sc num">${score}</span></div>`;
@@ -207,10 +200,6 @@ function nightCover({ name, colors, meta, kicker, title, games, teamOf, pending 
     const homeWon = g.homeScore > g.awayScore;
     return `<div class="row">${side(g.homeTeamId, g.homeScore, homeWon)}<span class="at">vs</span>${side(g.awayTeamId, g.awayScore, !homeWon)}</div>`;
   }).join('');
-  const note = (label, g) => {
-    const w = g.homeScore > g.awayScore ? g.homeTeamId : g.awayTeamId;
-    return `<div class="note"><b>${label}</b> ${esc(teamOf(w).name)} ${Math.max(g.homeScore, g.awayScore)}-${Math.min(g.homeScore, g.awayScore)} 승 (${margin(g)}점 차)</div>`;
-  };
   return {
     name,
     html: frame({
@@ -219,8 +208,7 @@ function nightCover({ name, colors, meta, kicker, title, games, teamOf, pending 
       kicker,
       title,
       body: `<div class="panel">${rows}
-        <div class="notes">${games.length > 1 ? note('접전', closest) : ''}${games.length > 1 && biggest !== closest && margin(biggest) >= 15 ? note('대승', biggest) : ''}
-        ${pending ? `<div class="note dim">${pending}경기는 아직 결과가 확정되지 않았어요</div>` : ''}
+        <div class="notes">${pending ? `<div class="note dim">${pending}경기는 아직 결과가 확정되지 않았어요</div>` : ''}
         <div class="swipe">넘겨서 경기별로 보기 →</div></div></div>`,
       css: `
 .panel{padding:16px 36px;justify-content:space-between;flex:${dense ? 1 : '0 0 auto'}}
@@ -233,7 +221,6 @@ function nightCover({ name, colors, meta, kicker, title, games, teamOf, pending 
 .at{width:44px;text-align:center;font-size:20px;color:rgba(255,255,255,.4)}
 .notes{padding-top:16px}
 .note{font-size:26px;margin-top:6px;color:#F1F5F9}
-.note b{display:inline-block;padding:2px 12px;margin-right:10px;border-radius:8px;background:${BRAND};color:#fff;font-size:22px}
 .swipe{margin-top:14px;text-align:right;font-size:24px;color:#CBD5E1;font-weight:700}`,
     }),
   };
