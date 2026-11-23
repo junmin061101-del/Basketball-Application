@@ -6,6 +6,7 @@
  * - pushLiveScores: 팔로우한 팀의 실시간 경기를 잠금화면으로 보낸다(live-score.js).
  * - updatePredictionLeaderboard: 승부예측 랭킹을 서버에서 채점한다(leaderboard.js).
  * - cleanUpDeletedUser: 탈퇴한 사람의 데이터를 정리한다(account-cleanup.js).
+ * - kickInstagramPost: 그날 경기가 다 끝나면 인스타 게시를 깨운다(instagram-kick.js).
  *
  * 뉴스는 GitHub Actions 수집기(tools/fetch-news.js)가 정적 JSON으로 올린다.
  * 예전 뉴스 함수(getBasketballNews)는 앱이 쓰지 않게 되어 지웠다.
@@ -20,6 +21,11 @@ const { runLivePush } = require('./live-score');
 const { updateLeaderboard, applyTallyChange } = require('./leaderboard');
 const { onDocumentWritten } = require('firebase-functions/v2/firestore');
 const { cleanUpDeletedUser } = require('./account-cleanup');
+const { kickInstagram } = require('./instagram-kick');
+const { defineSecret } = require('firebase-functions/params');
+
+/** news.yml을 깨울 GitHub 토큰(fine-grained, 이 저장소 Actions: Read and write). */
+const githubDispatchToken = defineSecret('GITHUB_DISPATCH_TOKEN');
 
 admin.initializeApp();
 const db = admin.firestore();
@@ -46,6 +52,27 @@ exports.pushLiveScores = onSchedule(
     if (sent > 0 || rounds[0].live > 0) {
       logger.info('실시간 스코어 푸시', { rounds });
     }
+  },
+);
+
+/**
+ * 그날 KBL·NBA 경기가 다 끝났는데 인스타에 아직 안 올렸으면 수집기를 깨운다.
+ * 수집기가 끝나면 GitHub Actions(instagram-post.yml)가 결과 캐러셀을 올린다.
+ */
+exports.kickInstagramPost = onSchedule(
+  {
+    schedule: 'every 20 minutes',
+    region: 'asia-northeast3',
+    timeZone: 'Asia/Seoul',
+    timeoutSeconds: 60,
+    memory: '256MiB',
+    cpu: 'gcf_gen1',
+    retryCount: 0,
+    secrets: [githubDispatchToken],
+  },
+  async () => {
+    const keys = await kickInstagram({ token: githubDispatchToken.value() });
+    if (keys.length) logger.info('인스타 게시용 수집기 깨움', { keys });
   },
 );
 

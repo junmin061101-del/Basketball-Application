@@ -2,7 +2,7 @@
 'use strict';
 
 /**
- * 인스타그램 카드(1080×1350 PNG)를 만든다.
+ * 인스타그램 카드(1080×1350 JPEG)를 만든다.
  *
  *   node tools/instagram/cards.js game [경기 id]      경기 결과 한 장(빼면 가장 최근 경기)
  *   node tools/instagram/cards.js kbl-night [날짜]   KBL 하룻밤 결과 캐러셀(표지 + 경기별)
@@ -33,7 +33,8 @@ const NAVY = '#0F172A';
 const SHORT = { 한국가스공사: '페가수스', 현대모비스: '모비스' };
 
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
-const getJson = (p) => fetch(`${PAGES}/${p}.json`).then((r) => {
+// 자동 게시는 수집기가 막 올린 데이터를 봐야 해서 Pages 캐시(10분)를 비켜 간다.
+const getJson = (p) => fetch(`${PAGES}/${p}.json?t=${Date.now()}`).then((r) => {
   if (!r.ok) throw new Error(`${p}.json HTTP ${r.status}`);
   return r.json();
 });
@@ -85,7 +86,8 @@ ${css}
 
 async function render(cards) {
   fs.mkdirSync(OUT, { recursive: true });
-  const browser = await chromium.launch();
+  // Actions에선 러너에 깔린 Chrome을 써서(CARDS_CHROME_CHANNEL=chrome) 브라우저를 받지 않는다.
+  const browser = await chromium.launch({ channel: process.env.CARDS_CHROME_CHANNEL });
   const page = await browser.newPage({ viewport: { width: 1080, height: 1350 } });
   const files = [];
   for (const { name, html } of cards) {
@@ -93,9 +95,10 @@ async function render(cards) {
     fs.writeFileSync(htmlFile, html);
     await page.goto(`file://${htmlFile}`);
     await page.evaluate(() => document.fonts.ready);
-    const png = path.join(OUT, `${name}.png`);
-    await page.screenshot({ path: png });
-    files.push(png);
+    // 인스타 게시 API는 사진으로 JPEG만 받는다.
+    const jpg = path.join(OUT, `${name}.jpg`);
+    await page.screenshot({ path: jpg, type: 'jpeg', quality: 92 });
+    files.push(jpg);
   }
   await browser.close();
   return files;

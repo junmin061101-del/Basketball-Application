@@ -513,6 +513,7 @@ module.exports = {
   SUBSCRIBERS,
   buildMessage,
   contentState,
+  fetchGames,
   fetchKblBoxScore,
   kblClock,
   kstDate,

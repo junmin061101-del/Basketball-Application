@@ -1,0 +1,57 @@
+# 그날 마지막 경기가 끝나면 하룻밤 결과 캐러셀을 인스타에 올린다(KBL·NBA).
+#
+# 수집기(데이터 수집)가 끝날 때마다 돌아, 끝난 날이 있고 아직 안 올렸으면 올린다.
+# 경기 끝을 바로 잡으려고 Cloud Function(functions/instagram-kick.js)이 경기가 끝나면
+# 수집기를 깨운다. 사진 주소와 "올렸다" 기록은 instagram 브랜치에 둔다.
+#
+# 사전 준비: Secrets에 IG_ACCESS_TOKEN(Meta 시스템 사용자 토큰, 게시 권한)
+name: 인스타 게시
+
+on:
+  workflow_run:
+    workflows: ['데이터 수집']
+    types: [completed]
+  workflow_dispatch:
+
+permissions:
+  contents: write # instagram 브랜치에 카드와 게시 기록을 올린다
+
+# 두 실행이 겹치면 같은 날을 두 번 올릴 수 있어 하나씩 돈다.
+concurrency:
+  group: instagram-post
+  cancel-in-progress: false
+
+jobs:
+  post:
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: 카드 도구 설치
+        working-directory: basket_it/tools/instagram
+        run: npm ci
+
+      - name: 게시 기록 브랜치
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          if git ls-remote --exit-code --heads origin instagram >/dev/null; then
+            git fetch --depth 1 origin instagram
+            git worktree add ig FETCH_HEAD
+          else
+            git worktree add --detach ig
+            git -C ig checkout --orphan instagram
+            git -C ig rm -rf -q .
+          fi
+
+      - name: 게시
+        working-directory: basket_it
+        env:
+          IG_ACCESS_TOKEN: ${{ secrets.IG_ACCESS_TOKEN }}
+          CARDS_CHROME_CHANNEL: chrome # 러너에 깔린 Chrome
+        run: node tools/instagram/post.js ../ig
