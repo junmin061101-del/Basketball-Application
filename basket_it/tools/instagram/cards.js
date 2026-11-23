@@ -130,7 +130,7 @@ function teamTotals(lines, teamId) {
 function gameSlide({ name, meta, home, away, homeScore, awayScore, homeExtra = {}, awayExtra = {}, quarters = null }) {
   const homeWon = homeScore > awayScore;
   const side = (team, score, won, { stats, top }) => `
-    <div class="side">
+    <div class="side ${won ? 'won' : 'lost'}">
       <div class="band">
         ${team.city ? `<div class="city">${esc(team.city)}</div>` : ''}
         <div class="name">${esc(team.name)}</div>
@@ -161,6 +161,7 @@ function gameSlide({ name, meta, home, away, homeScore, awayScore, homeExtra = {
 .ls td{font-size:38px;font-weight:700;text-align:center;padding:12px 0;border-top:2px solid rgba(255,255,255,.12)}
 .ls td:first-child{font-size:32px;font-weight:800}
 .ls td.t{font-weight:800;color:${BRAND}}
+.ls tr.lost td,.ls tr.lost td.t{color:rgba(255,255,255,.4)}
 .side{flex:1;background:rgba(15,23,42,.8);border-radius:32px;overflow:hidden;display:flex;flex-direction:column;align-items:center}
 .band{width:100%;padding:30px 24px 26px;text-align:center}
 .city{font-size:28px;font-weight:600;opacity:.85}
@@ -168,6 +169,10 @@ function gameSlide({ name, meta, home, away, homeScore, awayScore, homeExtra = {
 .rec{margin-top:6px;font-size:24px;font-weight:600;opacity:.85}
 .score{margin-top:34px;font-size:168px;font-weight:800;line-height:1;letter-spacing:-4px}
 .score.lose{color:rgba(255,255,255,.7)}
+.side.won{box-shadow:inset 0 0 0 5px ${BRAND}}
+.side.lost{background:rgba(15,23,42,.9)}
+.side.lost,.side.lost .stats div,.side.lost .stats b,.side.lost .lbl,.side.lost .line,.side.lost .line b{color:rgba(255,255,255,.42)}
+.side.lost .score.lose{color:rgba(255,255,255,.35)}
 .tag{margin-top:14px;padding:6px 20px;border-radius:999px;background:${BRAND};font-size:24px;font-weight:800;letter-spacing:3px}
 .tag.ghost{background:transparent}
 .stats{margin-top:30px;width:100%;padding:0 40px;display:grid;grid-template-columns:1fr 1fr;gap:14px 24px}
@@ -185,43 +190,36 @@ function gameSlide({ name, meta, home, away, homeScore, awayScore, homeExtra = {
 /** 쿼터별 점수 표(라인 스코어). */
 function lineScore(home, away, q, homeScore, awayScore) {
   const heads = q.home.map((_, i) => (i < 4 ? `${i + 1}Q` : `OT${i > 4 ? i - 3 : ''}`));
-  const row = (team, pts, total) =>
-    `<tr><td>${esc(team.short ?? team.name)}</td>${pts.map((v) => `<td class="num">${v}</td>`).join('')}<td class="t num">${total}</td></tr>`;
+  const row = (team, pts, total, won) =>
+    `<tr class="${won ? '' : 'lost'}"><td>${esc(team.short ?? team.name)}</td>${pts.map((v) => `<td class="num">${v}</td>`).join('')}<td class="t num">${total}</td></tr>`;
   return `<div class="ls"><table><tr><th></th>${heads.map((h) => `<th>${h}</th>`).join('')}<th>합계</th></tr>
-    ${row(home, q.home, homeScore)}${row(away, q.away, awayScore)}</table></div>`;
+    ${row(home, q.home, homeScore, homeScore > awayScore)}${row(away, q.away, awayScore, awayScore > homeScore)}</table></div>`;
 }
 
-/** 하룻밤 결과 표지: 경기 목록. teamOf(id) → { name, color }. */
-function nightCover({ name, colors, meta, kicker, title, games, teamOf, pending }) {
-  const dense = games.length > 7;
-  const side = (id, score, won) => `<div class="s ${won ? 'w' : ''}"><span class="chip" style="background:${teamOf(id).color}"></span>
-    <span class="tn">${esc(teamOf(id).name)}</span><span class="sc num">${score}</span></div>`;
-  const rows = games.map((g) => {
-    const homeWon = g.homeScore > g.awayScore;
-    return `<div class="row">${side(g.homeTeamId, g.homeScore, homeWon)}<span class="at">vs</span>${side(g.awayTeamId, g.awayScore, !homeWon)}</div>`;
-  }).join('');
+/** 하룻밤 결과 표지: "TODAY'S NBA"와 날짜·경기 수만. 결과는 넘겨서 경기별로 본다. */
+function nightCover({ name, colors, league, dateLabel, count }) {
   return {
     name,
     html: frame({
       colors,
-      meta,
-      kicker,
-      title,
-      body: `<div class="panel">${rows}
-        <div class="notes">${pending ? `<div class="note dim">${pending}경기는 아직 결과가 확정되지 않았어요</div>` : ''}
-        <div class="swipe">넘겨서 경기별로 보기 →</div></div></div>`,
+      meta: '',
+      kicker: '',
+      title: '',
+      body: `<div class="cover">
+        <div class="date">${dateLabel}</div>
+        <div class="big">TODAY'S<br><span>${league}</span></div>
+        <div class="sub">경기 결과 <b class="num">${count}</b>경기</div>
+        <div class="swipe">넘겨서 보기 →</div>
+      </div>`,
       css: `
-.panel{padding:16px 36px;justify-content:space-between;flex:${dense ? 1 : '0 0 auto'}}
-.row{display:flex;align-items:center;gap:10px;padding:${dense ? 9 : 26}px 0;border-bottom:2px solid rgba(255,255,255,.1)}
-.s{flex:1;display:flex;align-items:center;gap:12px;font-size:${dense ? 28 : 36}px;font-weight:600;color:rgba(255,255,255,.65)}
-.s.w{color:#fff;font-weight:800}
-.s .chip{width:10px;height:30px;flex:none}
-.tn{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.sc{font-size:${dense ? 34 : 44}px;font-weight:800;min-width:72px;text-align:right}
-.at{width:44px;text-align:center;font-size:20px;color:rgba(255,255,255,.4)}
-.notes{padding-top:16px}
-.note{font-size:26px;margin-top:6px;color:#F1F5F9}
-.swipe{margin-top:14px;text-align:right;font-size:24px;color:#CBD5E1;font-weight:700}`,
+.kicker,.title{display:none}
+.cover{flex:1;display:flex;flex-direction:column;justify-content:center;padding:0 12px}
+.date{font-size:40px;font-weight:700;color:rgba(255,255,255,.85)}
+.big{margin-top:24px;font-size:168px;font-weight:800;line-height:.95;letter-spacing:-4px}
+.big span{color:${BRAND}}
+.sub{margin-top:48px;font-size:44px;font-weight:700}
+.sub b{font-size:56px;font-weight:800}
+.swipe{position:absolute;right:60px;bottom:60px;font-size:28px;color:#CBD5E1;font-weight:700}`,
     }),
   };
 }
@@ -231,8 +229,7 @@ function nightCover({ name, colors, meta, kicker, title, games, teamOf, pending 
  * 경기가 9개를 넘으면 두 번째 게시물은 경기 카드만.
  */
 function toPosts(prefix, cover, slides) {
-  // 한 경기뿐이면 표지는 그 경기 카드와 같은 말을 되풀이할 뿐이라 뺀다.
-  const posts = slides.length === 1 ? [slides] : [[cover, ...slides.slice(0, 9)]];
+  const posts = [[cover, ...slides.slice(0, 9)]];
   for (let i = 9; i < slides.length; i += 10) posts.push(slides.slice(i, i + 10));
   return posts.flatMap((cards, p) =>
     cards.map((c, i) => ({ ...c, name: `${prefix}-p${p + 1}-${String(i + 1).padStart(2, '0')}` })),
@@ -288,12 +285,9 @@ async function kblNightCards(day) {
   const cover = nightCover({
     name: 'cover',
     colors: [BRAND, NAVY],
-    meta: `KBL 정규시즌<br>${kstLabel(new Date(`${date}T12:00:00+09:00`))}`,
-    kicker: 'KBL RESULTS',
-    title: `오늘의 KBL 결과 ${done.length}경기`,
-    games: done,
-    teamOf: (id) => ({ name: short(kbl.teamById[id]), color: kbl.teamById[id].color }),
-    pending: all.length - done.length,
+    league: 'KBL',
+    dateLabel: `${kstLabel(new Date(`${date}T12:00:00+09:00`))} · KBL 정규시즌`,
+    count: done.length,
   });
   const slides = [];
   for (const g of done) slides.push(await kblSlide(kbl, g, g.id));
@@ -313,12 +307,9 @@ async function nbaNightCards(wantDate) {
   const cover = nightCover({
     name: 'cover',
     colors: ['#1D428A', NAVY],
-    meta,
-    kicker: 'NBA RESULTS',
-    title: `NBA 결과 ${done.length}경기`,
-    games: done,
-    teamOf: (id) => teamById[id],
-    pending: all.length - done.length,
+    league: 'NBA',
+    dateLabel: `${m}.${d} (미국 현지) · NBA 정규시즌`,
+    count: done.length,
   });
   const slides = done.map((g) => gameSlide({
     name: g.id,
