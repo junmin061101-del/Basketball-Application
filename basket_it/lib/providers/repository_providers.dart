@@ -25,6 +25,11 @@ final kblSourceProvider = Provider<LeagueDataSource>(
   (ref) => LeagueDataSource.kbl(),
 );
 
+/// NBA 정적 데이터(경기·팀). 승부예측 NBA 섹션만 읽는다.
+final nbaSourceProvider = Provider<LeagueDataSource>(
+  (ref) => LeagueDataSource.nba(),
+);
+
 /// 화면이 읽는 데이터 소스.
 final leagueSourceProvider = Provider<LeagueDataSource>((ref) {
   return ref.watch(kblSourceProvider);

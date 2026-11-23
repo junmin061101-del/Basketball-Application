@@ -25,20 +25,39 @@ class LeagueDataSource {
         'https://junmin061101-del.github.io/Basketball-Application/kbl',
   );
 
+  /// NBA 경기 결과·일정(BALLDONTLIE, 수집기가 모은다). 승부예측에만 쓴다.
+  static const nbaBaseUrl = String.fromEnvironment(
+    'NBA_BASE_URL',
+    defaultValue:
+        'https://junmin061101-del.github.io/Basketball-Application/nba',
+  );
+
   final String baseUrl;
 
   /// 오류 문구에 넣는 리그 이름("NBA", "KBL").
   final String leagueLabel;
+
+  /// 경기 id 앞에 붙인다. NBA 경기 id가 KBL 경기 id와 겹치지 않게(투표 문서 id에 쓰인다).
+  final String gameIdPrefix;
   final http.Client _client;
 
   LeagueDataSource({
     required this.baseUrl,
     required this.leagueLabel,
+    this.gameIdPrefix = '',
     http.Client? client,
   }) : _client = client ?? http.Client();
 
   LeagueDataSource.kbl({http.Client? client})
     : this(baseUrl: kblBaseUrl, leagueLabel: 'KBL', client: client);
+
+  LeagueDataSource.nba({http.Client? client})
+    : this(
+        baseUrl: nbaBaseUrl,
+        leagueLabel: 'NBA',
+        gameIdPrefix: 'nba-',
+        client: client,
+      );
 
   final Map<String, Future<Map<dynamic, dynamic>>> _cache = {};
   final Map<String, DateTime> _fetchedAt = {};
@@ -138,7 +157,7 @@ class LeagueDataSource {
       final local = start.toLocal();
       games.add(
         Game(
-          id: row['id'] as String? ?? '',
+          id: '$gameIdPrefix${row['id'] as String? ?? ''}',
           date: DateTime(local.year, local.month, local.day),
           homeTeamId: row['homeTeamId'] as String? ?? '',
           awayTeamId: row['awayTeamId'] as String? ?? '',
@@ -324,7 +343,10 @@ class LeagueDataSource {
       id: row['id'] as String? ?? '',
       city: row['city'] as String? ?? '',
       name: row['name'] as String? ?? '',
-      shortName: compactTeamName(row['shortName'] as String? ?? ''),
+      // NBA 팀 목록엔 약칭이 없어 팀 코드(LAL)를 쓴다.
+      shortName: compactTeamName(
+        row['shortName'] as String? ?? row['id'] as String? ?? '',
+      ),
       primaryColor: Color(int.parse('FF$hex', radix: 16)),
       // 팀 로고는 사용 허가를 받기 전까지 쓰지 않는다. 화면은 팀색 + 이름 글자로 그린다.
     );

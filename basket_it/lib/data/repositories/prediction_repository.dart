@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import '../models/league.dart';
 import '../models/prediction.dart';
 
 /// 승부예측(투표/토론) 데이터 접근을 추상화한 Repository.
@@ -25,7 +26,8 @@ abstract class PredictionRepository {
   Future<void> addComment(PredictionComment comment);
 
   /// 서버가 채점해 둔 랭킹(맞힌 수 → 이름 순).
-  Future<List<LeaderboardEntry>> getLeaderboard();
+  /// 리그별 랭킹(서버가 leaderboard/kbl·nba에 채점해 둔다).
+  Future<List<LeaderboardEntry>> getLeaderboard(League league);
 }
 
 /// 댓글 목록이 한 번에 받는 수. 보안 규칙이 이보다 큰 목록 읽기를 막는다.
@@ -106,8 +108,8 @@ class FirestorePredictionRepository implements PredictionRepository {
   }
 
   @override
-  Future<List<LeaderboardEntry>> getLeaderboard() async {
-    final doc = await _db.collection('leaderboard').doc('kbl').get();
+  Future<List<LeaderboardEntry>> getLeaderboard(League league) async {
+    final doc = await _db.collection('leaderboard').doc(league.wireName).get();
     final raw = doc.data()?['entries'];
     if (raw is! List) return const [];
     return raw

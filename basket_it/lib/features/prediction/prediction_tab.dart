@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../common/league_switch.dart';
 import '../common/page_header.dart';
 
 import '../../core/theme/app_colors.dart';
@@ -8,7 +9,6 @@ import '../../core/theme/app_theme.dart';
 import '../../data/models/game.dart';
 import '../../data/models/team.dart';
 import '../../providers/prediction_providers.dart';
-import '../../providers/repository_providers.dart';
 import 'leaderboard_view.dart';
 import 'prediction_game_card.dart';
 
@@ -23,7 +23,10 @@ class PredictionTab extends StatelessWidget {
       child: Scaffold(
         body: Column(
           children: [
-            const PageHeader(title: '승부 예측'),
+            PageHeader(
+              title: '승부 예측',
+              trailing: LeagueSwitch(provider: predictionLeagueProvider),
+            ),
             const Divider(height: 1, color: AppColors.border),
             const TabBar(
               indicatorColor: AppColors.primary,
@@ -60,7 +63,7 @@ class _PredictionList extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final gamesAsync = ref.watch(predictionGamesProvider);
-    final teamsAsync = ref.watch(teamsProvider);
+    final teamsAsync = ref.watch(predictionTeamsProvider);
 
     return teamsAsync.when(
       loading: () => const _Loading(),

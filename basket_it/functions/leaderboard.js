@@ -68,14 +68,29 @@ function tallyVotes(votes) {
  * 적어, 트리거가 놓친 증감이 있으면 바로잡는다.
  * 반환: 채점한 인원 수, 건너뛰면 null.
  */
+/**
+ * 승부예측 대상 경기(KBL·NBA). NBA 경기 id는 앱처럼 "nba-"를 붙인다(투표의 gameId와 같게).
+ * 하나라도 못 받으면 던진다(빈 목록으로 채점하면 랭킹이 0으로 덮인다).
+ */
+async function loadGames(fetchImpl) {
+  const get = async (league, prefix) => {
+    const res = await fetchImpl(`${PAGES_BASE}/${league}/games.json`, { signal: AbortSignal.timeout(20000) });
+    if (!res.ok) throw new Error(`${league}/games.json HTTP ${res.status}`);
+    const { games = [] } = await res.json();
+    return games.map((g) => ({ ...g, id: `${prefix}${g.id}` }));
+  };
+  return { kbl: await get('kbl', ''), nba: await get('nba', 'nba-') };
+}
+
+const leagueOf = (gameId) => (String(gameId).startsWith('nba-') ? 'nba' : 'kbl');
+
 async function updateLeaderboard({ db, fetchImpl = fetch }) {
-  const res = await fetchImpl(`${PAGES_BASE}/kbl/games.json`, { signal: AbortSignal.timeout(20000) });
-  if (!res.ok) throw new Error(`games.json HTTP ${res.status}`);
-  const { games = [] } = await res.json();
+  const byLeague = await loadGames(fetchImpl);
+  const games = [...byLeague.kbl, ...byLeague.nba];
 
   const finished = games.filter((g) => g.status === 'finished').map((g) => g.id).sort();
   const finishedKey = crypto.createHash('sha1').update(finished.join(',')).digest('hex');
-  const boardRef = db.collection(LEADERBOARD).doc('kbl');
+  const boardRef = db.collection(LEADERBOARD).doc('kbl'); // 마지막 채점 표시는 kbl 문서에 둔다
   const board = await boardRef.get();
   if (board.exists && board.get('finishedKey') === finishedKey) return null;
 
@@ -92,15 +107,20 @@ async function updateLeaderboard({ db, fetchImpl = fetch }) {
       createdAtMs: x.createdAt?.toMillis?.() ?? NaN,
     };
   });
-  const entries = scoreLeaderboard(votes, games).slice(0, MAX_ENTRIES);
+  // 리그별로 따로 채점한다(앱의 KBL / NBA 랭킹).
+  const boards = {};
+  for (const league of ['kbl', 'nba']) {
+    boards[league] = scoreLeaderboard(votes.filter((v) => leagueOf(v.gameId) === league), byLeague[league]).slice(0, MAX_ENTRIES);
+  }
   const tallies = Object.entries(tallyVotes(votes));
   for (let i = 0; i < tallies.length; i += 500) {
     const batch = db.batch();
     for (const [gameId, t] of tallies.slice(i, i + 500)) batch.set(db.collection(TALLIES).doc(gameId), t);
     await batch.commit();
   }
-  await boardRef.set({ updatedAt: new Date(), finishedKey, entries });
-  return entries.length;
+  await db.collection(LEADERBOARD).doc('nba').set({ updatedAt: new Date(), entries: boards.nba });
+  await boardRef.set({ updatedAt: new Date(), finishedKey, entries: boards.kbl });
+  return boards.kbl.length + boards.nba.length;
 }
 
 /**
@@ -145,9 +165,7 @@ function lockedVote(before, after, game, nowMs) {
  */
 async function guardLockedVote({ auth, ref, before, after, fetchImpl = fetch, nowMs = Date.now() }) {
   if (!before) return false;
-  const res = await fetchImpl(`${PAGES_BASE}/kbl/games.json`, { signal: AbortSignal.timeout(20000) });
-  if (!res.ok) throw new Error(`games.json HTTP ${res.status}`);
-  const { games = [] } = await res.json();
+  const games = (await loadGames(fetchImpl))[leagueOf(before.gameId)];
   const restore = lockedVote(before, after, games.find((g) => g.id === before.gameId), nowMs);
   if (!restore) return false;
   try {

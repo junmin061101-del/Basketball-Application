@@ -58,3 +58,33 @@ test('마감 뒤 투표 지우기·바꾸기는 되돌리고, 마감 전 변경�
   assert.strictEqual(lockedVote(early, { ...early }, game, after), null); // 바뀐 것 없음
   assert.strictEqual(lockedVote(early, undefined, undefined, after), null); // 모르는 경기
 });
+
+test('랭킹: KBL·NBA를 따로 채점해 leaderboard/kbl·nba에 적는다', async () => {
+  const { updateLeaderboard } = require('../leaderboard');
+  const store = {};
+  const ts = (iso) => ({ toMillis: () => Date.parse(iso) });
+  const votes = [
+    { uid: 'a', displayName: '에이', gameId: 'k1', pick: 'home', createdAt: ts('2026-12-03T08:00:00Z') },
+    { uid: 'a', displayName: '에이', gameId: 'nba-9', pick: 'away', createdAt: ts('2026-11-23T20:00:00Z') },
+    { uid: 'b', displayName: '비비', gameId: 'nba-9', pick: 'home', createdAt: ts('2026-11-23T20:00:00Z') },
+  ];
+  const db = {
+    collection: (name) => ({
+      get: async () => ({ docs: name === 'predictionVotes' ? votes.map((v) => ({ data: () => v })) : [] }),
+      doc: (id) => ({
+        get: async () => ({ exists: false, get: () => undefined }),
+        set: async (v) => { store[`${name}/${id}`] = v; },
+      }),
+    }),
+    batch: () => ({ set: (ref, v) => ref.set(v), commit: async () => {} }),
+  };
+  const data = {
+    kbl: [{ id: 'k1', status: 'finished', startTime: '2026-12-03T10:00:00Z', homeScore: 80, awayScore: 70 }],
+    nba: [{ id: '9', status: 'finished', startTime: '2026-11-24T00:00:00Z', homeScore: 100, awayScore: 110 }],
+  };
+  const fetchImpl = async (url) => ({ ok: true, json: async () => ({ games: data[url.includes('/nba/') ? 'nba' : 'kbl'] }) });
+  await updateLeaderboard({ db, fetchImpl });
+  const pick = (doc) => store[doc].entries.map((e) => `${e.uid}:${e.correct}/${e.settled}`);
+  assert.deepStrictEqual(pick('leaderboard/kbl'), ['a:1/1']);
+  assert.deepStrictEqual(pick('leaderboard/nba'), ['a:1/1', 'b:0/1']);
+});

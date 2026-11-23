@@ -1,19 +1,37 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/models/game.dart';
+import '../data/models/league.dart';
 import '../data/models/prediction.dart';
+import '../data/models/team.dart';
+import '../data/repositories/collected_repositories.dart';
 import '../data/repositories/prediction_repository.dart';
 import 'auth_providers.dart';
 import 'game_providers.dart';
+import 'repository_providers.dart';
 
 final predictionRepositoryProvider = Provider<PredictionRepository>((ref) {
   return FirestorePredictionRepository();
 });
 
+/// 승부예측에서 보고 있는 리그(위쪽 KBL / NBA 스위치). 예측하기·랭킹이 같이 바뀐다.
+final predictionLeagueProvider = StateProvider<League>((ref) => League.kbl);
+
+/// 고른 리그의 팀들(카드의 팀색·이름).
+final predictionTeamsProvider = FutureProvider<List<Team>>((ref) {
+  return switch (ref.watch(predictionLeagueProvider)) {
+    League.kbl => ref.watch(teamsProvider.future),
+    League.nba => ref.watch(nbaSourceProvider).teams(),
+  };
+});
+
 /// 승부예측 대상 경기: 오늘부터 7일치. 오늘 경기는 이미 시작/종료됐어도
-/// 결과 확인용으로 함께 보여준다.
+/// 결과 확인용으로 함께 보여준다. NBA 경기 id는 "nba-"로 시작한다.
 final predictionGamesProvider = FutureProvider<List<Game>>((ref) async {
-  final repo = ref.watch(gameRepositoryProvider);
+  final repo = switch (ref.watch(predictionLeagueProvider)) {
+    League.kbl => ref.watch(gameRepositoryProvider),
+    League.nba => CollectedGameRepository(ref.watch(nbaSourceProvider)),
+  };
   final now = DateTime.now();
   final today = DateTime(now.year, now.month, now.day);
   final games = <Game>[];
@@ -57,7 +75,9 @@ final minuteTickProvider = StreamProvider<DateTime>((ref) async* {
 /// 승부예측 랭킹. 서버(updatePredictionLeaderboard)가 30분마다 채점해 둔
 /// 문서 하나를 읽는다. 마감(경기 1시간 전) 뒤 투표는 서버가 채점하지 않는다.
 final leaderboardProvider = FutureProvider<List<LeaderboardEntry>>((ref) {
-  return ref.watch(predictionRepositoryProvider).getLeaderboard();
+  return ref
+      .watch(predictionRepositoryProvider)
+      .getLeaderboard(ref.watch(predictionLeagueProvider));
 });
 
 /// 현재 로그인 사용자(게스트 포함). 로그아웃 상태면 null.

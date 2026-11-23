@@ -27,7 +27,7 @@ class Team {
   });
 
   /// "서울 SK" 형태의 전체 명칭.
-  String get fullName => '$city $name';
+  String get fullName => city.isEmpty ? name : '$city $name';
 
   @override
   bool operator ==(Object other) => other is Team && other.id == id;
