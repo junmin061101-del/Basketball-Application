@@ -142,3 +142,40 @@ test('탈퇴 정리: 글은 비식별, 투표·사용자 문서는 삭제, 남�
   assert.strictEqual((await db.doc('users/bob').get()).exists, false);
   assert.strictEqual((await db.doc('liveSubscribers/tokB').get()).exists, false);
 });
+
+test('이름 사칭: 앱이 만드는 이름(닉네임·내 게스트 이름·가린 이메일)만 받는다', async () => {
+  const db = as('alice123');
+  const name = (displayName) => addDoc(collection(db, 'communityPosts'), post({ uid: 'alice123', displayName }));
+  for (const ok of ['앨리스', 'hoops_23', '게스트-alic', 'j***e', 'j*', 'j', '익명']) await assertSucceeds(name(ok));
+  for (const bad of ['관리자', '관리자공지', 'Admin', 'BASKIT운영', 'Baskit 운영팀', '게스트-zzzz', '사용자',
+    '탈퇴한 사용자', '공식 계정', 'a b', '<b>x</b>', '가'.repeat(11)]) await assertFails(name(bad));
+  // 투표 이름도 같은 규칙(랭킹에 그대로 나온다)
+  await assertFails(setDoc(doc(db, 'predictionVotes/g1_alice123'), {
+    gameId: 'g1', uid: 'alice123', displayName: '관리자', pick: 'home', gameDate: '2026-11-05', createdAt: serverTimestamp(),
+  }));
+});
+
+test('사용자 문서: 앱이 쓰는 필드만, 정해진 크기로만', async () => {
+  const db = as('bob');
+  const ref = doc(db, 'users/bob');
+  await assertSucceeds(setDoc(ref, { followedTeamIds: ['sk'], followedPlayerIds: [], updatedAt: serverTimestamp() }, { merge: true }));
+  await assertSucceeds(setDoc(ref, { nickname: '밥밥', updatedAt: serverTimestamp() }, { merge: true }));
+  await assertSucceeds(setDoc(ref, { termsVersion: 2, termsAgreedAt: serverTimestamp() }, { merge: true }));
+  await assertFails(setDoc(ref, { nickname: '관리자' }, { merge: true }));
+  await assertFails(setDoc(ref, { isAdmin: true }, { merge: true }));
+  await assertFails(setDoc(ref, { followedPlayerIds: Array(1001).fill('p') }, { merge: true }));
+  await assertFails(setDoc(doc(db, 'users/alice'), { nickname: '밥밥' }));
+  // 예전 버전이 남긴 필드가 있어도 팔로우 저장은 된다
+  await env.withSecurityRulesDisabled((c) => setDoc(doc(c.firestore(), 'users/carol'), { legacy: 1 }));
+  await assertSucceeds(setDoc(doc(as('carol'), 'users/carol'), { followedTeamIds: ['kt'] }, { merge: true }));
+});
+
+test('신고: 정해진 값만 받는다', async () => {
+  const db = as('bob');
+  const r = (over = {}) => ({ targetId: 'p1', targetType: 'post', targetUid: 'alice', reporterUid: 'bob',
+    reason: 'spam', detail: '', status: 'pending', createdAt: serverTimestamp(), ...over });
+  await assertSucceeds(setDoc(doc(db, 'reports/p1_bob'), r()));
+  await assertFails(setDoc(doc(db, 'reports/p1_bob'), r({ status: 'resolved' })));
+  await assertFails(setDoc(doc(db, 'reports/p1_bob'), r({ reason: 'x'.repeat(5000) })));
+  await assertFails(setDoc(doc(db, 'reports/p1_bob'), r({ extra: 1 })));
+});

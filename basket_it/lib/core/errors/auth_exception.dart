@@ -19,7 +19,7 @@ class AuthException implements Exception {
       case 'email-already-in-use':
         return const AuthException('이미 가입된 이메일이에요.');
       case 'weak-password':
-        return const AuthException('비밀번호가 너무 약해요. 6자 이상으로 설정해주세요.');
+        return const AuthException('비밀번호가 너무 약해요. 8자 이상으로 설정해주세요.');
       case 'network-request-failed':
         return const AuthException('네트워크 연결을 확인해주세요.');
       case 'requires-recent-login':

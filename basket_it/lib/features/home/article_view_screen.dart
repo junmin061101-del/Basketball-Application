@@ -62,6 +62,14 @@ class _ArticleViewScreenState extends State<ArticleViewScreen> {
       ..setBackgroundColor(AppColors.background)
       ..setNavigationDelegate(
         NavigationDelegate(
+          // 기사 페이지가 http(s) 밖(intent:, file:, javascript: 등)으로 이끌면 막는다.
+          onNavigationRequest: (request) {
+            final scheme = Uri.tryParse(request.url)?.scheme;
+            // about:blank는 기사 안 빈 틀(광고 등)이 쓴다.
+            return scheme == 'http' || scheme == 'https' || scheme == 'about'
+                ? NavigationDecision.navigate
+                : NavigationDecision.prevent;
+          },
           onProgress: (value) => setState(() => _progress = value),
           onPageStarted: (_) => setState(() {
             _progress = 0;

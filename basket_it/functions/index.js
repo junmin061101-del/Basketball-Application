@@ -18,7 +18,7 @@ const logger = require('firebase-functions/logger');
 const admin = require('firebase-admin');
 
 const { runLivePush } = require('./live-score');
-const { updateLeaderboard, applyTallyChange } = require('./leaderboard');
+const { updateLeaderboard, applyTallyChange, guardLockedVote } = require('./leaderboard');
 const { onDocumentWritten } = require('firebase-functions/v2/firestore');
 const { cleanUpDeletedUser } = require('./account-cleanup');
 const { kickInstagram } = require('./instagram-kick');
@@ -127,6 +127,7 @@ exports.countPostComments = onDocumentWritten(
 
 /**
  * 투표가 바뀌면 그 경기의 홈·원정 투표 수(predictionTallies/{gameId})를 고친다.
+ * 마감 뒤에 채점 대상 투표를 지우거나 바꾸면 되돌린다(leaderboard.js lockedVote).
  * 앱은 투표 목록 대신 이 문서 하나를 읽는다. 재시도는 켜지 않는다(두 번 세지
  * 않게). 놓친 증감은 랭킹을 다시 채점할 때 바로잡힌다.
  */
@@ -138,13 +139,15 @@ exports.tallyPredictionVote = onDocumentWritten(
     cpu: 'gcf_gen1',
     maxInstances: 10,
   },
-  (event) =>
-    applyTallyChange(
-      db,
-      admin.firestore.FieldValue,
-      event.data?.before?.data(),
-      event.data?.after?.data(),
-    ),
+  async (event) => {
+    const before = event.data?.before?.data();
+    const after = event.data?.after?.data();
+    await applyTallyChange(db, admin.firestore.FieldValue, before, after);
+    // 마감 뒤에 채점 대상 투표를 지우거나 바꾸면 되돌린다(적중률 부풀리기 방지).
+    if (await guardLockedVote({ auth: admin.auth(), ref: event.data.before.ref, before, after })) {
+      logger.warn('마감 뒤 투표 변경을 되돌림', { voteId: event.params.voteId, uid: before.uid });
+    }
+  },
 );
 
 /**

@@ -88,7 +88,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                   obscureText: _obscure,
                   style: const TextStyle(color: AppColors.textPrimary),
                   decoration: InputDecoration(
-                    hintText: '비밀번호 (6자 이상)',
+                    hintText: '비밀번호 (8자 이상)',
                     suffixIcon: IconButton(
                       icon: Icon(
                         _obscure
@@ -100,8 +100,9 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                     ),
                   ),
                   validator: (value) {
-                    if (value == null || value.length < 6) {
-                      return '비밀번호는 6자 이상이어야 해요';
+                    // 새 가입은 8자 이상. 로그인 화면은 예전 6자 계정 때문에 6자 그대로.
+                    if (value == null || value.length < 8) {
+                      return '비밀번호는 8자 이상이어야 해요';
                     }
                     return null;
                   },

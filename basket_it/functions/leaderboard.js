@@ -122,4 +122,42 @@ async function applyTallyChange(db, FieldValue, before, after) {
   }
 }
 
-module.exports = { scoreLeaderboard, updateLeaderboard, tallyVotes, tallyChange, applyTallyChange, DEADLINE_MS };
+/**
+ * 마감 뒤에 채점 대상 투표를 지우거나 바꾸면 되돌릴 원래 투표, 아니면 null.
+ *
+ * 보안 규칙은 경기 시각을 몰라 마감 뒤 삭제·수정을 막지 못한다. 그러면 경기가
+ * 끝난 뒤 틀린 투표만 지워(또는 다시 써서 채점에서 빼) 적중률을 올릴 수 있다.
+ * 그래서 서버가 그런 변경을 되돌린다. 되돌린 쓰기는 before가 이미 마감 뒤
+ * 투표라 다시 되돌리지 않는다(돌고 돌지 않는다).
+ */
+function lockedVote(before, after, game, nowMs) {
+  if (!before || !game) return null;
+  const deadline = Date.parse(game.startTime) - DEADLINE_MS;
+  const createdAtMs = before.createdAt?.toMillis?.() ?? NaN;
+  if (!(createdAtMs <= deadline) || !(nowMs > deadline)) return null;
+  if (after && after.pick === before.pick && after.createdAt?.toMillis?.() === createdAtMs) return null;
+  return before;
+}
+
+/**
+ * 투표 트리거에서 부른다. 되돌렸으면 true. 탈퇴 정리(계정이 이미 없음)가 지운
+ * 투표는 되돌리지 않는다.
+ */
+async function guardLockedVote({ auth, ref, before, after, fetchImpl = fetch, nowMs = Date.now() }) {
+  if (!before) return false;
+  const res = await fetchImpl(`${PAGES_BASE}/kbl/games.json`, { signal: AbortSignal.timeout(20000) });
+  if (!res.ok) throw new Error(`games.json HTTP ${res.status}`);
+  const { games = [] } = await res.json();
+  const restore = lockedVote(before, after, games.find((g) => g.id === before.gameId), nowMs);
+  if (!restore) return false;
+  try {
+    await auth.getUser(before.uid);
+  } catch (e) {
+    if (e.code === 'auth/user-not-found') return false;
+    throw e;
+  }
+  await ref.set(restore);
+  return true;
+}
+
+module.exports = { scoreLeaderboard, updateLeaderboard, tallyVotes, tallyChange, applyTallyChange, lockedVote, guardLockedVote, DEADLINE_MS };

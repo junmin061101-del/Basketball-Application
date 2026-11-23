@@ -43,3 +43,18 @@ test('투표 수: 경기별로 세고, 고르기·바꾸기·취소를 증감으
   assert.deepStrictEqual(tallyChange(v('home'), v('home')), []); // 이름만 바뀐 경우
   assert.deepStrictEqual(tallyChange(v('away'), undefined), [['g1', 'away', -1]]);
 });
+
+test('마감 뒤 투표 지우기·바꾸기는 되돌리고, 마감 전 변경과 늦은 투표는 그대로 둔다', () => {
+  const { lockedVote } = require('../leaderboard');
+  const game = { id: 'g1', startTime: '2026-12-03T10:00:00Z' }; // 마감 09:00Z
+  const at = (iso) => ({ toMillis: () => Date.parse(iso) });
+  const early = { uid: 'bob', gameId: 'g1', pick: 'home', createdAt: at('2026-12-03T08:00:00Z') };
+  const after = Date.parse('2026-12-03T12:30:00Z');
+  assert.strictEqual(lockedVote(early, undefined, game, after), early); // 끝나고 지움
+  assert.strictEqual(lockedVote(early, { ...early, pick: 'away', createdAt: at('2026-12-03T12:30:00Z') }, game, after), early);
+  assert.strictEqual(lockedVote(early, undefined, game, Date.parse('2026-12-03T08:30:00Z')), null); // 마감 전 취소
+  const late = { ...early, createdAt: at('2026-12-03T09:30:00Z') };
+  assert.strictEqual(lockedVote(late, undefined, game, after), null); // 채점 안 되는 투표
+  assert.strictEqual(lockedVote(early, { ...early }, game, after), null); // 바뀐 것 없음
+  assert.strictEqual(lockedVote(early, undefined, undefined, after), null); // 모르는 경기
+});
