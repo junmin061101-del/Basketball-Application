@@ -88,7 +88,8 @@ async function graph(method, endpoint, params = {}) {
   const res = await fetch(method === 'GET' ? `${GRAPH}/${endpoint}?${query}` : `${GRAPH}/${endpoint}`, {
     method,
     body: method === 'GET' ? undefined : query,
-    signal: AbortSignal.timeout(30000),
+    // 인스타가 사진을 받아 가느라 응답이 늦을 때가 있다(30초로는 끊긴 적이 있다).
+    signal: AbortSignal.timeout(90000),
   });
   const json = await res.json().catch(() => ({}));
   if (!res.ok || json.error) throw new Error(`${endpoint}: ${json.error?.message ?? `HTTP ${res.status}`}`);
