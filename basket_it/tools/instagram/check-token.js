@@ -37,6 +37,11 @@ async function get(label, url) {
   await get('인스타 로그인 방식', 'https://graph.instagram.com/me?fields=user_id,username,account_type');
   // 최근 게시물의 댓글 상태(댓글 켜짐 여부·댓글 수). 조회만 한다.
   await get('최근 게시물 댓글 상태', 'https://graph.facebook.com/17841475895149180/media?fields=timestamp,is_comment_enabled,comments_count,caption&limit=10');
+  // 게시 기록(instagram 브랜치 posted.json)에 있는 게시물마다 상태를 본다.
+  const posted = await fetch('https://raw.githubusercontent.com/junmin061101-del/Basketball-Application/instagram/posted.json').then((r) => r.json()).catch(() => ({}));
+  for (const [key, id] of Object.entries(posted)) {
+    if (/^\d+$/.test(String(id))) await get(`게시물 ${key}`, `https://graph.facebook.com/${id}?fields=timestamp,is_comment_enabled,comments_count,permalink,media_type`);
+  }
   if (me?.id) {
     await get('할당된 인스타 계정', `https://graph.facebook.com/${me.id}/assigned_business_asset_groups`);
     await get('시스템 사용자 비즈니스', `https://graph.facebook.com/${me.id}?fields=business{id,name}`);
