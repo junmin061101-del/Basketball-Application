@@ -65,13 +65,12 @@
       align-items: center; justify-content: center; gap: 40px;
       transition: opacity .2s;
     }
-    /* 아이콘 PNG는 공이 칸을 거의 채워서, 주황 칸 안에 작게 넣어 앱 로고와 맞춘다. */
+    /* 앱 아이콘(흰 바탕 로고)을 그대로, 흰 화면에서도 보이게 옅은 그림자. 앱 로딩 화면(AppLogo)과 같다. */
     #splash .logo {
-      width: 120px; height: 120px; border-radius: 28px; background: #F97316;
-      box-shadow: 0 0 40px 4px rgba(249, 115, 22, .35);
-      display: flex; align-items: center; justify-content: center;
+      width: 120px; height: 120px; border-radius: 28px; overflow: hidden; background: #FFFFFF;
+      box-shadow: 0 8px 28px rgba(28, 43, 78, .16);
     }
-    #splash img { width: 86px; height: 86px; }
+    #splash img { width: 120px; height: 120px; display: block; }
     #splash .spinner {
       width: 26px; height: 26px; border-radius: 50%;
       border: 3px solid rgba(249, 115, 22, .2); border-top-color: #F97316;

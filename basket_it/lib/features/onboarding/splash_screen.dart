@@ -57,21 +57,27 @@ class AppLogo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // 앱 아이콘과 같은 로고(assets/brand/app-logo.png). 흰 화면에서도 보이게
+    // 옅은 그림자를 준다.
     return Container(
       width: 120,
       height: 120,
       decoration: BoxDecoration(
-        color: AppColors.primary,
         borderRadius: BorderRadius.circular(28),
         boxShadow: [
           BoxShadow(
-            color: AppColors.primary.withValues(alpha: 0.35),
-            blurRadius: 40,
-            spreadRadius: 4,
+            color: const Color(0xFF1C2B4E).withValues(alpha: 0.16),
+            blurRadius: 28,
+            offset: const Offset(0, 8),
           ),
         ],
       ),
-      child: const Icon(Icons.sports_basketball, color: Colors.white, size: 64),
+      child: Image.asset(
+        'assets/brand/app-logo.png',
+        width: 120,
+        height: 120,
+        semanticLabel: 'Baskit',
+      ),
     );
   }
 }

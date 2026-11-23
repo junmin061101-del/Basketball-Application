@@ -10,7 +10,9 @@
  *   런처가 원·물방울로 잘라도 남게 가운데 안전 영역 안에 둔다. 배경은 흰색)
  * - iOS: AppIcon 전부(흰 정사각형, 투명 없음. 모서리는 iOS가 깎는다)
  * - 웹: 아이콘·마스커블·애플 터치·파비콘
- * - assets/brand: 인스타 프로필(1080, 원으로 잘려도 남게) · 확인용 앱 아이콘
+ * - assets/brand: 인스타 프로필(1080, 원으로 잘려도 남게) · 확인용 앱 아이콘 ·
+ *   앱 안 로고(app-logo.png, 로딩 화면 등)
+ * - 실행 화면(앱을 누른 직후): Android launch_logo, iOS LaunchImage
  *
  * 로고를 바꾸면 mark.svg만 고치고 이 스크립트를 다시 돌린다. 그림은 Playwright로 찍는다
  * (tools/instagram에 깔린 것을 쓴다).
@@ -45,12 +47,15 @@ async function main() {
   for (const [d, k] of Object.entries(ANDROID)) {
     jobs.push([ROUNDED, 48 * k, res(`mipmap-${d}`, 'ic_launcher.png'), true]);
     jobs.push([FOREGROUND, 108 * k, res(`drawable-${d}`, 'ic_launcher_foreground.png'), true]);
+    jobs.push([ROUNDED, 120 * k, res(`drawable-${d}`, 'launch_logo.png'), true]);
   }
   const ios = path.join(ROOT, 'ios/Runner/Assets.xcassets/AppIcon.appiconset');
   for (const f of fs.readdirSync(ios).filter((x) => x.endsWith('.png'))) {
     const [, size, mul] = f.match(/(\d+(?:\.\d+)?)x[\d.]+@(\d)x/);
     jobs.push([FULL, Math.round(size * mul), path.join(ios, f), false]);
   }
+  const launch = path.join(ROOT, 'ios/Runner/Assets.xcassets/LaunchImage.imageset');
+  for (const k of [1, 2, 3]) jobs.push([ROUNDED, 120 * k, path.join(launch, `LaunchImage${k > 1 ? `@${k}x` : ''}.png`), true]);
   const web = (...p) => path.join(ROOT, 'web', ...p);
   jobs.push(
     [FULL, 192, web('icons/Icon-192.png'), false],
@@ -63,6 +68,7 @@ async function main() {
     [FULL, 96, web('favicon-96.png'), false],
     [PROFILE, 1080, path.join(ROOT, 'assets/brand/profile-1080.png'), false],
     [ROUNDED, 1080, path.join(ROOT, 'assets/brand/app-icon-1080.png'), true],
+    [ROUNDED, 360, path.join(ROOT, 'assets/brand/app-logo.png'), true],
   );
 
   const browser = await chromium.launch();
