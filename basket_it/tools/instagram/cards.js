@@ -11,6 +11,8 @@
  *   node tools/instagram/cards.js standings           KBL 순위
  *   node tools/instagram/cards.js leaders             득점·리바운드·어시스트 TOP 5(3장)
  *   node tools/instagram/cards.js news                KBL 뉴스 브리핑
+ *   node tools/instagram/cards.js nba-schedule [날짜]  NBA 경기 일정(한국 날짜, 빼면 다음 경기일)
+ *   node tools/instagram/cards.js kbl-schedule [날짜]  KBL 경기 일정
  *
  * 우리가 모은 데이터(GitHub Pages)로만 만든다. 팀 로고·선수 사진·기사 사진은 사용
  * 허가 전이라 쓰지 않고 팀색으로 구분한다. 배경은 두 색을 대각선으로 나눈다(앱의
@@ -507,6 +509,69 @@ async function newsCards() {
   }];
 }
 
+// ---------------------------------------------------------------- 경기 일정(다음 날)
+
+/** 한국 시각 "오전 9:00" / "오후 7:00". */
+function kstTime(iso) {
+  const k = new Date(Date.parse(iso) + 9 * 3600e3);
+  const h = k.getUTCHours();
+  return `${h < 12 ? '오전' : '오후'} ${h % 12 || 12}:${String(k.getUTCMinutes()).padStart(2, '0')}`;
+}
+
+/**
+ * 하루 경기 일정 한 장(한국 날짜·한국 시각). 로고 대신 팀색 칸에 약칭.
+ * league: 'nba' | 'kbl'. day를 빼면 아직 시작 전 경기가 있는 가장 빠른 날.
+ */
+async function scheduleCards(league, day) {
+  const [{ games }, { teams }] = await Promise.all([getJson(`${league}/games`), getJson(`${league}/teams`)]);
+  const teamById = Object.fromEntries(teams.map((t) => [t.id, t]));
+  const upcoming = games.filter((g) => g.status === 'scheduled' && g.startTime);
+  const date = day ?? upcoming.map((g) => kstDay(new Date(g.startTime))).sort()[0];
+  const list = upcoming.filter((g) => kstDay(new Date(g.startTime)) === date).sort((a, b) => a.startTime.localeCompare(b.startTime));
+  if (!list.length) return [];
+  const label = (id) => (league === 'nba' ? { code: id, name: teamById[id].name } : { code: short(teamById[id]), name: teamById[id].city });
+  const chip = (id) => {
+    const { code, name } = label(id);
+    return `<div class="team"><div class="chip ${league}" style="background:${teamById[id].color}">${esc(code)}</div><div class="tname">${esc(name)}</div></div>`;
+  };
+  const tiles = list.map((g) => `<div class="tile">${chip(g.awayTeamId)}<div class="time num">${kstTime(g.startTime)}</div>${chip(g.homeTeamId)}</div>`).join('');
+  // 4경기 이하는 칸을 크게, 남는 자리 가운데에 둔다.
+  const big = list.length <= 4;
+  const LEAGUE = league.toUpperCase();
+  return [{
+    name: `${league}-schedule-${date}`,
+    html: `<!doctype html><html><head><meta charset="utf-8"><style>
+${['Regular', 'SemiBold', 'Bold', 'ExtraBold'].map((w, i) => `@font-face{font-family:P;font-weight:${[400, 600, 700, 800][i]};src:url("file://${path.join(FONTS, `Pretendard-${w}.otf`)}")}`).join('')}
+*{box-sizing:border-box;margin:0}
+body{width:1080px;height:1350px;font-family:P,sans-serif;color:#fff;word-break:keep-all;
+  background:radial-gradient(120% 70% at 50% 0%,${league === 'nba' ? '#2A4B9B' : '#C2410C'} 0%,${NAVY} 70%);
+  display:flex;flex-direction:column;align-items:center;padding:88px 56px 64px}
+.kick{font-size:34px;font-weight:800;letter-spacing:10px;opacity:.85}
+.title{margin-top:12px;font-size:116px;font-weight:800;letter-spacing:-3px;line-height:1}
+.title b{color:${BRAND}}
+.date{margin-top:28px;padding:14px 44px;background:${league === 'nba' ? '#C8102E' : BRAND};font-size:40px;font-weight:800;letter-spacing:1px;transform:skewX(-8deg)}
+.date span{display:inline-block;transform:skewX(8deg)}
+.board{margin:auto 0;width:100%;border:3px solid rgba(255,255,255,.75);border-radius:28px;padding:24px;
+  display:grid;grid-template-columns:${big ? 'minmax(0,1fr)' : 'minmax(0,1fr) minmax(0,1fr)'};gap:16px}
+.tile{min-width:0;display:flex;align-items:center;justify-content:space-between;gap:8px;background:rgba(255,255,255,.07);border-radius:20px;padding:${big ? '28px 24px' : '14px 16px'}}
+${big ? '.tile{padding:28px 56px}' : '.tile:last-child:nth-child(odd){grid-column:1/-1;justify-self:center;width:calc(50% - 8px)}'}
+.team{flex:none;display:flex;flex-direction:column;align-items:center;gap:6px;width:${big ? 132 : 96}px}
+.chip{width:${big ? 116 : 80}px;height:${big ? 116 : 80}px;border-radius:${big ? 26 : 18}px;display:flex;align-items:center;justify-content:center;
+  font-size:${big ? 40 : 30}px;font-weight:800;letter-spacing:1px;box-shadow:inset 0 0 0 3px rgba(255,255,255,.25)}
+.chip.kbl{font-size:${big ? 30 : 22}px;letter-spacing:-.5px}
+.tname{font-size:${big ? 24 : 18}px;font-weight:600;color:#CBD5E1;white-space:nowrap}
+.time{font-size:${big ? 52 : 36}px;font-weight:800;letter-spacing:-1px;white-space:nowrap}
+.foot{font-size:26px;color:#CBD5E1;font-weight:600}
+</style></head><body>
+<div class="kick">${LEAGUE} · 한국 시각</div>
+<div class="title">GAME <b>SCHEDULE</b></div>
+<div class="date"><span>${kstLabel(new Date(`${date}T12:00:00+09:00`))} · ${list.length}경기</span></div>
+<div class="board">${tiles}</div>
+<div class="foot">왼쪽이 원정, 오른쪽이 홈 · 실시간 점수는 Baskit 앱에서</div>
+</body></html>`,
+  }];
+}
+
 // ----------------------------------------------------------------
 
 const KINDS = {
@@ -517,6 +582,8 @@ const KINDS = {
   standings: standingsCards,
   leaders: leaderCards,
   news: newsCards,
+  'nba-schedule': (day) => scheduleCards('nba', day),
+  'kbl-schedule': (day) => scheduleCards('kbl', day),
 };
 
 async function main() {
@@ -538,4 +605,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { KINDS, render, frame, nightComplete, toPosts, getJson, esc, short, kstLabel, kstDay, BRAND, NAVY };
+module.exports = { KINDS, render, frame, nightComplete, toPosts, getJson, esc, short, kstLabel, kstDay, kstTime, BRAND, NAVY };

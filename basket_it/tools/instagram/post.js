@@ -3,6 +3,7 @@
 
 /**
  * 그날 마지막 경기가 끝나면 하룻밤 결과 캐러셀을 인스타(@baskit_official)에 한 번 올린다.
+ * 다음 날 경기 일정 카드도 올린다(첫 경기 12시간 전, 새벽이면 아침 9시. functions/instagram-kick.js dueSchedule).
  *
  *   node tools/instagram/post.js <instagram 브랜치 작업 폴더>
  *
@@ -17,7 +18,8 @@
 const fs = require('fs');
 const path = require('path');
 const { execFileSync } = require('child_process');
-const { KINDS, render, nightComplete, getJson, short, kstLabel, kstDay } = require('./cards');
+const { KINDS, render, nightComplete, getJson, short, kstLabel, kstDay, kstTime } = require('./cards');
+const { dueSchedule } = require('../../functions/instagram-kick');
 
 const IG_USER = '17841475895149180'; // @baskit_official (공개 값)
 const GRAPH = 'https://graph.facebook.com';
@@ -71,6 +73,16 @@ function dueDate(league, { games, dayOf, today }, posted) {
 function wantedDate(league, date, { games, dayOf }, posted) {
   if (posted[`${league}-${date}`]) return null;
   return nightComplete(games.filter((g) => dayOf(g) === date)) ? date : null;
+}
+
+/** 일정 캡션: 원정 vs 홈 · 한국 시각. */
+function scheduleCaption(league, data, date) {
+  const lines = data.games
+    .filter((g) => g.startTime && kstDay(new Date(g.startTime)) === date)
+    .sort((a, b) => a.startTime.localeCompare(b.startTime))
+    .map((g) => `${data.name(g.awayTeamId)} vs ${data.name(g.homeTeamId)} · ${kstTime(g.startTime)}`);
+  const head = `📅 ${kstLabel(new Date(`${date}T12:00:00+09:00`))} ${league.toUpperCase()} 경기 일정 (한국 시각)`;
+  return [head, '', ...lines, '', '왼쪽이 원정, 오른쪽이 홈', '', LEAGUES[league].tags].join('\n');
 }
 
 function caption(cfg, data, date, part, parts) {
@@ -186,6 +198,34 @@ async function main() {
       }
     } catch (e) {
       console.error(`${league} 실패: ${e.message}`);
+      failed = true;
+    }
+  }
+  // 다음 날 경기 일정(첫 경기 12시간 전, 새벽이면 아침 9시). 손으로 지난 날을 올릴 때는 건너뛴다.
+  for (const league of manual.length ? [] : Object.keys(LEAGUES)) {
+    try {
+      const data = await LEAGUES[league].load();
+      const date = dueSchedule(league, data.games, posted, Date.now());
+      if (!date) {
+        console.log(`${league} 일정: 올릴 게 없어요`);
+        continue;
+      }
+      const key = `${league}-schedule-${date}`;
+      const files = await render(await KINDS[`${league}-schedule`](date));
+      const text = scheduleCaption(league, data, date);
+      if (dry) {
+        console.log(`\n[${key}] ${files.join(', ')}\n${text}`);
+        continue;
+      }
+      fs.mkdirSync(path.join(dir, key), { recursive: true });
+      for (const f of files) fs.copyFileSync(f, path.join(dir, key, path.basename(f)));
+      commit(dir, `카드 ${key}`);
+      const urls = files.map((f) => `https://raw.githubusercontent.com/${REPO}/${BRANCH}/${key}/${path.basename(f)}`);
+      posted[key] = await publish(urls, text);
+      save(`인스타 게시 ${key}`);
+      console.log(`${key}: 게시함 (${posted[key]})`);
+    } catch (e) {
+      console.error(`${league} 일정 실패: ${e.message}`);
       failed = true;
     }
   }
